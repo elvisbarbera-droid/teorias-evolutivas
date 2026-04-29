@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Origen — Fijismo, Lamarckismo y Selección Natural</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #f3ead8;
+    --paper-2: #ece0c3;
+    --ink: #2a1f14;
+    --ink-soft: #5a4630;
+    --accent: #8b2a1f;       /* tinta roja sello */
+    --accent-2: #1f4d3f;     /* verde botánico */
+    --gold: #b8893d;
+    --shadow: rgba(60,40,20,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 20% 0%, #f7efdb 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 100%, #ead8b2 0%, transparent 50%),
+      var(--paper);
+    background-attachment: fixed;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  /* Textura de papel */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      radial-gradient(circle at 25% 30%, rgba(120,80,40,.08) 0, transparent 1px),
+      radial-gradient(circle at 75% 70%, rgba(120,80,40,.06) 0, transparent 1px),
+      radial-gradient(circle at 50% 50%, rgba(80,50,20,.04) 0, transparent 2px);
+    background-size: 7px 7px, 11px 11px, 17px 17px;
+    opacity:.6;
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(140,100,60,.04) 1px, transparent 1px);
+    background-size: 100% 28px;
+    mix-blend-mode: multiply;
+  }
+  .wrap{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:24px 20px 80px}
+
+  /* ====== ENCABEZADO ====== */
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom:14px;margin-bottom:24px;
+    position:relative;
+  }
+  header.top::after{
+    content:"";position:absolute;left:0;right:0;bottom:-7px;height:1px;background:var(--ink);opacity:.5
+  }
+  .brand{display:flex;align-items:center;gap:14px}
+  .brand .seal{
+    width:54px;height:54px;border-radius:50%;
+    border:2px solid var(--accent);
+    color:var(--accent);
+    display:grid;place-items:center;
+    font-family:'JetBrains Mono', monospace;font-weight:700;font-size:11px;
+    letter-spacing:.08em;
+    transform:rotate(-8deg);
+    box-shadow: inset 0 0 0 4px var(--paper), 0 0 0 1px var(--accent);
+    text-align:center;line-height:1.05;
+  }
+  .brand h1{
+    font-weight:600;font-size:clamp(22px, 3vw, 30px);
+    letter-spacing:.5px;
+    font-style: italic;
+  }
+  .brand h1 small{
+    display:block;font-style:normal;font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:.3em;color:var(--ink-soft);text-transform:uppercase;margin-top:2px;
+  }
+  .meta{
+    font-family:'JetBrains Mono', monospace;font-size:11px;color:var(--ink-soft);
+    text-align:right;letter-spacing:.08em;
+  }
+  .meta b{color:var(--accent);font-weight:700}
+
+  /* ====== CARDS COMUNES ====== */
+  .card{
+    background: linear-gradient(180deg, #fbf4e1 0%, #f3ead8 100%);
+    border:1px solid #cbb78a;
+    border-radius:6px;
+    padding:28px;
+    box-shadow:
+      0 1px 0 #fff inset,
+      0 8px 22px var(--shadow),
+      0 30px 60px -30px rgba(60,30,10,.25);
+    position:relative;
+  }
+  .card::before{
+    content:"";position:absolute;inset:6px;border:1px dashed rgba(90,70,40,.35);border-radius:4px;pointer-events:none;
+  }
+
+  /* ====== LOGIN ====== */
+  .login-grid{display:grid;grid-template-columns: 1.1fr .9fr; gap:32px;align-items:stretch}
+  @media (max-width: 840px){.login-grid{grid-template-columns:1fr}}
+  .hero{
+    padding:36px;
+  }
+  .hero h2{
+    font-size: clamp(34px, 5vw, 56px);
+    line-height:1;font-weight:600;font-style:italic;
+    letter-spacing:-.5px;margin-bottom:14px;
+  }
+  .hero h2 .amp{color:var(--accent);font-style:italic}
+  .hero p.lede{font-size:19px;color:var(--ink-soft);max-width:46ch;line-height:1.5}
+  .hero .three{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px;
+  }
+  .three .pill{
+    border:1px solid var(--ink);
+    padding:10px 8px;text-align:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;
+    background: var(--paper);
+    transform: rotate(-1deg);
+  }
+  .three .pill:nth-child(2){transform:rotate(.7deg);background:#ecdcb4}
+  .three .pill:nth-child(3){transform:rotate(-.4deg)}
+  .three .pill b{display:block;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:18px;letter-spacing:0;text-transform:none;color:var(--accent-2);margin-bottom:4px;font-weight:600}
+  .three .pill:nth-child(2) b{color:var(--gold)}
+  .three .pill:nth-child(3) b{color:var(--accent)}
+
+  .panel-login{padding:32px;display:flex;flex-direction:column;justify-content:center}
+  .panel-login h3{
+    font-family:'Caveat',cursive;font-size:32px;color:var(--accent);
+    transform:rotate(-2deg);margin-bottom:6px;
+  }
+  .panel-login p.sub{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:22px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
+  .field input, .field select{
+    background: transparent;
+    border:none;
+    border-bottom:2px solid var(--ink);
+    padding:8px 2px;
+    font-family:'Cormorant Garamond',serif;
+    font-size:20px;color:var(--ink);
+    outline:none;
+  }
+  .field input:focus, .field select:focus{border-color:var(--accent)}
+  button.primary{
+    margin-top:10px;
+    background: var(--ink);color:var(--paper);
+    border:none;padding:14px 18px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.25em;text-transform:uppercase;
+    cursor:pointer;border-radius:2px;
+    transition: transform .15s ease, background .15s;
+    position:relative;
+  }
+  button.primary:hover{background:var(--accent);transform:translateY(-1px)}
+  button.ghost{
+    background:transparent;border:1px solid var(--ink);color:var(--ink);
+    padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    cursor:pointer;border-radius:2px;transition:all .15s;
+  }
+  button.ghost:hover{background:var(--ink);color:var(--paper)}
+  .msg{margin-top:10px;min-height:18px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent)}
+
+  /* ====== HUD del juego ====== */
+  .hud{
+    display:grid;grid-template-columns: 1.4fr 1fr 1fr 1fr;gap:14px;margin-bottom:18px;
+  }
+  @media (max-width:780px){.hud{grid-template-columns:1fr 1fr}}
+  .hud .stat{
+    background: var(--paper);
+    border:1px solid var(--ink);
+    padding:12px 14px;
+    position:relative;
+  }
+  .hud .stat .lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--ink-soft)}
+  .hud .stat .val{font-style:italic;font-size:22px;font-weight:600;margin-top:2px}
+  .hud .stat .val small{font-size:13px;color:var(--ink-soft);font-weight:400}
+  .hud .stat.accent{background:#fdf3d8;border-color:var(--accent)}
+  .hud .stat.accent .val{color:var(--accent)}
+  .progressbar{
+    height:8px;background: var(--paper-2);border:1px solid var(--ink);
+    margin-top:14px;position:relative;overflow:hidden;
+  }
+  .progressbar > i{
+    display:block;height:100%;background:repeating-linear-gradient(45deg, var(--accent-2) 0 6px, #2a6a55 6px 12px);
+    width:0%;transition: width .5s cubic-bezier(.2,.7,.2,1);
+  }
+
+  /* ====== PREGUNTA ====== */
+  .question-card{padding:34px 36px}
+  .qhead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px dashed var(--ink-soft);padding-bottom:12px;margin-bottom:18px;gap:14px}
+  .tag{
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.25em;text-transform:uppercase;
+    padding:4px 10px;border:1px solid var(--ink);background:var(--paper);
+  }
+  .tag.fij{background:#e8d4cc;border-color:var(--accent);color:var(--accent)}
+  .tag.lam{background:#f4e6c0;border-color:var(--gold);color:#7a5a20}
+  .tag.dar{background:#d6e6dc;border-color:var(--accent-2);color:var(--accent-2)}
+  .qnum{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;color:var(--ink-soft)}
+  .question{
+    font-size: clamp(22px, 2.6vw, 30px);
+    line-height:1.25;font-weight:500;font-style:italic;margin-bottom:24px;
+  }
+  .options{display:grid;gap:12px}
+  .opt{
+    border:1.5px solid var(--ink);
+    background: var(--paper);
+    padding:14px 16px 14px 52px;
+    cursor:pointer;
+    font-size:18px;line-height:1.35;
+    position:relative;
+    transition: transform .15s ease, background .15s, border-color .15s;
+    text-align:left;
+    font-family:'Cormorant Garamond',serif;color:var(--ink);
+  }
+  .opt::before{
+    content: attr(data-letter);
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    width:26px;height:26px;border-radius:50%;
+    border:1.5px solid var(--ink);
+    display:grid;place-items:center;
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;
+    background:var(--paper-2);
+  }
+  .opt:hover:not([disabled]){background:#f8eecf;transform:translateX(3px)}
+  .opt.correct{background:#d6e6dc;border-color:var(--accent-2);color:#143b30}
+  .opt.correct::before{background:var(--accent-2);color:#fff;border-color:var(--accent-2)}
+  .opt.wrong{background:#eed4cd;border-color:var(--accent);color:#5a1610}
+  .opt.wrong::before{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .opt[disabled]{cursor:default}
+  .feedback{
+    margin-top:18px;padding:14px 16px;border-left:4px solid var(--accent-2);
+    background:rgba(31,77,63,.06);font-size:17px;display:none;
+  }
+  .feedback.show{display:block;animation: slidein .35s ease}
+  .feedback.bad{border-left-color:var(--accent);background:rgba(139,42,31,.06)}
+  .feedback b{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;display:block;margin-bottom:4px}
+  @keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .qfoot{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:12px;flex-wrap:wrap}
+
+  /* ====== BADGES ====== */
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    border:1px solid var(--gold);background:#fbf0d2;
+    padding:4px 10px;font-family:'JetBrains Mono',monospace;font-size:10px;
+    letter-spacing:.15em;text-transform:uppercase;color:#7a5a20;
+    animation: pop .4s cubic-bezier(.2,1.6,.4,1);
+  }
+  .badge::before{content:"✦"}
+  @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* ====== RESULTADO FINAL ====== */
+  .final{padding:42px;text-align:center}
+  .final h2{font-size:clamp(32px,5vw,56px);font-style:italic;font-weight:600;margin-bottom:6px}
+  .final .score-big{
+    font-family:'JetBrains Mono',monospace;font-size:88px;font-weight:700;color:var(--accent);
+    line-height:1;margin:18px 0 6px;
+  }
+  .final .nota{font-size:22px;color:var(--ink-soft);font-style:italic}
+  .final .breakdown{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:30px 0 18px;
+  }
+  @media (max-width:640px){.final .breakdown{grid-template-columns:1fr}}
+  .br-cell{border:1px solid var(--ink);padding:14px;background:var(--paper)}
+  .br-cell h4{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px}
+  .br-cell .num{font-size:28px;font-style:italic;font-weight:600}
+  .actions-final{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+
+  /* ====== RANKING / DOCENTE ====== */
+  .ranking{padding:24px;margin-top:18px}
+  .ranking h3{font-family:'Caveat',cursive;font-size:30px;color:var(--accent-2);margin-bottom:10px;transform:rotate(-1deg)}
+  .ranking table{width:100%;border-collapse:collapse;font-size:15px}
+  .ranking th, .ranking td{padding:9px 8px;border-bottom:1px dashed rgba(90,70,40,.35);text-align:left}
+  .ranking th{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid var(--ink)}
+  .ranking td.r{font-family:'JetBrains Mono',monospace;font-size:13px}
+  .ranking tr:first-child td{font-weight:700}
+  .medal{display:inline-block;width:22px;height:22px;border-radius:50%;text-align:center;line-height:22px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;margin-right:6px}
+  .m1{background:var(--gold)} .m2{background:#9aa0a6} .m3{background:#a2683b}
+
+  /* ====== utilidades ====== */
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .spacer{flex:1}
+  .sigil{
+    position:absolute;right:18px;top:18px;
+    font-family:'Caveat',cursive;color:var(--accent);font-size:22px;transform:rotate(8deg);
+    opacity:.7;
+  }
+  .hidden{display:none !important}
+
+  /* impresión */
+  @media print{
+    body{background:#fff}
+    button{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="seal">ORIGEN<br/>1859</div>
+      <h1>Origen <em>de las ideas evolutivas</em>
+        <small>FIJISMO · LAMARCKISMO · SELECCIÓN NATURAL</small>
+      </h1>
+    </div>
+    <div class="meta">
+      I° MEDIO · BIOLOGÍA<br/>
+      <b>25 ítems</b> · MINEDUC
+    </div>
+  </header>
+
+  <!-- ============ PANTALLA LOGIN ============ -->
+  <section id="screenLogin">
+    <div class="login-grid">
+      <div class="card hero">
+        <div class="sigil">— ¡a explorar! —</div>
+        <h2>Tres miradas <span class="amp">&amp;</span> una pregunta:<br/>¿cómo cambia la vida?</h2>
+        <p class="lede">Pon a prueba lo aprendido sobre las teorías que explicaron —y siguen explicando— el origen y la transformación de las especies. Acumula puntos, gana medallas y desafía a tu curso.</p>
+        <div class="three">
+          <div class="pill"><b>Cuvier</b>Fijismo</div>
+          <div class="pill"><b>Lamarck</b>Caracteres adquiridos</div>
+          <div class="pill"><b>Darwin</b>Selección natural</div>
+        </div>
+      </div>
+
+      <div class="card panel-login">
+        <h3>Entra a tu bitácora</h3>
+        <p class="sub">Tu progreso queda guardado</p>
+        <div class="field">
+          <label>Nombre y apellido</label>
+          <input id="inpName" type="text" placeholder="Ej: Camila Pérez" autocomplete="off"/>
+        </div>
+        <div class="field">
+          <label>Curso</label>
+          <select id="inpCurso">
+            <option value="I°A">I° Medio A</option>
+            <option value="I°B">I° Medio B</option>
+            <option value="I°C">I° Medio C</option>
+            <option value="I°D">I° Medio D</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <button class="primary" id="btnEntrar">Entrar al desafío →</button>
+        <div class="msg" id="loginMsg"></div>
+        <hr style="margin:18px 0;border:none;border-top:1px dashed rgba(90,70,40,.4)"/>
+        <div class="row">
+          <button class="ghost" id="btnDocente">Vista docente</button>
+          <span class="spacer"></span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-soft);letter-spacing:.15em">v1.0</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA JUEGO ============ -->
+  <section id="screenGame" class="hidden">
+    <div class="hud">
+      <div class="stat">
+        <div class="lbl">Naturalista</div>
+        <div class="val" id="hudName">—</div>
+      </div>
+      <div class="stat accent">
+        <div class="lbl">Puntaje</div>
+        <div class="val"><span id="hudScore">0</span> <small>pts</small></div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Racha</div>
+        <div class="val">🔥 <span id="hudStreak">0</span></div>
+      </div>
+      <div class="stat">
+        <div class="lbl">Avance</div>
+        <div class="val"><span id="hudPos">1</span> <small>/ 25</small></div>
+      </div>
+    </div>
+    <div class="progressbar"><i id="bar"></i></div>
+    <div class="badges" id="badges"></div>
+
+    <div class="card question-card" id="qCard" style="margin-top:18px">
+      <div class="qhead">
+        <span class="tag" id="qTag">—</span>
+        <span class="qnum" id="qNum">PREGUNTA 1 / 25</span>
+      </div>
+      <div class="question" id="qText">…</div>
+      <div class="options" id="qOpts"></div>
+      <div class="feedback" id="qFb"></div>
+      <div class="qfoot">
+        <button class="ghost" id="btnSalir">Guardar y salir</button>
+        <span class="spacer"></span>
+        <button class="primary hidden" id="btnNext">Siguiente →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA FINAL ============ -->
+  <section id="screenEnd" class="hidden">
+    <div class="card final">
+      <h2 id="endTitle">¡Bitácora completa!</h2>
+      <div class="score-big"><span id="endScore">0</span><span style="font-size:32px;color:var(--ink-soft)">/2500</span></div>
+      <div class="nota" id="endNota">Nota estimada: 7.0</div>
+      <div class="breakdown">
+        <div class="br-cell"><h4>Fijismo</h4><div class="num" id="brFij">0/0</div></div>
+        <div class="br-cell"><h4>Lamarckismo</h4><div class="num" id="brLam">0/0</div></div>
+        <div class="br-cell"><h4>Selección natural</h4><div class="num" id="brDar">0/0</div></div>
+      </div>
+      <div class="badges" id="endBadges" style="justify-content:center"></div>
+      <div class="actions-final">
+        <button class="primary" id="btnRestart">Volver a intentar</button>
+        <button class="ghost" id="btnVerRanking">Ver ranking del curso</button>
+        <button class="ghost" id="btnLogout">Salir</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PANTALLA DOCENTE / RANKING ============ -->
+  <section id="screenTeacher" class="hidden">
+    <div class="card ranking">
+      <div class="row" style="margin-bottom:14px">
+        <h3 style="margin:0">Bitácora del curso · Ranking</h3>
+        <span class="spacer"></span>
+        <select id="filterCurso" class="ghost" style="padding:8px;font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--paper);border:1px solid var(--ink)">
+          <option value="">Todos los cursos</option>
+          <option value="I°A">I° Medio A</option>
+          <option value="I°B">I° Medio B</option>
+          <option value="I°C">I° Medio C</option>
+          <option value="I°D">I° Medio D</option>
+          <option value="otro">Otro</option>
+        </select>
+        <button class="ghost" id="btnExport">Exportar CSV</button>
+        <button class="ghost" id="btnClear">Borrar todo</button>
+        <button class="ghost" id="btnVolver">← Volver</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Alumno</th><th>Curso</th><th>Puntos</th><th>Aciertos</th><th>Nota</th><th>Última vez</th></tr>
+        </thead>
+        <tbody id="rankBody"></tbody>
+      </table>
+      <p style="margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-soft);letter-spacing:.1em">
+        * Datos guardados en este dispositivo y respaldados en la nube si la app está alojada con el módulo de almacenamiento activo.
+      </p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ============================================================
+   BANCO DE 25 PREGUNTAS
+   Categorías: FIJ (Fijismo), LAM (Lamarckismo), DAR (Selección natural / Darwin)
+   ============================================================ */
+const QUESTIONS = [
+  // ---------- FIJISMO (8) ----------
+  { cat:"FIJ", q:"¿Cuál es la idea central del fijismo?",
+    o:[
+      "Las especies cambian continuamente con el tiempo",
+      "Las especies son inmutables desde su origen",
+      "Los individuos heredan los caracteres adquiridos",
+      "Sobreviven los individuos mejor adaptados"
+    ], a:1,
+    fb:"El fijismo sostiene que las especies son inmutables: tal como aparecieron, así permanecen."
+  },
+  { cat:"FIJ", q:"Georges Cuvier propuso una teoría que intentaba explicar el registro fósil sin aceptar la evolución. ¿Cómo se llama?",
+    o:["Uniformismo","Catastrofismo","Gradualismo","Mutacionismo"], a:1,
+    fb:"El catastrofismo explicaba la desaparición de fósiles por catástrofes sucesivas, no por transformación de especies."
+  },
+  { cat:"FIJ", q:"Una creencia típica del fijismo del siglo XVIII era que las especies actuales:",
+    o:[
+      "Provenían de un ancestro común único",
+      "Eran resultado de mutaciones acumuladas",
+      "Habían sido creadas tal como las observamos",
+      "Cambiaban según el ambiente en cada generación"
+    ], a:2,
+    fb:"El fijismo se asociaba a la idea creacionista de especies tal como se observan."
+  },
+  { cat:"FIJ", q:"¿Qué evidencia puso en aprietos a la teoría fijista?",
+    o:[
+      "El descubrimiento del ADN",
+      "El hallazgo de fósiles de especies extintas",
+      "La invención del microscopio óptico",
+      "La clasificación de Linneo"
+    ], a:1,
+    fb:"Los fósiles de especies que ya no existen contradicen la idea de inmutabilidad."
+  },
+  { cat:"FIJ", q:"Carl von Linneo, aunque clasificó a los seres vivos, era considerado fijista porque:",
+    o:[
+      "Negaba la existencia de los fósiles",
+      "Pensaba que las especies eran categorías fijas creadas por separado",
+      "Defendía la herencia de caracteres adquiridos",
+      "Aceptaba la selección natural"
+    ], a:1,
+    fb:"Linneo creía en especies fijas; la clasificación buscaba ordenar la creación, no explicar el cambio."
+  },
+  { cat:"FIJ", q:"Una limitación científica del fijismo es que:",
+    o:[
+      "No puede explicar el registro fósil ni la diversidad biológica",
+      "Se basa en demasiadas evidencias experimentales",
+      "Acepta tanto la mutación como la selección natural",
+      "Considera el tiempo geológico profundo"
+    ], a:0,
+    fb:"El fijismo no explica fósiles, vestigios ni similitudes anatómicas entre especies distintas."
+  },
+  { cat:"FIJ", q:"Para el catastrofismo de Cuvier, las nuevas especies que aparecen en estratos posteriores se debían a:",
+    o:[
+      "Evolución gradual a partir de las anteriores",
+      "Migración desde regiones no afectadas por la catástrofe",
+      "Mutaciones espontáneas",
+      "Hibridación entre especies sobrevivientes"
+    ], a:1,
+    fb:"Cuvier proponía migraciones desde otras regiones, NO transformación de especies."
+  },
+  { cat:"FIJ", q:"¿Qué afirmación es coherente con la postura fijista?",
+    o:[
+      "Los pinzones de Galápagos provienen de un ancestro común",
+      "El cuello de la jirafa se alargó por uso continuado",
+      "Cada especie de pinzón fue creada con su forma actual",
+      "Los individuos más aptos dejan más descendencia"
+    ], a:2,
+    fb:"Para el fijismo cada especie es una creación independiente e inmutable."
+  },
+
+  // ---------- LAMARCKISMO (8) ----------
+  { cat:"LAM", q:"¿Cuál es el principio conocido como 'ley del uso y desuso' de Lamarck?",
+    o:[
+      "Los órganos más usados se desarrollan; los no usados se atrofian",
+      "Solo los más fuertes sobreviven",
+      "Las mutaciones aleatorias generan variación",
+      "Las especies no cambian con el tiempo"
+    ], a:0,
+    fb:"Lamarck propuso que el uso fortalece órganos y el desuso los atrofia, y eso luego se hereda."
+  },
+  { cat:"LAM", q:"Lamarck explicaba el cuello largo de las jirafas afirmando que:",
+    o:[
+      "Las jirafas con cuello más largo dejaron más descendencia",
+      "Cada generación estiraba el cuello para alcanzar hojas altas y heredaba ese rasgo",
+      "Una mutación al azar produjo cuellos largos",
+      "Dios creó a las jirafas con cuello largo desde el inicio"
+    ], a:1,
+    fb:"Lamarck pensaba que el esfuerzo de cada individuo modificaba el cuerpo y se transmitía a la descendencia."
+  },
+  { cat:"LAM", q:"La 'herencia de los caracteres adquiridos' significa que:",
+    o:[
+      "Los caracteres aprendidos durante la vida pasan a los descendientes",
+      "Solo se heredan los caracteres presentes en los gametos",
+      "Los caracteres se distribuyen al azar en cada generación",
+      "Los caracteres no se transmiten entre generaciones"
+    ], a:0,
+    fb:"Lamarck sostenía que cambios adquiridos durante la vida del individuo pasaban a la siguiente generación."
+  },
+  { cat:"LAM", q:"Lamarck también propuso una 'tendencia natural a la complejidad'. Esto significa que:",
+    o:[
+      "Las especies tienden a evolucionar hacia formas más complejas",
+      "Las especies se simplifican con el tiempo",
+      "Toda especie permanece igual",
+      "Solo cambian las especies acuáticas"
+    ], a:0,
+    fb:"Para Lamarck había un impulso interno hacia formas más complejas y perfectas."
+  },
+  { cat:"LAM", q:"La principal crítica científica al lamarckismo es que:",
+    o:[
+      "Niega la existencia de los fósiles",
+      "Los caracteres adquiridos durante la vida no se transmiten genéticamente",
+      "No considera el ambiente",
+      "No explica la diversidad de especies"
+    ], a:1,
+    fb:"Hoy sabemos que solo se heredan cambios en el ADN de las células germinales, no los rasgos adquiridos por el cuerpo."
+  },
+  { cat:"LAM", q:"Según Lamarck, si un herrero desarrolla brazos muy fuertes durante su vida:",
+    o:[
+      "Sus hijos no heredarán esa fuerza",
+      "Sus hijos nacerán con brazos más fuertes",
+      "Solo sus hijas heredarán el rasgo",
+      "Es producto del azar genético"
+    ], a:1,
+    fb:"Para el lamarckismo, ese carácter adquirido se heredaría. Hoy se sabe que esto no ocurre."
+  },
+  { cat:"LAM", q:"¿Qué experimento contribuyó a refutar la herencia de caracteres adquiridos?",
+    o:[
+      "Los guisantes de Mendel",
+      "El experimento de Weismann cortando colas a ratones por generaciones",
+      "Las observaciones de Darwin en las Galápagos",
+      "La domesticación del lobo"
+    ], a:1,
+    fb:"August Weismann cortó colas a ratones durante varias generaciones y los descendientes seguían naciendo con cola: los caracteres adquiridos no se heredan."
+  },
+  { cat:"LAM", q:"¿Cuál fue un aporte valioso de Lamarck al pensamiento evolutivo?",
+    o:[
+      "Postular el concepto de selección natural",
+      "Proponer que las especies cambian a lo largo del tiempo",
+      "Afirmar que las especies son inmutables",
+      "Descubrir las leyes de la herencia"
+    ], a:1,
+    fb:"Aunque su mecanismo era erróneo, Lamarck rompió con el fijismo y planteó que las especies sí evolucionan."
+  },
+
+  // ---------- DARWIN / SELECCIÓN NATURAL (9) ----------
+  { cat:"DAR", q:"¿Cuál es el mecanismo principal propuesto por Darwin?",
+    o:[
+      "Herencia de los caracteres adquiridos",
+      "Catastrofismo",
+      "Selección natural",
+      "Creación independiente de las especies"
+    ], a:2,
+    fb:"Darwin propuso que la selección natural es el motor del cambio evolutivo."
+  },
+  { cat:"DAR", q:"Para que opere la selección natural, una población DEBE presentar:",
+    o:[
+      "Individuos idénticos entre sí",
+      "Variabilidad heredable y diferencias en éxito reproductivo",
+      "Mutaciones intencionales",
+      "Catástrofes ambientales periódicas"
+    ], a:1,
+    fb:"Sin variación heredable y sin diferencias en sobrevivencia/reproducción, no hay selección natural."
+  },
+  { cat:"DAR", q:"Las observaciones de Darwin durante el viaje del HMS Beagle más relevantes ocurrieron en:",
+    o:[
+      "Las islas Canarias",
+      "Las islas Galápagos",
+      "Australia",
+      "Madagascar"
+    ], a:1,
+    fb:"En Galápagos observó variaciones entre pinzones y tortugas de distintas islas, clave para sus ideas."
+  },
+  { cat:"DAR", q:"Bajo la mirada darwinista, el cuello largo de las jirafas se explica porque:",
+    o:[
+      "Las jirafas estiraban el cuello en cada generación",
+      "Existía variación en el largo del cuello y las de cuello más largo dejaron más crías",
+      "Una catástrofe eliminó a las jirafas de cuello corto",
+      "Las jirafas decidieron alargar su cuello"
+    ], a:1,
+    fb:"La selección natural actúa sobre la variación previa: los individuos con un rasgo ventajoso dejan más descendencia."
+  },
+  { cat:"DAR", q:"El concepto de 'aptitud biológica' (fitness) se refiere principalmente a:",
+    o:[
+      "La fuerza física del individuo",
+      "El éxito reproductivo en relación con el ambiente",
+      "El tamaño corporal",
+      "La inteligencia del organismo"
+    ], a:1,
+    fb:"Fitness = capacidad de dejar descendencia fértil. No es 'el más fuerte', sino el que mejor se reproduce en su ambiente."
+  },
+  { cat:"DAR", q:"¿Qué obra publicó Darwin en 1859?",
+    o:[
+      "Filosofía Zoológica",
+      "El Origen de las Especies",
+      "Principios de Geología",
+      "La Descendencia del Hombre"
+    ], a:1,
+    fb:"'El Origen de las Especies' (1859) sentó las bases de la teoría evolutiva moderna."
+  },
+  { cat:"DAR", q:"Una diferencia clave entre Lamarck y Darwin es que:",
+    o:[
+      "Darwin negaba que las especies cambien",
+      "Lamarck explicaba el cambio por uso/desuso, Darwin por selección sobre variación previa",
+      "Darwin proponía que los individuos eligen sus rasgos",
+      "Lamarck no creía en la herencia"
+    ], a:1,
+    fb:"Lamarck: el ambiente induce el cambio. Darwin: el ambiente selecciona variaciones que ya existen."
+  },
+  { cat:"DAR", q:"La resistencia a antibióticos en bacterias es un ejemplo actual de selección natural porque:",
+    o:[
+      "Las bacterias deciden volverse resistentes",
+      "Las bacterias resistentes ya existían y al usar antibiótico sobreviven y se reproducen más",
+      "Los antibióticos generan la mutación necesaria",
+      "Es un caso de herencia de caracteres adquiridos"
+    ], a:1,
+    fb:"Las mutaciones de resistencia surgen al azar. El antibiótico selecciona a las que ya las tenían."
+  },
+  { cat:"DAR", q:"La teoría sintética o neodarwinismo combina las ideas de Darwin con:",
+    o:[
+      "El catastrofismo de Cuvier",
+      "La genética mendeliana y la genética de poblaciones",
+      "El fijismo de Linneo",
+      "La ley del uso y desuso"
+    ], a:1,
+    fb:"El neodarwinismo integra selección natural + genética mendeliana + mutación + deriva génica + flujo génico."
+  }
+];
+
+/* ============================================================
+   ESTADO Y PERSISTENCIA
+   Usa window.storage si está disponible (artefactos), si no localStorage.
+   ============================================================ */
+const Store = (() => {
+  const hasCloud = (typeof window !== 'undefined') && window.storage && typeof window.storage.set === 'function';
+  const KEY_LOCAL = 'origen_evolucion_v1';
+  return {
+    hasCloud,
+    async getAll(){
+      try{
+        if(hasCloud){
+          const r = await window.storage.get('students_master', true);
+          if(r && r.value) return JSON.parse(r.value);
+          return {};
+        }
+        const raw = localStorage.getItem(KEY_LOCAL);
+        return raw ? JSON.parse(raw) : {};
+      }catch(e){console.warn('storage get',e);return {};}
+    },
+    async setAll(obj){
+      try{
+        if(hasCloud){
+          await window.storage.set('students_master', JSON.stringify(obj), true);
+        }
+        localStorage.setItem(KEY_LOCAL, JSON.stringify(obj));
+      }catch(e){console.warn('storage set',e);}
+    },
+    async upsertStudent(student){
+      const all = await this.getAll();
+      const id = (student.name.trim().toLowerCase()+'__'+student.curso).replace(/\s+/g,'_');
+      const prev = all[id] || {};
+      // conserva mejor puntaje histórico
+      const bestScore = Math.max(prev.bestScore||0, student.score||0);
+      all[id] = {...prev, ...student, id, bestScore, updatedAt: Date.now()};
+      await this.setAll(all);
+      return all[id];
+    }
+  };
+})();
+
+const State = {
+  student: null,
+  qOrder: [],
+  idx: 0,
+  score: 0,
+  streak: 0,
+  maxStreak: 0,
+  correct: 0,
+  byCat: {FIJ:{ok:0,n:0}, LAM:{ok:0,n:0}, DAR:{ok:0,n:0}},
+  badges: [],
+  answered: false
+};
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => document.querySelectorAll(sel);
+function shuffle(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function show(id){
+  ['screenLogin','screenGame','screenEnd','screenTeacher'].forEach(s=>{
+    document.getElementById(s).classList.toggle('hidden', s!==id);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function notaChile(score, max){
+  // 60% exigencia: nota 4.0 al 60% del puntaje
+  const p = score/max;
+  let nota;
+  if(p >= 0.6){
+    nota = 4 + ((p-0.6)/0.4)*3;
+  } else {
+    nota = 1 + (p/0.6)*3;
+  }
+  return Math.round(nota*10)/10;
+}
+function fmtDate(ts){
+  if(!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'2-digit'})+' '+d.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+$('#btnEntrar').addEventListener('click', async () => {
+  const name = $('#inpName').value.trim();
+  const curso = $('#inpCurso').value;
+  if(name.length < 3){
+    $('#loginMsg').textContent = 'Escribe tu nombre completo (mínimo 3 letras).';
+    return;
+  }
+  // Resetear estado
+  State.student = {name, curso};
+  State.qOrder = shuffle(QUESTIONS.map((_,i)=>i));
+  State.idx = 0; State.score = 0; State.streak = 0; State.maxStreak = 0;
+  State.correct = 0; State.badges = [];
+  State.byCat = {FIJ:{ok:0,n:0}, LAM:{ok:0,n:0}, DAR:{ok:0,n:0}};
+  $('#hudName').textContent = name.split(' ')[0];
+  show('screenGame');
+  renderQuestion();
+});
+
+$('#btnDocente').addEventListener('click', () => openTeacher());
+
+/* ============================================================
+   JUEGO
+   ============================================================ */
+function renderQuestion(){
+  const qIdx = State.qOrder[State.idx];
+  const q = QUESTIONS[qIdx];
+  State.answered = false;
+
+  const tagEl = $('#qTag');
+  tagEl.className = 'tag '+ q.cat.toLowerCase();
+  tagEl.textContent = q.cat==='FIJ' ? 'Fijismo' : q.cat==='LAM' ? 'Lamarckismo' : 'Selección natural';
+  $('#qNum').textContent = `PREGUNTA ${State.idx+1} / 25`;
+  $('#qText').textContent = q.q;
+
+  // mezclar opciones manteniendo respuesta correcta
+  const opts = q.o.map((text,i)=>({text, ok: i===q.a}));
+  const shuffled = shuffle(opts);
+  const optsEl = $('#qOpts');
+  optsEl.innerHTML = '';
+  const letters = ['A','B','C','D','E'];
+  shuffled.forEach((op,i)=>{
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.dataset.letter = letters[i];
+    b.textContent = op.text;
+    b.addEventListener('click', () => answer(b, op.ok, q));
+    optsEl.appendChild(b);
+  });
+  $('#qFb').classList.remove('show','bad');
+  $('#qFb').innerHTML = '';
+  $('#btnNext').classList.add('hidden');
+  updateHud();
+}
+
+function answer(btn, isOk, q){
+  if(State.answered) return;
+  State.answered = true;
+  const allBtns = $$('#qOpts .opt');
+  allBtns.forEach(b => b.setAttribute('disabled','disabled'));
+
+  State.byCat[q.cat].n++;
+
+  if(isOk){
+    btn.classList.add('correct');
+    State.correct++;
+    State.byCat[q.cat].ok++;
+    State.streak++;
+    if(State.streak > State.maxStreak) State.maxStreak = State.streak;
+    // puntaje base 100, bonus por racha
+    const bonus = Math.min(State.streak-1, 5)*10;
+    const got = 100 + bonus;
+    State.score += got;
+
+    const fb = $('#qFb');
+    fb.classList.add('show');
+    fb.classList.remove('bad');
+    fb.innerHTML = `<b>+${got} pts · ¡Correcto!</b>${q.fb}`;
+
+    // Badges
+    if(State.streak===3) addBadge('Racha x3');
+    if(State.streak===5) addBadge('Racha x5 — En llamas');
+    if(State.streak===10) addBadge('Imparable x10');
+    if(State.correct===10) addBadge('Naturalista');
+    if(State.correct===20) addBadge('Discípulo de Darwin');
+  } else {
+    btn.classList.add('wrong');
+    // mostrar la correcta
+    allBtns.forEach(b => { if(b.textContent === q.o[q.a]) b.classList.add('correct'); });
+    State.streak = 0;
+    const fb = $('#qFb');
+    fb.classList.add('show','bad');
+    fb.innerHTML = `<b>Respuesta incorrecta</b>${q.fb}`;
+  }
+  updateHud();
+  $('#btnNext').classList.remove('hidden');
+  $('#btnNext').textContent = (State.idx === State.qOrder.length-1) ? 'Ver resultado →' : 'Siguiente →';
+}
+
+function addBadge(text){
+  if(State.badges.includes(text)) return;
+  State.badges.push(text);
+  const el = document.createElement('span');
+  el.className = 'badge';
+  el.textContent = text;
+  $('#badges').appendChild(el);
+}
+
+function updateHud(){
+  $('#hudScore').textContent = State.score;
+  $('#hudStreak').textContent = State.streak;
+  $('#hudPos').textContent = State.idx+1;
+  const pct = ((State.idx + (State.answered?1:0))/State.qOrder.length)*100;
+  $('#bar').style.width = pct + '%';
+}
+
+$('#btnNext').addEventListener('click', () => {
+  if(State.idx >= State.qOrder.length-1){
+    finish();
+  } else {
+    State.idx++;
+    renderQuestion();
+  }
+});
+
+$('#btnSalir').addEventListener('click', async () => {
+  await saveProgress(false);
+  alert('Tu progreso ha sido guardado. Puedes volver a entrar con el mismo nombre.');
+  show('screenLogin');
+});
+
+/* ============================================================
+   FIN DE PARTIDA
+   ============================================================ */
+async function finish(){
+  const max = State.qOrder.length * 100 + 5*10*5; // teórico (no se alcanza siempre)
+  const maxBase = State.qOrder.length * 100;
+  const nota = notaChile(State.correct, State.qOrder.length);
+
+  $('#endScore').textContent = State.score;
+  document.querySelector('#screenEnd .score-big span:last-child').textContent = '/'+maxBase;
+  $('#endNota').textContent = `Nota estimada (60%): ${nota.toFixed(1)} · ${State.correct}/25 correctas`;
+  $('#brFij').textContent = `${State.byCat.FIJ.ok}/${State.byCat.FIJ.n}`;
+  $('#brLam').textContent = `${State.byCat.LAM.ok}/${State.byCat.LAM.n}`;
+  $('#brDar').textContent = `${State.byCat.DAR.ok}/${State.byCat.DAR.n}`;
+
+  // Mensaje según rendimiento
+  let title = '¡Bitácora completa!';
+  if(State.correct >= 22) title = '¡Naturalista de elite!';
+  else if(State.correct >= 18) title = '¡Excelente trabajo!';
+  else if(State.correct >= 13) title = 'Buen esfuerzo, sigue explorando';
+  else title = 'A repasar la bitácora';
+  $('#endTitle').textContent = title;
+
+  // Badges finales
+  const eb = $('#endBadges'); eb.innerHTML = '';
+  State.badges.forEach(t => {
+    const el = document.createElement('span'); el.className='badge'; el.textContent = t; eb.appendChild(el);
+  });
+  if(State.correct === 25){ const el=document.createElement('span'); el.className='badge'; el.textContent='Puntaje perfecto ★'; eb.appendChild(el); }
+  if(State.maxStreak >= 8){ const el=document.createElement('span'); el.className='badge'; el.textContent=`Mejor racha: ${State.maxStreak}`; eb.appendChild(el);}
+
+  await saveProgress(true);
+  show('screenEnd');
+}
+
+async function saveProgress(completed){
+  if(!State.student) return;
+  const data = {
+    name: State.student.name,
+    curso: State.student.curso,
+    score: State.score,
+    correct: State.correct,
+    total: State.qOrder.length,
+    nota: notaChile(State.correct, State.qOrder.length),
+    byCat: State.byCat,
+    badges: State.badges,
+    completed,
+    maxStreak: State.maxStreak
+  };
+  await Store.upsertStudent(data);
+}
+
+$('#btnRestart').addEventListener('click', () => {
+  // mantener mismo estudiante
+  State.qOrder = shuffle(QUESTIONS.map((_,i)=>i));
+  State.idx = 0; State.score = 0; State.streak = 0; State.maxStreak = 0;
+  State.correct = 0; State.badges = [];
+  State.byCat = {FIJ:{ok:0,n:0}, LAM:{ok:0,n:0}, DAR:{ok:0,n:0}};
+  $('#badges').innerHTML = '';
+  show('screenGame');
+  renderQuestion();
+});
+
+$('#btnLogout').addEventListener('click', () => {
+  State.student = null;
+  $('#inpName').value = '';
+  show('screenLogin');
+});
+$('#btnVerRanking').addEventListener('click', () => openTeacher());
+
+/* ============================================================
+   PANEL DOCENTE
+   ============================================================ */
+async function openTeacher(){
+  await renderRanking();
+  show('screenTeacher');
+}
+async function renderRanking(){
+  const all = await Store.getAll();
+  const filter = $('#filterCurso').value;
+  let rows = Object.values(all);
+  if(filter) rows = rows.filter(r => r.curso === filter);
+  rows.sort((a,b)=> (b.bestScore||b.score||0) - (a.bestScore||a.score||0));
+  const tb = $('#rankBody'); tb.innerHTML='';
+  if(rows.length === 0){
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--ink-soft);font-style:italic">Aún no hay registros. Cuando los alumnos completen el desafío aparecerán aquí.</td></tr>';
+    return;
+  }
+  rows.forEach((r,i)=>{
+    const tr = document.createElement('tr');
+    let medal = '';
+    if(i===0) medal='<span class="medal m1">1</span>';
+    else if(i===1) medal='<span class="medal m2">2</span>';
+    else if(i===2) medal='<span class="medal m3">3</span>';
+    else medal=`<span class="r" style="margin-right:8px">${i+1}.</span>`;
+    tr.innerHTML = `
+      <td class="r">${medal}</td>
+      <td><b>${r.name}</b></td>
+      <td>${r.curso}</td>
+      <td class="r">${r.bestScore||r.score||0}</td>
+      <td class="r">${r.correct||0}/${r.total||25}</td>
+      <td class="r"><b>${(r.nota||0).toFixed(1)}</b></td>
+      <td class="r">${fmtDate(r.updatedAt)}</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+$('#filterCurso').addEventListener('change', renderRanking);
+$('#btnVolver').addEventListener('click', () => show('screenLogin'));
+$('#btnExport').addEventListener('click', async () => {
+  const all = await Store.getAll();
+  const rows = Object.values(all);
+  if(rows.length===0){alert('No hay datos para exportar.');return;}
+  const headers = ['Nombre','Curso','Puntaje','Mejor puntaje','Correctas','Total','Nota','Fijismo','Lamarckismo','SeleccionNatural','MaxRacha','Completado','Fecha'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    const f = r.byCat?.FIJ || {ok:0,n:0};
+    const l = r.byCat?.LAM || {ok:0,n:0};
+    const d = r.byCat?.DAR || {ok:0,n:0};
+    lines.push([
+      `"${r.name}"`, r.curso, r.score||0, r.bestScore||0, r.correct||0, r.total||25,
+      r.nota||0, `${f.ok}/${f.n}`, `${l.ok}/${l.n}`, `${d.ok}/${d.n}`,
+      r.maxStreak||0, r.completed?'Sí':'No', new Date(r.updatedAt||Date.now()).toISOString()
+    ].join(','));
+  });
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ranking_evolucion_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+$('#btnClear').addEventListener('click', async () => {
+  const pwd = prompt('Esto borrará TODOS los registros. Escribe "BORRAR" para confirmar:');
+  if(pwd === 'BORRAR'){
+    await Store.setAll({});
+    renderRanking();
+  }
+});
+
+/* ============================================================
+   INICIO
+   ============================================================ */
+window.addEventListener('keydown', (e)=>{
+  if(document.getElementById('screenGame').classList.contains('hidden')) return;
+  if(e.key === 'Enter' && !$('#btnNext').classList.contains('hidden')){
+    $('#btnNext').click();
+  }
+  // 1-4 para responder
+  const n = parseInt(e.key);
+  if(n>=1 && n<=4){
+    const opts = $$('#qOpts .opt');
+    if(opts[n-1] && !State.answered) opts[n-1].click();
+  }
+});
+</script>
+</body>
+</html>
