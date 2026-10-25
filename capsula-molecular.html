@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Cápsula Molecular</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#04070f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Juego a pantalla completa: canvas al fondo, HUD fino arriba, mandos táctiles abajo, tarjetas modales al centro */
+:root{
+  --void:#04070f;
+  --panel:#0b1628;
+  --panel-2:#10203a;
+  --plasma:#38e8ff;
+  --membrane:#ff5fa2;
+  --chloro:#7cff6b;
+  --atp:#ffc93c;
+  --danger:#ff4d5e;
+  --ink:#e8f4ff;
+  --muted:#8ea6c6;
+  --line:rgba(56,232,255,.28);
+  --fig-bg:#f4f8ff;
+  --fig-ink:#1b2a44;
+  --display:'Chakra Petch','Trebuchet MS',system-ui,sans-serif;
+  --body:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--void);color:var(--ink);overflow:hidden;
+  overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;font-family:var(--body)}
+canvas#game{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:3px solid var(--atp);outline-offset:2px}
+[hidden]{display:none!important}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;top:0;left:0;right:0;z-index:5;pointer-events:none;
+  padding-top:calc(env(safe-area-inset-top,0px) + 8px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:6px;font-family:var(--display)}
+.hrow{display:flex;align-items:center;gap:10px;justify-content:space-between;width:100%;max-width:800px;margin:0 auto}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:rgba(8,18,34,.72);border:1px solid var(--line);font-family:var(--display);
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.chip b{color:var(--plasma)}
+.score{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;text-shadow:0 0 12px rgba(56,232,255,.6)}
+.score small{font-size:10px;letter-spacing:.14em;color:var(--muted);margin-right:6px;font-weight:600}
+.tools{display:flex;gap:8px;pointer-events:auto}
+.ico{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:rgba(8,18,34,.72);
+  display:grid;place-items:center;padding:0}
+.ico svg{width:18px;height:18px}
+.meter{display:flex;align-items:center;gap:8px;flex:1;min-width:0;max-width:280px}
+.meter small{font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.bar{flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.08);overflow:hidden;border:1px solid rgba(255,95,162,.4)}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff3d7a,#ff9ac4);transition:width .25s}
+.bar.low i{background:linear-gradient(90deg,#ff2a2a,#ff7a3d)}
+.qdots{display:flex;gap:4px;align-items:center}
+.qdots small{font-size:10px;letter-spacing:.14em;color:var(--muted);margin-right:4px}
+.qdots i{width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
+.qdots i.on{background:var(--chloro);border-color:var(--chloro);box-shadow:0 0 8px rgba(124,255,107,.7)}
+
+/* ---------- Mandos ---------- */
+#ctrls{position:fixed;left:0;right:0;bottom:0;z-index:5;pointer-events:none;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+#bReload{pointer-events:auto;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(124,255,107,.22),rgba(20,60,30,.7));border:1px solid rgba(124,255,107,.6);
+  font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.04em;text-align:left;line-height:1.1;touch-action:none}
+#bReload small{font-weight:500;font-size:11px;color:#c9ffd0;letter-spacing:.02em}
+#bReload svg{width:24px;height:24px;flex:none}
+#bReload.urge{animation:urge .7s ease-in-out infinite alternate}
+@keyframes urge{from{box-shadow:0 0 0 rgba(124,255,107,0)}to{box-shadow:0 0 24px rgba(124,255,107,.9);transform:scale(1.05)}}
+#ammoBox{display:flex;flex-direction:column;align-items:center;font-family:var(--display);padding-bottom:6px}
+#ammoBox b{font-size:34px;line-height:1;font-variant-numeric:tabular-nums;color:var(--atp);text-shadow:0 0 14px rgba(255,201,60,.7)}
+#ammoBox span{font-size:10px;letter-spacing:.2em;color:var(--muted)}
+#ammoBox.empty b{color:var(--danger);text-shadow:0 0 14px rgba(255,77,94,.8)}
+#ammoBox.flash{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#bFire{pointer-events:auto;width:96px;height:96px;border-radius:50%;flex:none;touch-action:none;
+  background:radial-gradient(circle at 35% 30%,#bff7ff,#38e8ff 35%,#0a5a8a 80%);border:3px solid rgba(255,255,255,.6);
+  box-shadow:0 0 24px rgba(56,232,255,.55),inset 0 -6px 14px rgba(0,0,0,.35);
+  font-family:var(--display);font-weight:700;font-size:13px;letter-spacing:.08em;color:#04203a}
+#bFire.down{transform:scale(.93);box-shadow:0 0 36px rgba(56,232,255,.9),inset 0 4px 14px rgba(0,0,0,.4)}
+
+#toast{position:fixed;left:50%;top:28%;transform:translateX(-50%);z-index:6;pointer-events:none;
+  font-family:var(--display);font-weight:700;font-size:clamp(16px,4.4vw,22px);text-align:center;
+  padding:10px 18px;border-radius:14px;background:rgba(4,10,22,.78);border:1px solid var(--line);
+  width:max-content;max-width:calc(100% - 32px);opacity:0;transition:opacity .25s}
+#toast.show{opacity:1}
+
+/* ---------- Modales ---------- */
+.modal{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,6,14,.62);-webkit-backdrop-filter:blur(5px);backdrop-filter:blur(5px);
+  padding-top:calc(env(safe-area-inset-top,0px) + 12px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-user-select:text;user-select:text}
+.card{width:100%;max-width:700px;max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.03) inset;padding:20px;
+  display:flex;flex-direction:column;gap:14px}
+.card h1,.card h2,.card h3{margin:0;font-family:var(--display);text-wrap:balance}
+.eyebrow{font-family:var(--display);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--plasma)}
+.lead{margin:0;color:#c9d9ee;line-height:1.5;font-size:16px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{border-radius:14px;padding:13px 18px;border:1px solid var(--line);background:rgba(255,255,255,.04);
+  font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.05em}
+.btn.primary{background:linear-gradient(180deg,#5ff0ff,#1b9cc9);color:#03182a;border-color:#9ff6ff;box-shadow:0 0 22px rgba(56,232,255,.35)}
+.btn.go{background:linear-gradient(180deg,#9cff8a,#2fae4a);color:#062410;border-color:#c9ffbe}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* Portada */
+.title{font-family:var(--display);font-weight:700;line-height:.92;letter-spacing:.02em;
+  font-size:clamp(40px,11vw,76px);margin:0;
+  background:linear-gradient(180deg,#ffffff 10%,#9ff6ff 45%,#38e8ff 55%,#1b5fa0 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(56,232,255,.45))}
+.title span{display:block;font-size:.5em;letter-spacing:.32em;background:linear-gradient(180deg,#ffd0e4,#ff5fa2);
+  -webkit-background-clip:text;background-clip:text}
+.phases{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.ph{display:flex;flex-direction:column;gap:2px;text-align:left;padding:10px 12px;border-radius:12px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);min-width:0}
+.ph b{font-family:var(--display);font-size:13px;letter-spacing:.1em;color:var(--plasma)}
+.ph span{font-size:12.5px;color:#c9d9ee;line-height:1.25}
+.ph.done b{color:var(--chloro)}
+.ph:disabled{opacity:.38}
+.small{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+.link{background:none;border:none;padding:0;color:var(--muted);text-decoration:underline;font-size:13px}
+.howto{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;line-height:1.45;color:#d6e4f5}
+.howto b{color:var(--atp)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px;color:#c9d9ee}
+.keys kbd{font-family:var(--display);font-size:12px;padding:2px 7px;border-radius:6px;border:1px solid var(--line);background:rgba(255,255,255,.05);white-space:nowrap}
+.enemies{display:flex;flex-wrap:wrap;gap:8px}
+.enemies span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:13px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04)}
+.enemies i{width:10px;height:10px;border-radius:50%}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.stat{padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.stat small{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-family:var(--display);font-size:24px;font-variant-numeric:tabular-nums}
+
+/* Pregunta */
+.qhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.qtopic{font-size:13px;color:var(--muted)}
+#qText{font-family:var(--body);font-weight:700;font-size:clamp(17px,4.6vw,21px);line-height:1.35}
+.fig{background:var(--fig-bg);border-radius:14px;padding:8px;overflow-x:auto;flex:none}
+.fig svg{width:100%;max-width:560px;height:auto;max-height:36vh;display:block;margin:0 auto}
+.opts{display:grid;grid-template-columns:1fr;gap:8px}
+@media (min-width:620px){.opts{grid-template-columns:1fr 1fr}}
+.opt{display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border-radius:14px;min-height:54px;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);font-size:15.5px;line-height:1.3;min-width:0}
+.opt .k{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-family:var(--display);font-weight:700;
+  background:rgba(56,232,255,.15);color:var(--plasma);border:1px solid var(--line)}
+.opt:not(:disabled):hover{border-color:var(--plasma);background:rgba(56,232,255,.08)}
+.opt.ok{border-color:var(--chloro);background:rgba(124,255,107,.16)}
+.opt.ok .k{background:var(--chloro);color:#06240f}
+.opt.bad{border-color:var(--danger);background:rgba(255,77,94,.16)}
+.opt.bad .k{background:var(--danger);color:#2a0006}
+.opt:disabled{cursor:default}
+.opt.dim{opacity:.45}
+.fb{border-radius:14px;padding:12px 14px;line-height:1.45;font-size:15px}
+.fb.ok{background:rgba(124,255,107,.1);border:1px solid rgba(124,255,107,.45)}
+.fb.bad{background:rgba(255,77,94,.1);border:1px solid rgba(255,77,94,.45)}
+.fb strong{font-family:var(--display);letter-spacing:.04em;display:block;margin-bottom:4px;font-size:16px}
+@media (max-height:560px){.fig svg{max-height:44vh}.card{padding:14px;gap:10px}}
+@media (prefers-reduced-motion:reduce){#bReload.urge{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Juego Cápsula Molecular"></canvas>
+
+<div id="hud" hidden>
+  <div class="hrow">
+    <span class="chip" id="hPhase">Fase <b>1</b></span>
+    <span class="score"><small>PUNTOS</small><span id="hScore">0</span></span>
+    <div class="tools">
+      <button class="ico" id="bMute" aria-label="Silenciar sonido"></button>
+      <button class="ico" id="bPause" aria-label="Pausa"><svg viewBox="0 0 24 24" fill="#e8f4ff"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+    </div>
+  </div>
+  <div class="hrow">
+    <div class="meter"><small>MEMBRANA</small><div class="bar" id="hHpBar"><i id="hHp"></i></div></div>
+    <div class="qdots" id="hQ"><small>PREGUNTAS</small></div>
+  </div>
+</div>
+
+<div id="ctrls" hidden>
+  <button id="bReload" aria-label="Responder una pregunta para recargar 15 balas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#c9ffbe" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 1 1 3.6 2.4c-.7.3-1.1.9-1.1 1.6v.5"/><circle cx="12" cy="17" r=".6" fill="#c9ffbe"/></svg>
+    <span>Recargar<br><small>+15 balas</small></span>
+  </button>
+  <div id="ammoBox"><b id="hAmmo">0</b><span>BALAS</span></div>
+  <button id="bFire" aria-label="Disparar">DISPARAR</button>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="screen" class="modal" hidden></div>
+
+<div id="quiz" class="modal" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="qText">
+    <div class="qhead"><span class="chip" id="qTag">Recarga</span><span class="chip" id="qCount">Correctas 0/10</span></div>
+    <div class="qtopic" id="qTopic"></div>
+    <h2 id="qText"></h2>
+    <div class="fig" id="qFig" hidden></div>
+    <div class="opts" id="qOpts"></div>
+    <div class="fb" id="qFb" hidden></div>
+    <button class="btn primary" id="qNext" hidden>Continuar</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+   SONIDO (sintetizado, sin archivos)
+   ========================================================= */
+const SFX={ctx:null,on:true,lastEmpty:0,
+  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+    if(this.ctx&&this.ctx.state==='suspended') this.ctx.resume(); },
+  tone(f,d,type='square',v=.06,slide=0,delay=0){ if(!this.on||!this.ctx) return;
+    const c=this.ctx,t=c.currentTime+delay,o=c.createOscillator(),g=c.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+d);
+    g.gain.setValueAtTime(v,t); g.gain.exponentialRampToValueAtTime(.0001,t+d);
+    o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.03); },
+  noise(d,v=.18){ if(!this.on||!this.ctx) return; const c=this.ctx,len=Math.floor(c.sampleRate*d),b=c.createBuffer(1,len,c.sampleRate),a=b.getChannelData(0);
+    for(let i=0;i<len;i++) a[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);
+    const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain(); f.type='lowpass';f.frequency.value=900;
+    s.buffer=b;g.gain.value=v;s.connect(f);f.connect(g);g.connect(c.destination);s.start(); },
+  shoot(){this.tone(1100,.07,'square',.025,-700)},
+  boom(big){this.noise(big?.6:.3,big?.3:.16);this.tone(140,.3,'sawtooth',.05,-90)},
+  hit(){this.tone(320,.05,'square',.03,-120)},
+  hurt(){this.tone(180,.25,'sawtooth',.08,-120);this.noise(.2,.12)},
+  ok(){[523,659,784,1047].forEach((f,i)=>this.tone(f,.16,'triangle',.08,0,i*.08))},
+  bad(){this.tone(240,.22,'sawtooth',.06,-80);this.tone(170,.3,'sawtooth',.06,-60,.16)},
+  empty(){const n=performance.now(); if(n-this.lastEmpty<220) return; this.lastEmpty=n; this.tone(130,.06,'square',.05)},
+  win(){[392,523,659,784,1047,1319].forEach((f,i)=>this.tone(f,.22,'triangle',.08,0,i*.11))}
+};
+
+/* =========================================================
+   FIGURAS SVG PARA LAS PREGUNTAS
+   ========================================================= */
+const INK='#1b2a44', FONT="font-family=\"Atkinson Hyperlegible,Arial,sans-serif\"";
+const svg=(vb,inner)=>`<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" role="img" ${FONT}>${inner}</svg>`;
+const N=(x,y,n)=>`<g><circle cx="${x}" cy="${y}" r="11.5" fill="${INK}" stroke="#ffffff" stroke-width="2"/><text x="${x}" y="${y+4.6}" text-anchor="middle" font-size="13.5" font-weight="700" fill="#ffffff">${n}</text></g>`;
+const L=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${INK}" stroke-width="1.6"/>`;
+const T=(x,y,s,size=13,anchor='middle',w=400,fill=INK)=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${size}" font-weight="${w}" fill="${fill}">${s}</text>`;
+const ARROW=`<defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${INK}"/></marker></defs>`;
+const mitoIcon=(x,y,rot,s=1)=>`<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})"><ellipse rx="30" ry="15" fill="#f6a04d" stroke="#a54a12" stroke-width="2.5"/><path d="M-22 0 l5 -9 l5 18 l5 -18 l5 18 l5 -18 l5 18 l5 -18 l4 9" fill="none" stroke="#a54a12" stroke-width="2"/></g>`;
+const chloroIcon=(x,y,rot,s=1)=>`<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})"><ellipse rx="24" ry="13" fill="#4caf50" stroke="#1f6b25" stroke-width="2"/><g fill="#1f6b25"><rect x="-15" y="-6" width="7" height="12" rx="1.5"/><rect x="-3" y="-6" width="7" height="12" rx="1.5"/><rect x="9" y="-6" width="7" height="12" rx="1.5"/></g><line x1="-17" y1="0" x2="18" y2="0" stroke="#1f6b25" stroke-width="1.5"/></g>`;
+
+function barChart(data,max,step,ylab){
+  const x0=78,y0=200,h=165,w=345,bw=w/data.length; let s='';
+  for(let v=0;v<=max;v+=step){const y=y0-v/max*h; s+=`<line x1="${x0}" y1="${y}" x2="${x0+w}" y2="${y}" stroke="#cdd9eb" stroke-width="1"/>`+T(x0-8,y+4,v,11,'end');}
+  data.forEach((d,i)=>{const bh=d.v/max*h, x=x0+i*bw+bw*.17, bwi=bw*.66;
+    s+=`<rect x="${x}" y="${y0-bh}" width="${bwi}" height="${Math.max(bh,0)}" rx="3" fill="${d.c}" stroke="${INK}" stroke-width="1"/>`;
+    s+=T(x+bwi/2,y0-bh-6,d.v,12,'middle',700);
+    d.l.forEach((ln,j)=>{s+=T(x+bwi/2,y0+16+j*13,ln,11);});});
+  s+=`<line x1="${x0}" y1="${y0}" x2="${x0+w}" y2="${y0}" stroke="${INK}" stroke-width="1.8"/><line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0-h-8}" stroke="${INK}" stroke-width="1.8"/>`;
+  s+=`<text transform="translate(18 ${y0-h/2}) rotate(-90)" text-anchor="middle" font-size="12" font-weight="700" fill="${INK}">${ylab}</text>`;
+  return svg('0 0 440 240',s);
+}
+
+const FIG={
+  animal(){ let s=`<path d="M70 150 C60 72 150 32 230 40 C322 46 390 92 380 160 C372 236 300 268 220 260 C130 256 78 226 70 150Z" fill="#ffe1d3" stroke="#e0607e" stroke-width="5"/>`;
+    s+=`<circle cx="200" cy="150" r="48" fill="#cdb8f5" stroke="#6b4bc4" stroke-width="3"/><circle cx="212" cy="140" r="15" fill="#6b4bc4"/>`;
+    s+=`<path d="M172 162 q8 -10 16 0 t16 0 M178 178 q8 -8 14 0" stroke="#8d6fe0" stroke-width="2" fill="none"/>`;
+    s+=`<path d="M258 108 q14 10 0 20 q-14 10 0 20 q14 10 0 20 q-14 10 0 20" stroke="#4f86d9" stroke-width="5" fill="none"/><path d="M274 112 q14 10 0 20 q-14 10 0 20 q14 10 0 20" stroke="#4f86d9" stroke-width="5" fill="none"/>`;
+    [[265,112],[255,128],[266,146],[254,163],[265,182],[281,118],[272,138],[283,157],[271,172]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="2.6" fill="#1f3d7a"/>`);
+    s+=mitoIcon(122,100,-20)+mitoIcon(298,222,25,.8);
+    for(let i=0;i<4;i++) s+=`<path d="M100 ${192+i*9} q32 -14 64 0" stroke="#e85d9c" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+    s+=`<circle cx="172" cy="200" r="4.5" fill="#e85d9c"/><circle cx="176" cy="214" r="4" fill="#e85d9c"/><circle cx="93" cy="186" r="4" fill="#e85d9c"/>`;
+    s+=`<circle cx="345" cy="178" r="12" fill="#8bd16b" stroke="#3f8a2a" stroke-width="2.5"/><circle cx="341" cy="175" r="2" fill="#3f8a2a"/><circle cx="349" cy="181" r="2" fill="#3f8a2a"/>`;
+    s+=`<g fill="#7a8fb0" stroke="#3c4f70"><rect x="222" y="226" width="20" height="8" rx="2"/><rect x="236" y="218" width="8" height="20" rx="2"/></g>`;
+    [[150,70],[320,80],[110,160],[250,95],[160,240],[330,140],[95,130]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="2.6" fill="#1f3d7a"/>`);
+    s+=L(200,102,200,27)+N(200,16,1)+L(276,116,404,82)+N(415,78,2)+L(102,90,46,58)+N(36,52,3)+L(357,180,404,206)+N(415,210,4)+L(100,198,44,222)+N(34,226,5)+L(70,150,40,150)+N(28,150,6);
+    return svg('0 0 440 280',s); },
+
+  vegetal(){ let s=`<rect x="60" y="30" width="320" height="230" rx="14" fill="#b9d88a" stroke="#6d8d2d" stroke-width="3"/><rect x="72" y="42" width="296" height="206" rx="9" fill="#f1fbe3" stroke="#3f8a2a" stroke-width="2"/>`;
+    s+=`<rect x="130" y="78" width="180" height="134" rx="40" fill="#bfe3ff" stroke="#3b8fd1" stroke-width="2.5"/>`;
+    s+=`<circle cx="332" cy="92" r="24" fill="#cdb8f5" stroke="#6b4bc4" stroke-width="2.5"/><circle cx="337" cy="88" r="8" fill="#6b4bc4"/>`;
+    [[100,90,20],[96,180,-15],[172,234,5],[268,234,-8],[222,58,0]].forEach(([x,y,r])=>s+=chloroIcon(x,y,r));
+    s+=mitoIcon(342,214,-30,.62);
+    s+=L(64,62,38,44)+N(28,38,1)+L(74,180,40,180)+N(28,180,2)+L(220,212,220,270)+N(220,279,3)+L(354,84,405,62)+N(415,58,4)+L(352,222,405,246)+N(415,250,5)+L(368,150,405,150)+N(415,150,6);
+    return svg('0 0 440 292',s); },
+
+  bacteria(){ let s=`<rect x="58" y="58" width="274" height="124" rx="62" fill="#fff6d2" stroke="#d9b44a" stroke-width="2.5" stroke-dasharray="6 4"/>`;
+    s+=`<rect x="70" y="70" width="250" height="100" rx="50" fill="#ffd88a" stroke="#b07a1a" stroke-width="4"/><rect x="79" y="79" width="232" height="82" rx="41" fill="#fff8e8" stroke="#e0a33a" stroke-width="2"/>`;
+    s+=`<path d="M150 120 c10 -25 40 -20 30 0 s-35 25 -10 20 s40 -30 50 -5 s-20 25 -45 10 s-10 -30 15 -25 s30 10 25 18" stroke="#5b3fb0" stroke-width="2.6" fill="none"/>`;
+    [[110,100],[120,140],[250,100],[278,140],[236,146],[104,124],[140,102],[218,96]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="3.2" fill="#3a5a9a"/>`);
+    s+=`<circle cx="268" cy="116" r="10" fill="none" stroke="#c2185b" stroke-width="2.6"/>`;
+    s+=`<path d="M320 120 q15 -16 30 0 t30 0 t30 0" stroke="#8a6a2a" stroke-width="3" fill="none"/>`;
+    s+=L(95,73,66,36)+N(58,28,1)+L(178,132,176,203)+N(176,214,2)+L(120,140,103,203)+N(100,214,3)+L(392,118,408,98)+N(416,88,4)+L(270,106,296,38)+N(300,28,5)+L(58,120,38,120)+N(26,120,6);
+    return svg('0 0 440 232',s); },
+
+  mito(){ let s=`<ellipse cx="220" cy="110" rx="170" ry="80" fill="#f6a04d" stroke="#a54a12" stroke-width="4"/><ellipse cx="220" cy="110" rx="158" ry="68" fill="#ffe0b8" stroke="#c2611e" stroke-width="3"/>`;
+    for(let x=100;x<=340;x+=40){ const yt=110-68*Math.sqrt(1-Math.pow((x-220)/158,2)); s+=`<path d="M${x-6} ${yt} L${x-6} 96 Q${x} 106 ${x+6} 96 L${x+6} ${yt}Z" fill="#f6a04d" stroke="#c2611e" stroke-width="2"/>`; }
+    for(let x=120;x<=320;x+=40){ const yb=110+68*Math.sqrt(1-Math.pow((x-220)/158,2)); s+=`<path d="M${x-6} ${yb} L${x-6} 126 Q${x} 116 ${x+6} 126 L${x+6} ${yb}Z" fill="#f6a04d" stroke="#c2611e" stroke-width="2"/>`; }
+    [[110,112],[200,112],[250,104],[300,140],[150,82],[330,104]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="2.5" fill="#a54a12"/>`);
+    s+=L(90,58,40,40)+N(30,34,1)+L(306,82,404,36)+N(414,30,2)+L(300,140,404,186)+N(414,190,3)+L(84,145,40,184)+N(30,190,4);
+    return svg('0 0 440 220',s); },
+
+  cloro(){ let s=`<ellipse cx="220" cy="110" rx="175" ry="85" fill="#2e7d32"/><ellipse cx="220" cy="110" rx="164" ry="74" fill="#c8f0b0" stroke="#4caf50" stroke-width="3"/>`;
+    const st=[[110,95],[175,130],[245,90],[310,128]];
+    s+=`<path d="M128 95 L157 130 M193 130 L227 90 M263 90 L292 128 M80 108 L92 98 M328 128 L360 112" stroke="#2f9e44" stroke-width="3.5" fill="none"/>`;
+    st.forEach(([x,y])=>{for(let i=0;i<5;i++) s+=`<rect x="${x-18}" y="${y-22+i*9}" width="36" height="7.5" rx="3" fill="#2f9e44" stroke="#1b5e20" stroke-width="1"/>`;});
+    s+=`<ellipse cx="150" cy="165" rx="14" ry="8" fill="#fffbe6" stroke="#c9b26a"/>`;
+    s+=L(255,68,322,24)+N(332,18,1)+L(80,59,40,40)+N(30,34,2)+L(250,162,404,192)+N(414,196,3);
+    return svg('0 0 440 220',s); },
+
+  nucleo(){ let s=`<circle cx="220" cy="120" r="95" fill="#e7dcff" stroke="#6b4bc4" stroke-width="5"/><circle cx="220" cy="120" r="86" fill="#d6c6ff" stroke="#6b4bc4" stroke-width="3"/>`;
+    for(let i=0;i<10;i++){const a=i/10*Math.PI*2, x=220+Math.cos(a)*90.5, y=120+Math.sin(a)*90.5; s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="#f4f8ff" stroke="#6b4bc4" stroke-width="1.6"/>`;}
+    s+=`<path d="M160 150 q10 -16 20 0 t20 0 t18 -4 M170 95 q8 10 16 0 t16 2 M240 160 q10 -12 18 0 t16 -6 M150 120 q6 -10 14 -2" stroke="#8a6be0" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s+=`<circle cx="238" cy="108" r="28" fill="#5a3aa8"/>`;
+    s+=L(152,52,40,36)+N(30,30,1)+L(317,120,404,120)+N(414,120,2)+L(258,88,404,36)+N(414,30,3)+L(176,152,40,204)+N(30,210,4);
+    return svg('0 0 440 240',s); },
+
+  sangre(){ let s=`<rect x="8" y="8" width="424" height="150" rx="16" fill="#fff0ef" stroke="#f3c2c2"/>`;
+    const rbc=(x,y)=>`<circle cx="${x}" cy="${y}" r="25" fill="#e53935" stroke="#9a1b1b" stroke-width="2"/><circle cx="${x}" cy="${y}" r="10" fill="#ff8a80"/>`;
+    s+=rbc(62,62)+rbc(112,48)+rbc(98,112)+rbc(150,98);
+    s+=`<circle cx="245" cy="82" r="42" fill="#ece4fb" stroke="#7e57c2" stroke-width="2.5"/><g fill="#5e35b1"><circle cx="230" cy="74" r="12"/><circle cx="252" cy="68" r="11"/><circle cx="258" cy="92" r="12"/><path d="M236 80 L250 72 L256 88" stroke="#5e35b1" stroke-width="6"/></g>`;
+    [[350,58],[372,84],[340,102],[386,52],[398,110]].forEach(([x,y],i)=>s+=`<path d="M${x-5} ${y} q3 -6 9 -3 q5 4 0 8 q-5 4 -9 -5z" fill="#ab47bc" stroke="#6a1b9a" stroke-width="1"/>`);
+    s+=L(106,138,106,180)+N(106,192,1)+L(245,124,245,180)+N(245,192,2)+L(368,108,368,180)+N(368,192,3);
+    return svg('0 0 440 210',s); },
+
+  eritro(){ let s=`<defs><radialGradient id="rg"><stop offset="0" stop-color="#ff9e96"/><stop offset=".45" stop-color="#ef5350"/><stop offset="1" stop-color="#b71c1c"/></radialGradient></defs>`;
+    s+=`<circle cx="110" cy="92" r="62" fill="url(#rg)" stroke="#8e1414" stroke-width="2.5"/>`+T(110,180,'Vista superior',13,'middle',700);
+    s+=`<path d="M230 95 C230 58 268 60 290 80 C300 89 320 89 330 80 C352 60 390 58 390 95 C390 132 352 130 330 110 C320 101 300 101 290 110 C268 130 230 132 230 95Z" fill="#e53935" stroke="#8e1414" stroke-width="2.5"/>`;
+    s+=T(310,180,'Vista lateral',13,'middle',700)+T(310,40,'O₂',14,'middle',700,'#1565c0')+`<path d="M300 46 L300 70 M320 46 L320 70" stroke="#1565c0" stroke-width="2" marker-end="url(#ah)"/>`;
+    return svg('0 0 440 200',ARROW+s); },
+
+  entero(){ let s=`<rect x="0" y="0" width="440" height="44" fill="#fff4cc"/>`+T(16,26,'Luz del intestino (nutrientes)',13,'start',700);
+    [[300,24],[330,16],[360,30],[392,20],[270,32]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="5" fill="#f9a825"/>`);
+    [100,180,260].forEach(x=>{
+      for(let k=0;k<9;k++) s+=`<rect x="${x+3+k*8.3}" y="52" width="5" height="22" rx="2.5" fill="#ffb699" stroke="#c76b4a" stroke-width="1"/>`;
+      s+=`<rect x="${x}" y="70" width="76" height="168" rx="6" fill="#ffd9c7" stroke="#c76b4a" stroke-width="2"/>`;
+      s+=`<ellipse cx="${x+38}" cy="198" rx="17" ry="24" fill="#b39ddb" stroke="#6a4fb3" stroke-width="2"/>`;
+      s+=mitoIcon(x+38,128,80,.42)+mitoIcon(x+30,160,-70,.38);});
+    s+=`<path d="M218 244 L218 262" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/>`+T(232,262,'hacia la sangre',12,'start');
+    s+=L(337,62,402,62)+N(414,62,1)+L(315,198,402,198)+N(414,198,2);
+    return svg('0 0 440 272',ARROW+s); },
+
+  madre(){ let s=ARROW+`<circle cx="220" cy="130" r="36" fill="#e0f2f1" stroke="#26a69a" stroke-width="3"/><circle cx="220" cy="130" r="18" fill="#80cbc4" stroke="#00796b" stroke-width="2"/>`+N(220,184,'A');
+    s+=`<path d="M190 112 L118 70 M250 112 L322 70 M190 150 L118 192 M250 150 L322 192" stroke="${INK}" stroke-width="2.2" marker-end="url(#ah)"/>`;
+    s+=`<g transform="translate(72 52)"><circle r="14" fill="#ffe082" stroke="#c49000" stroke-width="2"/><circle r="5" fill="#8d6e00"/><path d="M-12 -8 l-16 -12 M-14 4 l-20 4 M0 -14 l-4 -18 M10 -10 l12 -14 M12 8 l40 20 l8 -4 M52 28 l6 8" stroke="#c49000" stroke-width="3" fill="none" stroke-linecap="round"/></g>`+T(72,104,'Neurona',12,'middle',700);
+    s+=`<g transform="translate(368 52)"><circle r="22" fill="#e53935" stroke="#8e1414" stroke-width="2"/><circle r="8" fill="#ff8a80"/></g>`+T(368,96,'Glóbulo rojo',12,'middle',700);
+    s+=`<g transform="translate(70 212)"><path d="M-46 0 Q0 -18 46 0 Q0 18 -46 0Z" fill="#ef9a9a" stroke="#b71c1c" stroke-width="2"/><path d="M-26 -8 v16 M-14 -10 v20 M-2 -11 v22 M10 -10 v20 M22 -8 v16" stroke="#b71c1c" stroke-width="1.5"/><ellipse rx="7" ry="4" fill="#7e57c2"/></g>`+T(70,246,'Célula muscular',12,'middle',700);
+    s+=`<g transform="translate(368 210)"><rect x="-18" y="-24" width="36" height="48" rx="4" fill="#ffd9c7" stroke="#c76b4a" stroke-width="2"/><path d="M-15 -24 v-7 M-9 -24 v-7 M-3 -24 v-7 M3 -24 v-7 M9 -24 v-7 M15 -24 v-7" stroke="#c76b4a" stroke-width="2.5" stroke-linecap="round"/><ellipse cy="10" rx="8" ry="10" fill="#b39ddb"/></g>`+T(368,252,'Enterocito',12,'middle',700);
+    return svg('0 0 440 262',s); },
+
+  unipluri(){ let s=`<rect x="10" y="10" width="200" height="200" rx="14" fill="#eef6ff" stroke="#b9cbe6"/><rect x="230" y="10" width="200" height="200" rx="14" fill="#eef6ff" stroke="#b9cbe6"/>`;
+    s+=`<path d="M70 110 C50 80 80 60 100 75 C110 50 150 55 145 85 C175 85 180 120 155 130 C170 160 130 175 115 155 C95 175 60 165 70 140 C45 135 50 115 70 110Z" fill="#c8e6c9" stroke="#2e7d32" stroke-width="2.5"/>`;
+    s+=`<circle cx="112" cy="112" r="16" fill="#9575cd" stroke="#5e35b1" stroke-width="2"/><circle cx="140" cy="100" r="8" fill="#ffffff" stroke="#2e7d32"/><circle cx="88" cy="138" r="7" fill="#ffe082" stroke="#c49000"/>`;
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++){const x=246+c*44+(r%2)*10, y=28+r*42; if(x>392) continue; s+=`<rect x="${x}" y="${y}" width="40" height="38" rx="9" fill="#ffccbc" stroke="#bf360c" stroke-width="1.8"/><circle cx="${x+20}" cy="${y+19}" r="7" fill="#9575cd"/>`;}
+    s+=N(110,196,'A')+N(330,196,'B');
+    return svg('0 0 440 220',s); },
+
+  niveles(){ const items=['Célula','Tejido','?','Sistema','Organismo']; let s=ARROW;
+    items.forEach((t,i)=>{const x=6+i*88; const q=t==='?';
+      s+=`<rect x="${x}" y="28" width="76" height="58" rx="10" fill="${q?'#fff3c4':'#e3f2fd'}" stroke="${q?'#c49000':'#1e5aa8'}" stroke-width="2" ${q?'stroke-dasharray="6 4"':''}/>`;
+      s+=T(x+38,q?66:62,t,q?26:13,'middle',700);
+      if(i<4) s+=`<path d="M${x+78} 57 L${x+86} 57" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/>`;});
+    s+=T(220,112,'de lo más simple → a lo más complejo',12,'middle');
+    return svg('0 0 446 124',s); },
+
+  compara(){ let s=`<path d="M40 110 C35 60 90 35 130 45 C180 55 195 100 180 140 C165 180 110 190 75 175 C45 160 42 135 40 110Z" fill="#ffe1d3" stroke="#e0607e" stroke-width="4"/><circle cx="112" cy="112" r="24" fill="#cdb8f5" stroke="#6b4bc4" stroke-width="2.5"/>`;
+    s+=mitoIcon(70,80,-20,.6)+mitoIcon(150,160,20,.6)+`<circle cx="160" cy="80" r="7" fill="#8bd16b" stroke="#3f8a2a" stroke-width="2"/>`;
+    s+=`<rect x="250" y="25" width="170" height="160" rx="8" fill="#b9d88a" stroke="#6d8d2d" stroke-width="3"/><rect x="259" y="34" width="152" height="142" rx="5" fill="#f1fbe3"/><rect x="290" y="60" width="96" height="92" rx="24" fill="#bfe3ff" stroke="#3b8fd1" stroke-width="2"/>`;
+    s+=chloroIcon(275,55,60,.6)+chloroIcon(400,100,90,.6)+chloroIcon(338,166,0,.7)+chloroIcon(272,128,80,.6)+`<circle cx="395" cy="48" r="11" fill="#cdb8f5" stroke="#6b4bc4" stroke-width="2"/>`;
+    s+=N(112,206,'A')+N(335,206,'B');
+    return svg('0 0 440 222',s); },
+
+  golgi(){ let s=ARROW; const cols=['#f8bbd0','#f48fb1','#ec407a','#d81b60','#ad1457'];
+    for(let i=0;i<5;i++){const y=70+i*22; s+=`<path d="M130 ${y+30} Q220 ${y-14} 310 ${y+30}" stroke="${cols[i]}" stroke-width="14" fill="none" stroke-linecap="round"/><path d="M130 ${y+30} Q220 ${y-14} 310 ${y+30}" stroke="#880e4f" stroke-width="1.2" fill="none" opacity=".5"/>`;}
+    [[118,92],[104,120],[322,96],[340,126],[362,152]].forEach(([x,y])=>s+=`<circle cx="${x}" cy="${y}" r="8" fill="#f48fb1" stroke="#ad1457" stroke-width="1.8"/>`);
+    s+=`<path d="M30 110 L86 110" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/>`+T(56,98,'desde el RE',12)+`<path d="M372 168 L414 196" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/>`+T(380,214,'hacia la membrana',12);
+    return svg('0 0 440 224',s); },
+
+  grafMito(){ return barChart([{l:['Músculo','cardíaco'],v:5000,c:'#ef5350'},{l:['Hígado'],v:2000,c:'#8d6e63'},{l:['Piel'],v:400,c:'#ffcc80'},{l:['Glóbulo','rojo'],v:0,c:'#e53935'}],5000,1000,'Mitocondrias por célula'); },
+  grafColores(){ return barChart([{l:['Violeta'],v:18,c:'#8e24aa'},{l:['Azul'],v:27,c:'#1e88e5'},{l:['Verde'],v:4,c:'#43a047'},{l:['Amarillo'],v:10,c:'#fdd835'},{l:['Naranja'],v:22,c:'#fb8c00'},{l:['Rojo'],v:30,c:'#e53935'}],30,5,'Burbujas de O₂ por minuto'); },
+
+  grafLuz(){ const x0=70,y0=200; let s=ARROW;
+    for(let i=1;i<=4;i++) s+=`<line x1="${x0}" y1="${y0-i*40}" x2="420" y2="${y0-i*40}" stroke="#dde6f3"/>`;
+    s+=`<line x1="${x0}" y1="${y0}" x2="424" y2="${y0}" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/><line x1="${x0}" y1="${y0}" x2="${x0}" y2="22" stroke="${INK}" stroke-width="2" marker-end="url(#ah)"/>`;
+    s+=`<path d="M${x0} ${y0-4} Q160 66 245 66 L410 66" stroke="#2e7d32" stroke-width="4" fill="none"/>`;
+    s+=`<line x1="245" y1="66" x2="245" y2="${y0}" stroke="${INK}" stroke-dasharray="5 4"/><circle cx="245" cy="66" r="7" fill="#ffb300" stroke="${INK}" stroke-width="2"/>`+T(245,52,'X',16,'middle',700);
+    s+=T(246,226,'Intensidad de luz',13,'middle',700)+`<text transform="translate(40 112) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700" fill="${INK}">Velocidad de fotosíntesis</text>`;
+    return svg('0 0 440 236',s); },
+
+  grafAltura(){ const x0=78,y0=196,w=330,h=160,lo=4.5,hi=7; const X=v=>x0+v/4500*w, Y=v=>y0-(v-lo)/(hi-lo)*h; let s='';
+    for(let v=4.5;v<=7.001;v+=.5){s+=`<line x1="${x0}" y1="${Y(v)}" x2="${x0+w}" y2="${Y(v)}" stroke="#dde6f3"/>`+T(x0-8,Y(v)+4,v.toFixed(1).replace('.',','),11,'end');}
+    const d=[[0,5.0],[1500,5.4],[3000,5.9],[4500,6.5]];
+    s+=`<line x1="${x0}" y1="${y0}" x2="${x0+w}" y2="${y0}" stroke="${INK}" stroke-width="1.8"/><line x1="${x0}" y1="${y0}" x2="${x0}" y2="${y0-h-6}" stroke="${INK}" stroke-width="1.8"/>`;
+    s+=`<polyline points="${d.map(p=>X(p[0])+','+Y(p[1])).join(' ')}" fill="none" stroke="#c62828" stroke-width="3.5"/>`;
+    d.forEach(p=>{s+=`<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="5.5" fill="#e53935" stroke="${INK}" stroke-width="1.5"/>`+T(X(p[0]),y0+16,p[0].toLocaleString('es-CL'),11)+T(X(p[0])+(p[0]===4500?-14:p[0]===0?16:0),Y(p[1])-10,p[1].toFixed(1).replace('.',','),12,'middle',700);});
+    s+=T(x0+w/2,y0+34,'Altitud donde vive la persona (metros)',12,'middle',700);
+    s+=`<text transform="translate(20 ${y0-h/2}) rotate(-90)" text-anchor="middle" font-size="11.5" font-weight="700" fill="${INK}">Glóbulos rojos (millones/mm³)</text>`;
+    return svg('0 0 440 240',s); },
+
+  ecuacion(){ let s=ARROW+`<rect x="6" y="40" width="160" height="62" rx="12" fill="#e3f2fd" stroke="#1e5aa8" stroke-width="2"/>`+T(86,78,'6 CO₂ + 6 H₂O',17,'middle',700)+T(86,30,'Reactivos',12,'middle',700,'#1e5aa8');
+    s+=`<path d="M174 71 L250 71" stroke="${INK}" stroke-width="3" marker-end="url(#ah)"/><circle cx="212" cy="38" r="12" fill="#ffd54f" stroke="#f9a825" stroke-width="2"/>`+T(212,100,'luz + clorofila',11);
+    s+=`<rect x="258" y="40" width="176" height="62" rx="12" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>`+T(318,78,'C₆H₁₂O₆ + 6',17,'middle',700)+T(346,30,'Productos',12,'middle',700,'#2e7d32');
+    s+=`<rect x="378" y="52" width="48" height="38" rx="6" fill="#fff3c4" stroke="#c49000" stroke-width="2" stroke-dasharray="5 3"/>`+T(402,79,'?',22,'middle',700);
+    return svg('0 0 440 120',s); },
+
+  ciclo(){ let s=ARROW+`<ellipse cx="90" cy="110" rx="58" ry="32" fill="#4caf50" stroke="#1f6b25" stroke-width="2.5"/>`;
+    for(let i=0;i<3;i++) s+=`<rect x="${60+i*22}" y="98" width="14" height="24" rx="3" fill="#1f6b25"/>`;
+    s+=T(90,162,'Cloroplasto',13,'middle',700)+`<ellipse cx="350" cy="110" rx="58" ry="30" fill="#f6a04d" stroke="#a54a12" stroke-width="2.5"/><path d="M305 110 l7 -14 l7 28 l7 -28 l7 28 l7 -28 l7 28 l7 -28 l7 28 l7 -14" fill="none" stroke="#a54a12" stroke-width="2"/>`+T(350,162,'Mitocondria',13,'middle',700);
+    s+=`<path d="M128 80 Q220 18 312 80" stroke="${INK}" stroke-width="2.5" fill="none" marker-end="url(#ah)"/><rect x="164" y="22" width="112" height="28" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>`+T(220,41,'Glucosa + O₂',13,'middle',700);
+    s+=`<path d="M312 142 Q220 208 128 142" stroke="${INK}" stroke-width="2.5" fill="none" marker-end="url(#ah)"/><rect x="188" y="168" width="64" height="30" rx="8" fill="#fff3c4" stroke="#c49000" stroke-width="2" stroke-dasharray="5 3"/>`+T(220,189,'?',20,'middle',700);
+    s+=`<circle cx="30" cy="40" r="14" fill="#ffd54f" stroke="#f9a825" stroke-width="2"/><path d="M44 52 L62 74" stroke="#f9a825" stroke-width="2.5" marker-end="url(#ah)"/>`+T(30,22,'Luz',12,'middle',700);
+    s+=`<path d="M410 110 L432 110" stroke="${INK}" stroke-width="2.5" marker-end="url(#ah)"/>`+T(420,96,'ATP',12,'middle',700);
+    return svg('0 0 440 214',s); }
+};
+
+/* =========================================================
+   PREGUNTAS: 5 fases x 10 preguntas (la opción a=0 es la correcta; se barajan al mostrarse)
+   ========================================================= */
+const PHASES=[
+ {name:'Membrana de entrada',topic:'Tipos de células: unicelular, pluricelular, procariota y eucariota',enemies:['ribosoma','vacuola','adn'],qs:[
+  {t:'¿Cuál de los siguientes organismos es unicelular?',o:['Paramecio','Helecho','Champiñón','Lombriz de tierra'],e:'El paramecio es un protozoo formado por una sola célula que realiza todas las funciones vitales.'},
+  {f:'unipluri',t:'Observa las imágenes. ¿Cómo se clasifican A y B según su número de células?',o:['A: unicelular · B: pluricelular','A: pluricelular · B: unicelular','A: procariota · B: eucariota','Ambos son unicelulares'],e:'A es una ameba (una sola célula). B muestra muchas células unidas formando un tejido, propio de un organismo pluricelular.'},
+  {f:'bacteria',t:'Esta célula no tiene un núcleo rodeado por membrana. ¿Qué tipo de célula es?',o:['Procariota','Eucariota animal','Eucariota vegetal','Célula madre'],e:'Las células procariotas, como las bacterias, tienen su ADN libre en el citoplasma, en una zona llamada nucleoide.'},
+  {f:'bacteria',t:'En la bacteria, ¿qué estructura señala el número 2?',o:['Nucleoide (ADN circular)','Núcleo con envoltura nuclear','Mitocondria','Vacuola central'],e:'El nucleoide es la región donde se concentra el ADN de la bacteria, sin membrana que lo rodee.'},
+  {f:'bacteria',t:'¿Qué función cumple la estructura número 4?',o:['Permitir el movimiento de la bacteria','Producir glucosa','Almacenar agua','Digerir partículas'],e:'El número 4 es el flagelo: un filamento que gira como hélice y desplaza a la bacteria.'},
+  {t:'¿Cuál es la diferencia principal entre una célula procariota y una eucariota?',o:['La eucariota tiene un núcleo rodeado por membrana','La procariota tiene mitocondrias y la eucariota no','La eucariota no tiene ADN','La procariota siempre es más grande'],e:'"Eucariota" viene del griego eu (verdadero) y karyon (núcleo): tiene un núcleo verdadero con envoltura.'},
+  {t:'¿Qué estructura está presente tanto en células procariotas como en eucariotas?',o:['Ribosomas','Mitocondrias','Aparato de Golgi','Cloroplastos'],e:'Todas las células fabrican proteínas, por eso todas tienen ribosomas, además de membrana plasmática, citoplasma y ADN.'},
+  {t:'¿Cuál de estos seres vivos está formado por células procariotas?',o:['La bacteria Escherichia coli','La levadura del pan','Una ameba','Un helecho'],e:'Las bacterias son procariotas. Levaduras, amebas y plantas están formadas por células eucariotas.'},
+  {f:'niveles',t:'En los organismos pluricelulares las células se organizan en niveles. ¿Qué nivel falta en el esquema?',o:['Órgano','Molécula','Población','Organelo'],e:'Células parecidas forman tejidos; varios tejidos forman un órgano; varios órganos forman un sistema.'},
+  {t:'Según la teoría celular, ¿cuál afirmación es correcta?',o:['Toda célula proviene de otra célula preexistente','Las células se forman a partir de materia sin vida','Solo los animales están formados por células','Los virus son las células más pequeñas'],e:'La teoría celular dice: todos los seres vivos están formados por células, la célula es la unidad de la vida y toda célula proviene de otra célula.'}
+ ]},
+ {name:'Citoplasma profundo',topic:'Organelos y sus funciones',enemies:['ribosoma','vacuola','adn','mitocondria','golgi'],qs:[
+  {f:'animal',t:'En la célula animal, ¿qué estructura señala el número 1?',o:['Núcleo','Vacuola','Lisosoma','Cloroplasto'],e:'El núcleo contiene el ADN y dirige las actividades de la célula. En su interior se ve el nucléolo, más oscuro.'},
+  {f:'animal',t:'¿Qué organelo señala el número 3?',o:['Mitocondria','Ribosoma','Aparato de Golgi','Centríolo'],e:'La mitocondria se reconoce por su forma alargada y sus pliegues internos, llamados crestas.'},
+  {t:'¿Cuál es la función principal de la mitocondria?',o:['Producir energía (ATP) mediante la respiración celular','Fabricar glucosa con la luz solar','Guardar el ADN de la célula','Formar la pared celular'],e:'La mitocondria es la central energética: degrada glucosa con oxígeno y libera energía en forma de ATP.'},
+  {f:'golgi',t:'Este organelo recibe proteínas del retículo endoplasmático, las modifica y las envía en vesículas. ¿Cuál es?',o:['Aparato de Golgi','Mitocondria','Núcleo','Vacuola'],e:'El aparato de Golgi es un conjunto de sacos aplanados (cisternas) que empaqueta y distribuye sustancias.'},
+  {t:'¿Qué función cumplen los ribosomas?',o:['Sintetizar (fabricar) proteínas','Digerir sustancias','Producir energía','Realizar la fotosíntesis'],e:'Los ribosomas leen el ARN mensajero y unen aminoácidos para formar proteínas.'},
+  {f:'animal',t:'El número 2 señala membranas con ribosomas adheridos. ¿Cómo se llama esta estructura?',o:['Retículo endoplasmático rugoso','Retículo endoplasmático liso','Aparato de Golgi','Membrana plasmática'],e:'El RE rugoso tiene ribosomas en su superficie (por eso se ve "rugoso") y participa en la síntesis de proteínas.'},
+  {f:'animal',t:'¿Qué estructura señala el número 4 y cuál es su función?',o:['Lisosoma: digestión celular','Ribosoma: síntesis de proteínas','Vacuola: almacenar agua','Núcleo: control celular'],e:'Los lisosomas son vesículas con enzimas digestivas que degradan partículas y organelos viejos.'},
+  {f:'nucleo',t:'En el dibujo del núcleo, ¿qué señala el número 2?',o:['Poro nuclear','Nucléolo','Cromatina','Ribosoma'],e:'Los poros nucleares son aberturas de la envoltura que permiten el paso de ARN y proteínas entre el núcleo y el citoplasma.'},
+  {f:'mito',t:'Los pliegues de la membrana interna de la mitocondria (número 2) se llaman crestas. ¿Para qué sirven?',o:['Aumentan la superficie para producir más ATP','Almacenan agua','Fabrican clorofila','Protegen el ADN del núcleo'],e:'Más superficie significa más espacio para las proteínas que producen ATP.'},
+  {f:'grafMito',t:'El gráfico muestra el número aproximado de mitocondrias en distintas células. ¿Qué célula probablemente necesita más energía?',o:['Célula del músculo cardíaco','Célula del hígado','Célula de la piel','Glóbulo rojo'],e:'Más mitocondrias significa más producción de ATP. El corazón late sin descanso, por eso sus células tienen miles de mitocondrias.'}
+ ]},
+ {name:'Bosque de clorofila',topic:'Célula animal y célula vegetal',enemies:['ribosoma','vacuola','mitocondria','golgi','cloroplasto'],qs:[
+  {f:'vegetal',t:'En la célula vegetal, ¿qué estructura señala el número 1?',o:['Pared celular','Membrana plasmática','Vacuola','Citoplasma'],e:'La pared celular es una capa rígida externa que da forma y soporte a la célula vegetal.'},
+  {f:'vegetal',t:'¿Qué organelo señala el número 2?',o:['Cloroplasto','Mitocondria','Núcleo','Lisosoma'],e:'Los cloroplastos son verdes por la clorofila; en su interior se realiza la fotosíntesis.'},
+  {f:'vegetal',t:'El número 3 ocupa gran parte de la célula vegetal. ¿Qué es y qué hace?',o:['Vacuola central: almacena agua y mantiene la turgencia','Núcleo: controla la célula','Aparato de Golgi: empaqueta proteínas','Cloroplasto: realiza la fotosíntesis'],e:'La vacuola central acumula agua y sales; al llenarse empuja la pared y mantiene firme a la planta.'},
+  {t:'¿Qué estructuras tiene la célula vegetal y NO tiene la célula animal?',o:['Pared celular, cloroplastos y vacuola central','Núcleo, mitocondrias y ribosomas','Membrana plasmática y citoplasma','Lisosomas y centríolos'],e:'Pared celular, cloroplastos y una gran vacuola central son típicos de las células vegetales.'},
+  {t:'¿Qué estructura se encuentra en la célula animal pero generalmente NO en la vegetal?',o:['Centríolos','Pared celular','Cloroplastos','Vacuola central grande'],e:'Los centríolos forman el centrosoma y participan en la división de las células animales.'},
+  {t:'¿De qué sustancia está formada principalmente la pared celular de las plantas?',o:['Celulosa','Proteínas','Lípidos (grasas)','Quitina'],e:'La celulosa es un polisacárido muy resistente. La quitina forma la pared de los hongos.'},
+  {f:'compara',t:'¿Cuál de las dos células es vegetal?',o:['B, porque tiene pared celular, cloroplastos y una vacuola grande','A, porque tiene forma irregular','A, porque tiene núcleo','Ninguna: ambas son animales'],e:'La forma rectangular, la pared, los cloroplastos verdes y la gran vacuola identifican a B como célula vegetal.'},
+  {t:'¿Las células vegetales tienen mitocondrias?',o:['Sí, porque también necesitan respirar y obtener ATP','No, porque ya tienen cloroplastos','No, solo los animales respiran','Solo durante la noche'],e:'Las plantas hacen fotosíntesis en los cloroplastos y respiración celular en las mitocondrias, de día y de noche.'},
+  {f:'cloro',t:'En el cloroplasto, ¿qué señala el número 1?',o:['Grana (pilas de tilacoides)','Crestas mitocondriales','Nucléolo','Pared celular'],e:'Los tilacoides apilados forman las granas; ahí está la clorofila que capta la luz.'},
+  {f:'vegetal',t:'¿Qué estructura señala el número 6, presente tanto en células animales como vegetales?',o:['Membrana plasmática','Pared celular','Vacuola central','Cloroplasto'],e:'La membrana plasmática rodea el citoplasma y controla qué entra y sale. En la célula vegetal está justo por dentro de la pared.'}
+ ]},
+ {name:'Torrente sanguíneo',topic:'Diferenciación celular',enemies:['ribosoma','adn','mitocondria','golgi','cloroplasto','nucleo'],qs:[
+  {t:'¿Qué es la diferenciación celular?',o:['El proceso por el cual las células se especializan en forma y función','La división de una célula en dos','La muerte programada de las células','La unión de dos células sexuales'],e:'Durante el desarrollo, células no especializadas adquieren estructuras y funciones propias: neuronas, glóbulos rojos, enterocitos…'},
+  {f:'madre',t:'La célula A puede originar todos los tipos celulares del esquema. ¿Cómo se llama?',o:['Célula madre','Neurona','Glóbulo blanco','Célula procariota'],e:'Las células madre no están especializadas y pueden diferenciarse en muchos tipos de células.'},
+  {f:'sangre',t:'En este frotis de sangre, ¿qué célula señala el número 2?',o:['Glóbulo blanco (leucocito)','Glóbulo rojo (eritrocito)','Plaqueta','Neurona'],e:'El glóbulo blanco es más grande y tiene un núcleo visible, muchas veces dividido en lóbulos.'},
+  {f:'eritro',t:'El glóbulo rojo tiene forma de disco bicóncavo. ¿Qué ventaja le da esta forma?',o:['Más superficie para intercambiar oxígeno','Más espacio para el núcleo','Le permite fabricar anticuerpos','Le permite hacer fotosíntesis'],e:'La forma bicóncava aumenta la superficie y facilita el intercambio de oxígeno. Además lo hace flexible para pasar por los capilares.'},
+  {t:'Los glóbulos rojos maduros de los mamíferos NO tienen…',o:['Núcleo','Membrana plasmática','Hemoglobina','Citoplasma'],e:'Al diferenciarse pierden el núcleo y los organelos, y así queda más espacio para la hemoglobina.'},
+  {t:'Un glóbulo blanco rodea a una bacteria y la "engulle" para destruirla. ¿Cómo se llama este proceso?',o:['Fagocitosis','Fotosíntesis','Mitosis','Osmosis'],e:'En la fagocitosis la célula envuelve la partícula con su membrana y luego la digiere con sus lisosomas.'},
+  {f:'entero',t:'El enterocito es una célula del intestino. ¿Qué función tienen las microvellosidades (número 1)?',o:['Aumentar la superficie de absorción de nutrientes','Transportar oxígeno','Producir energía','Transmitir impulsos nerviosos'],e:'Las microvellosidades son pliegues de la membrana que multiplican la superficie para absorber nutrientes.'},
+  {t:'¿En qué órgano se encuentran los enterocitos?',o:['Intestino delgado','Pulmón','Corazón','Cerebro'],e:'Los enterocitos recubren las vellosidades del intestino delgado, donde se absorben los nutrientes de la digestión.'},
+  {t:'Todas tus células tienen el mismo ADN. ¿Por qué entonces una neurona es distinta de un glóbulo rojo?',o:['Porque cada tipo celular activa (expresa) genes distintos','Porque tienen ADN diferente','Porque provienen de organismos distintos','Porque una es procariota y la otra eucariota'],e:'La diferenciación ocurre porque cada célula "enciende" solo los genes que necesita para su función.'},
+  {f:'grafAltura',t:'El gráfico muestra la cantidad de glóbulos rojos en personas que viven a distintas alturas. ¿Cuál es la mejor explicación?',o:['En altura hay menos oxígeno y el cuerpo produce más glóbulos rojos para captarlo','En altura hay más oxígeno y se necesitan menos glóbulos rojos','La altura no influye en los glóbulos rojos','En altura aumentan los glóbulos rojos por el frío'],e:'A mayor altitud el aire tiene menos oxígeno; el cuerpo compensa fabricando más eritrocitos.'}
+ ]},
+ {name:'Reactor de energía',topic:'Fotosíntesis y respiración celular',enemies:['ribosoma','vacuola','adn','mitocondria','golgi','cloroplasto','nucleo'],qs:[
+  {t:'¿Cuáles son los reactivos de la fotosíntesis?',o:['Dióxido de carbono (CO₂) y agua (H₂O), con energía de la luz','Glucosa y oxígeno','Oxígeno y agua','Dióxido de carbono y glucosa'],e:'La planta toma CO₂ del aire y agua del suelo, y usa la energía de la luz para transformarlos.'},
+  {t:'¿Cuáles son los productos de la fotosíntesis?',o:['Glucosa (C₆H₁₂O₆) y oxígeno (O₂)','CO₂ y agua','Solo agua','ATP y CO₂'],e:'Se produce glucosa, el alimento de la planta, y se libera oxígeno a la atmósfera.'},
+  {f:'ecuacion',t:'Completa la ecuación de la fotosíntesis. ¿Qué molécula falta en el recuadro?',o:['O₂','CO₂','H₂O','N₂'],e:'6 CO₂ + 6 H₂O + luz → C₆H₁₂O₆ + 6 O₂'},
+  {t:'¿En qué organelo se realiza la fotosíntesis?',o:['Cloroplasto','Mitocondria','Ribosoma','Lisosoma'],e:'El cloroplasto contiene clorofila, el pigmento que capta la energía de la luz.'},
+  {t:'En la fotosíntesis, la energía de la luz se transforma en…',o:['Energía química almacenada en la glucosa','Energía eléctrica','Solo calor','Energía nuclear'],e:'La energía del Sol queda guardada en los enlaces químicos de la glucosa.'},
+  {f:'grafLuz',t:'El gráfico muestra la velocidad de fotosíntesis según la intensidad de luz. ¿Qué ocurre después del punto X?',o:['La velocidad se mantiene constante porque otro factor (CO₂ o temperatura) la limita','La velocidad sigue aumentando sin límite','La planta deja de hacer fotosíntesis','La velocidad baja a cero'],e:'Después de X, más luz ya no aumenta la velocidad: otro factor, como el CO₂ disponible, pasa a ser el limitante.'},
+  {f:'grafColores',t:'Se iluminó una planta acuática con luces de distintos colores y se contaron las burbujas de O₂. ¿Con qué color hubo MENOS fotosíntesis?',o:['Verde','Rojo','Azul','Naranja'],e:'La clorofila absorbe poco la luz verde y la refleja; por eso las hojas se ven verdes y esa luz produce menos fotosíntesis.'},
+  {t:'¿Cuál es la función principal de la respiración celular?',o:['Obtener energía (ATP) a partir de la glucosa','Producir glucosa a partir de la luz','Eliminar agua de la célula','Fabricar proteínas'],e:'Glucosa + O₂ → CO₂ + H₂O + ATP. Ocurre en las mitocondrias de animales y de plantas.'},
+  {f:'ciclo',t:'El esquema relaciona el cloroplasto con la mitocondria. ¿Qué debería ir en el recuadro "?"',o:['CO₂ + H₂O','Glucosa + O₂','Luz solar','ADN + ARN'],e:'Los productos de la respiración (CO₂ y agua) son los reactivos de la fotosíntesis, y al revés.'},
+  {f:'cloro',t:'La fase oscura (ciclo de Calvin), donde se fabrica la glucosa, ocurre en la zona número 3 del cloroplasto. ¿Cómo se llama?',o:['Estroma','Tilacoide','Matriz mitocondrial','Nucléolo'],e:'El estroma es el líquido interno del cloroplasto, donde se fija el CO₂ y se forma la glucosa.'}
+ ]}
+];
+
+/* =========================================================
+   UTILIDADES
+   ========================================================= */
+const $=id=>document.getElementById(id);
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+function hexA(h,a){const n=parseInt(h.slice(1),16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`;}
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+/* =========================================================
+   CANVAS Y ESCALA
+   ========================================================= */
+const cv=$('game'), ctx=cv.getContext('2d');
+let DPR=1, scale=1, W=520, H=820, PX0=0, PW=520, CTRL_H=130;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  const cw=window.innerWidth, ch=window.innerHeight;
+  cv.width=Math.round(cw*DPR); cv.height=Math.round(ch*DPR);
+  scale=Math.min(cw/520, ch/800);
+  W=cw/scale; H=ch/scale;
+  PW=Math.min(W,760); PX0=(W-PW)/2;
+  const c=$('ctrls'); CTRL_H=(c&&!c.hidden?c.getBoundingClientRect().height:130)/scale;
+  if(player){player.x=clamp(player.x,PX0+24,PX0+PW-24);player.y=clamp(player.y,H*.3,maxY());}
+  initBG();
+}
+const maxY=()=>H-CTRL_H-34;
+
+/* =========================================================
+   SPRITES PRE-RENDERIZADOS (estilo 3D con gradientes y brillo)
+   ========================================================= */
+const ET={
+  ribosoma:{name:'Ribosoma',r:15,hp:1,pts:100,spd:150,fire:0,col:'#9cff6b'},
+  vacuola:{name:'Vacuola',r:30,hp:3,pts:150,spd:62,fire:0,col:'#7fd8ff'},
+  adn:{name:'ADN',r:20,hp:2,pts:200,spd:105,fire:0,col:'#ff7ad9'},
+  mitocondria:{name:'Mitocondria',r:24,hp:2,pts:200,spd:95,fire:.32,col:'#ffb347',shot:'atp'},
+  golgi:{name:'Ap. de Golgi',r:27,hp:3,pts:250,spd:72,fire:.26,col:'#ff6fa8',shot:'spread'},
+  cloroplasto:{name:'Cloroplasto',r:26,hp:3,pts:250,spd:80,fire:.3,col:'#5dff7a',shot:'aim'},
+  nucleo:{name:'Núcleo',r:36,hp:6,pts:500,spd:46,fire:.38,col:'#b18cff',shot:'burst'}
+};
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h||w;return c;}
+function spec(g,x,y,rx,ry,a=.75){g.save();g.translate(x,y);g.scale(1,ry/rx);const gr=g.createRadialGradient(0,0,0,0,0,rx);gr.addColorStop(0,`rgba(255,255,255,${a})`);gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.beginPath();g.arc(0,0,rx,0,7);g.fill();g.restore();}
+function rr(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function seeded(s){return()=>{s=(s*16807)%2147483647;return (s-1)/2147483646;};}
+const DRAW={
+  ribosoma(g,R){let gr=g.createRadialGradient(-R*.3,-R*.55,R*.1,0,-R*.2,R);gr.addColorStop(0,'#eaffc0');gr.addColorStop(.5,'#6fcf3f');gr.addColorStop(1,'#1d5a12');
+    g.fillStyle=gr;g.beginPath();g.ellipse(0,-R*.18,R*.95,R*.66,0,0,7);g.fill();
+    gr=g.createRadialGradient(-R*.2,R*.35,R*.05,0,R*.45,R*.75);gr.addColorStop(0,'#fff6b0');gr.addColorStop(.6,'#e0b830');gr.addColorStop(1,'#6b4a05');
+    g.fillStyle=gr;g.beginPath();g.ellipse(0,R*.52,R*.74,R*.42,0,0,7);g.fill();
+    g.strokeStyle='rgba(255,90,150,.95)';g.lineWidth=R*.13;g.lineCap='round';g.beginPath();g.moveTo(-R*1.25,R*.3);g.bezierCurveTo(-R*.4,R*.08,R*.4,R*.5,R*1.25,R*.24);g.stroke();
+    spec(g,-R*.35,-R*.45,R*.38,R*.2);},
+  vacuola(g,R){let gr=g.createRadialGradient(-R*.35,-R*.35,R*.1,0,0,R);gr.addColorStop(0,'rgba(230,252,255,.95)');gr.addColorStop(.55,'rgba(100,200,255,.55)');gr.addColorStop(.9,'rgba(40,120,220,.75)');gr.addColorStop(1,'rgba(190,240,255,.95)');
+    g.fillStyle=gr;g.beginPath();g.arc(0,0,R,0,7);g.fill();g.strokeStyle='rgba(200,245,255,.9)';g.lineWidth=2;g.stroke();
+    const rn=seeded(7);g.fillStyle='rgba(20,80,170,.55)';for(let i=0;i<10;i++){const a=rn()*7,d=rn()*R*.65;g.beginPath();g.arc(Math.cos(a)*d,Math.sin(a)*d,R*(.05+rn()*.07),0,7);g.fill();}
+    spec(g,-R*.38,-R*.42,R*.44,R*.25,.95);g.strokeStyle='rgba(255,255,255,.35)';g.lineWidth=R*.08;g.beginPath();g.arc(0,0,R*.82,.3,2.2);g.stroke();},
+  mitocondria(g,R){const a=R*1.3,b=R*.72;let gr=g.createRadialGradient(-a*.3,-b*.5,R*.1,0,0,a);gr.addColorStop(0,'#ffe2a8');gr.addColorStop(.5,'#f2902c');gr.addColorStop(1,'#7a2e05');
+    g.fillStyle=gr;g.beginPath();g.ellipse(0,0,a,b,0,0,7);g.fill();g.fillStyle='rgba(255,226,180,.85)';g.beginPath();g.ellipse(0,0,a*.84,b*.7,0,0,7);g.fill();
+    g.lineJoin='round';g.beginPath();const n=8;for(let i=0;i<=n;i++){const x=-a*.72+i*(a*1.44/n),y=(i%2?-1:1)*b*.48;i?g.lineTo(x,y):g.moveTo(x,y);}
+    g.strokeStyle='#c45a12';g.lineWidth=R*.14;g.stroke();g.strokeStyle='rgba(255,240,210,.55)';g.lineWidth=R*.05;g.stroke();
+    spec(g,-a*.35,-b*.55,a*.45,b*.22);},
+  golgi(g,R){const cols=['#ffd0e4','#ff9ac4','#ff5fa2','#e0367f','#b01d61'];g.lineCap='round';
+    for(let i=0;i<5;i++){const y=-R*.62+i*R*.3,w=R*(1.05-i*.07);const path=()=>{g.beginPath();g.moveTo(-w,y+R*.28);g.quadraticCurveTo(0,y-R*.32,w,y+R*.28);};
+      path();g.lineWidth=R*.24;g.strokeStyle='#4a0a2c';g.stroke();path();g.lineWidth=R*.17;g.strokeStyle=cols[i];g.stroke();
+      g.save();g.translate(0,-R*.04);path();g.lineWidth=R*.05;g.strokeStyle='rgba(255,255,255,.6)';g.stroke();g.restore();}
+    [[-R*1.08,R*.62],[R*1.1,R*.55],[R*.95,-R*.62],[-R*.9,-R*.55]].forEach(([x,y])=>{const gr=g.createRadialGradient(x-2,y-2,0,x,y,R*.15);gr.addColorStop(0,'#fff');gr.addColorStop(.4,'#ff9ac4');gr.addColorStop(1,'#a0174f');g.fillStyle=gr;g.beginPath();g.arc(x,y,R*.15,0,7);g.fill();});},
+  nucleo(g,R){let gr=g.createRadialGradient(-R*.35,-R*.4,R*.1,0,0,R);gr.addColorStop(0,'#f1e7ff');gr.addColorStop(.55,'#9a6cf5');gr.addColorStop(1,'#2a0f66');
+    g.fillStyle=gr;g.beginPath();g.arc(0,0,R,0,7);g.fill();g.strokeStyle='rgba(235,220,255,.85)';g.lineWidth=R*.06;g.beginPath();g.arc(0,0,R*.94,0,7);g.stroke();
+    g.fillStyle='#1a0840';for(let i=0;i<16;i++){const a=i/16*Math.PI*2;g.beginPath();g.arc(Math.cos(a)*R*.94,Math.sin(a)*R*.94,R*.045,0,7);g.fill();}
+    const rn=seeded(3);g.strokeStyle='rgba(215,190,255,.5)';g.lineWidth=R*.05;g.lineCap='round';
+    for(let i=0;i<7;i++){const a=rn()*7,d=rn()*R*.6,x=Math.cos(a)*d,y=Math.sin(a)*d;g.beginPath();g.moveTo(x,y);g.bezierCurveTo(x+R*.2,y-R*.2,x+R*.1,y+R*.25,x+R*.3,y+R*.1);g.stroke();}
+    gr=g.createRadialGradient(R*.12,R*.02,0,R*.2,R*.12,R*.34);gr.addColorStop(0,'#9b74ff');gr.addColorStop(1,'#1d0650');g.fillStyle=gr;g.beginPath();g.arc(R*.2,R*.12,R*.33,0,7);g.fill();
+    spec(g,-R*.38,-R*.42,R*.42,R*.22,.85);},
+  cloroplasto(g,R){const a=R*1.3,b=R*.78;let gr=g.createRadialGradient(-a*.3,-b*.45,R*.1,0,0,a);gr.addColorStop(0,'#d8ffb8');gr.addColorStop(.5,'#3dbb55');gr.addColorStop(1,'#0a4a1a');
+    g.fillStyle=gr;g.beginPath();g.ellipse(0,0,a,b,0,0,7);g.fill();g.fillStyle='rgba(180,245,150,.5)';g.beginPath();g.ellipse(0,0,a*.86,b*.76,0,0,7);g.fill();
+    g.strokeStyle='#1f7a33';g.lineWidth=R*.07;g.beginPath();g.moveTo(-a*.75,b*.05);g.bezierCurveTo(-a*.3,-b*.3,a*.2,b*.35,a*.75,-b*.05);g.stroke();
+    [[-a*.48,-b*.12],[0,b*.12],[a*.48,-b*.1]].forEach(([x,y])=>{for(let i=0;i<4;i++){const yy=y-R*.24+i*R*.15;rr(g,x-R*.24,yy,R*.48,R*.11,R*.05);g.fillStyle='#16602a';g.fill();g.fillStyle='rgba(140,255,160,.6)';g.fillRect(x-R*.2,yy+R*.01,R*.4,R*.025);}});
+    spec(g,-a*.35,-b*.5,a*.42,b*.22);}
+};
+const SPR={}, GLOW={};
+function glowSpr(col){if(GLOW[col])return GLOW[col];const c=mk(64),g=c.getContext('2d'),gr=g.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,hexA(col,1));gr.addColorStop(.25,hexA(col,.55));gr.addColorStop(1,hexA(col,0));g.fillStyle=gr;g.fillRect(0,0,64,64);return GLOW[col]=c;}
+function buildSprites(){
+  for(const k in DRAW){const R=ET[k].r,S=Math.ceil(R*2*1.75),c=mk(S*2),g=c.getContext('2d');g.scale(2,2);g.translate(S/2,S/2);
+    const gl=g.createRadialGradient(0,0,R*.5,0,0,S/2);gl.addColorStop(0,hexA(ET[k].col,.35));gl.addColorStop(1,hexA(ET[k].col,0));g.fillStyle=gl;g.fillRect(-S/2,-S/2,S,S);
+    DRAW[k](g,R);SPR[k]={c,S};}
+  // membrana de fosfolípidos (bicapa) para los bordes
+  const t=mk(40,18),g=t.getContext('2d');
+  [[6,'#ff8fc0'],[34,'#ff8fc0']].forEach(([x,c])=>{const gr=g.createRadialGradient(x-1.5,7,0,x,9,6);gr.addColorStop(0,'#fff');gr.addColorStop(.4,c);gr.addColorStop(1,'#8a1550');g.fillStyle=gr;g.beginPath();g.arc(x,9,5.5,0,7);g.fill();});
+  g.strokeStyle='rgba(255,210,120,.75)';g.lineWidth=1.6;[[11,7],[11,11],[29,7],[29,11]].forEach(([x,y])=>{g.beginPath();g.moveTo(x,y);g.quadraticCurveTo(x<20?16:24,y+(y<9?-2:2),20,y);g.stroke();});
+  SPR.membrane=t;
+}
+
+/* =========================================================
+   FONDO: citoplasma con profundidad (parallax)
+   ========================================================= */
+const PAL=[
+  {top:'#021622',bot:'#06303f',blob:'#1ec8c8',acc:'#38e8ff'},
+  {top:'#0e0424',bot:'#2a0b45',blob:'#a24bff',acc:'#d08cff'},
+  {top:'#031a0b',bot:'#0b3a1c',blob:'#4cff7a',acc:'#9cff6b'},
+  {top:'#1e030a',bot:'#470a17',blob:'#ff3d5a',acc:'#ff8a9a'},
+  {top:'#1c1102',bot:'#3f2806',blob:'#ffc93c',acc:'#ffe08a'}];
+const BG={blobs:[],dust:[],far:[],fil:[],scroll:0};
+function initBG(){
+  BG.blobs=[];for(let i=0;i<7;i++)BG.blobs.push({x:rand(0,W),y:rand(0,H),r:rand(90,230),sp:rand(6,16)});
+  BG.dust=[];for(let i=0;i<70;i++)BG.dust.push({x:rand(0,W),y:rand(0,H),z:rand(.25,1)});
+  BG.far=[];const ks=Object.keys(DRAW);for(let i=0;i<6;i++)BG.far.push({k:ks[i%ks.length],x:rand(0,W),y:rand(0,H),s:rand(.5,.9),rot:rand(0,6),rs:rand(-.3,.3),sp:rand(14,28)});
+  BG.fil=[];for(let i=0;i<5;i++)BG.fil.push({x:rand(0,W),y:rand(-H,H),len:rand(240,520),amp:rand(20,60),sp:rand(30,50),ph:rand(0,6)});
+}
+function drawBG(dt){
+  const p=PAL[G.phase]||PAL[0];
+  const gr=ctx.createLinearGradient(0,0,0,H);gr.addColorStop(0,p.top);gr.addColorStop(1,p.bot);ctx.fillStyle=gr;ctx.fillRect(0,0,W,H);
+  const gs=glowSpr(p.blob);ctx.globalCompositeOperation='lighter';
+  for(const b of BG.blobs){b.y+=b.sp*dt;if(b.y-b.r>H){b.y=-b.r;b.x=rand(0,W);}ctx.globalAlpha=.13;ctx.drawImage(gs,b.x-b.r,b.y-b.r,b.r*2,b.r*2);}
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  // organelos lejanos, desenfocados por distancia
+  for(const f of BG.far){f.y+=f.sp*dt;f.rot+=f.rs*dt;if(f.y>H+60){f.y=-60;f.x=rand(0,W);}const s=SPR[f.k];if(!s)continue;
+    ctx.save();ctx.globalAlpha=.16;ctx.translate(f.x,f.y);ctx.rotate(f.rot);const w=s.S*f.s;ctx.drawImage(s.c,-w/2,-w/2,w,w);ctx.restore();}
+  // citoesqueleto
+  ctx.strokeStyle=hexA(p.acc,.10);ctx.lineWidth=3;
+  for(const f of BG.fil){f.y+=f.sp*dt;if(f.y>H+40){f.y=-f.len-40;f.x=rand(0,W);}ctx.beginPath();
+    for(let i=0;i<=12;i++){const yy=f.y+i/12*f.len,xx=f.x+Math.sin(i*.6+f.ph)*f.amp;i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}ctx.stroke();}
+  // partículas
+  ctx.fillStyle=hexA(p.acc,.55);
+  for(const d of BG.dust){d.y+=(30+d.z*170)*dt;if(d.y>H){d.y=-4;d.x=rand(0,W);}const s=d.z*2.2;ctx.globalAlpha=.25+d.z*.5;
+    if(d.z>.8)ctx.fillRect(d.x,d.y,1.4,s*5);else ctx.fillRect(d.x,d.y,s,s);}
+  ctx.globalAlpha=1;
+  // bicapa lipídica en los bordes del campo de juego
+  BG.scroll=(BG.scroll+60*dt)%18;
+  if(!BG.pat) BG.pat=ctx.createPattern(SPR.membrane,'repeat-y');
+  const edge=(x)=>{ctx.save();ctx.translate(x,BG.scroll-18);ctx.fillStyle=BG.pat;ctx.fillRect(0,0,40,H+36);ctx.restore();};
+  if(PX0>40){ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(0,0,PX0-40,H);ctx.fillRect(PX0+PW+40,0,W,H);edge(PX0-40);edge(PX0+PW);}
+  else{ctx.globalAlpha=.7;edge(-22);edge(W-18);ctx.globalAlpha=1;}
+}
+function drawVignette(){const v=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.35,W/2,H/2,Math.max(W,H)*.75);
+  v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,.55)');ctx.fillStyle=v;ctx.fillRect(0,0,W,H);}
+
+/* =========================================================
+   ESTADO DEL JUEGO
+   ========================================================= */
+let state='menu', player=null;
+let enemies=[], bullets=[], ebullets=[], parts=[], texts=[];
+const G={phase:0,score:0,phaseStartScore:0,ammo:0,hp:100,correct:0,queue:[],wrongIds:new Set(),wrongTotal:0,kills:0,
+  time:0,shake:0,spawnT:1.5,emptyT:0,fireCD:0,endT:0,finalNotice:false,firstTry:0,stats:[]};
+let unlocked=store.get('cm_unlocked',1), best=store.get('cm_best',0), teacher=false;
+
+function newPlayer(){return{x:PX0+PW/2,y:maxY()-20,r:15,inv:0,tilt:0,vx:0,dead:false};}
+
+/* ---------- Enemigos ---------- */
+function diff(){return 1+G.phase*.2;}
+function spawnGroup(){
+  const pool=PHASES[G.phase].enemies, maxE=7+G.phase*2;
+  if(enemies.length>=maxE) return;
+  const k=pool[Math.floor(Math.random()*pool.length)], d=ET[k], r=Math.random();
+  const L=PX0+40, Rr=PX0+PW-40;
+  if(k==='nucleo'||k==='vacuola'){ addEnemy(k,rand(L+30,Rr-30),-50,'drift',{amp:rand(30,70)}); if(k==='vacuola'&&Math.random()<.5) addEnemy(k,rand(L,Rr),-140,'drift',{amp:40}); return; }
+  if(r<.35){ const n=3+Math.floor(Math.random()*2+G.phase*.4), span=Math.min(PW-100,n*70), x0=PX0+PW/2-span/2+rand(-30,30);
+    for(let i=0;i<n;i++) addEnemy(k,x0+i*span/(n-1),-40-Math.abs(i-(n-1)/2)*34,'drift',{amp:24}); }
+  else if(r<.7){ const x0=rand(L+80,Rr-80), n=4+Math.floor(G.phase*.5);
+    for(let i=0;i<n;i++) addEnemy(k,x0,-40-i*48,'sine',{amp:rand(70,120),ph:i*.5}); }
+  else { const n=1+Math.floor(Math.random()*(1+G.phase*.5)); for(let i=0;i<n;i++) addEnemy(k,rand(L,Rr),-40-i*60,'dive',{}); }
+}
+function addEnemy(k,x,y,move,o){
+  const d=ET[k], df=diff();
+  enemies.push({k,def:d,x,y,x0:x,move,hp:Math.ceil(d.hp*(G.phase>=3&&d.hp>1?1.25:1)),t:rand(0,1),
+    amp:o.amp||40,ph:o.ph||rand(0,6),f:rand(1.2,2.2),vy:d.spd*(.85+G.phase*.08),vx:0,
+    rot:rand(-.4,.4),rs:rand(-.8,.8),flash:0,fireT:rand(.8,2.4)/df,hold:rand(.9,1.8),ty:rand(H*.12,H*.32),locked:false});
+}
+function enemyFire(e){
+  const d=e.def, sp=(220+G.phase*22), ang=Math.atan2(player.y-e.y,player.x-e.x);
+  const shot=(a,s,col,r=5)=>ebullets.push({x:e.x,y:e.y+d.r*.5,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r,col});
+  if(d.shot==='atp') shot(Math.PI/2,sp,'#ffc93c');
+  else if(d.shot==='spread') [-.32,0,.32].forEach(o=>shot(Math.PI/2+o,sp*.85,'#ff6fa8',6));
+  else if(d.shot==='aim') shot(ang,sp*1.15,'#7cff6b');
+  else if(d.shot==='burst') [-.16,0,.16].forEach(o=>shot(ang+o,sp,'#c9a8ff',6));
+}
+function updateEnemies(dt,attract){
+  for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];e.t+=dt;e.rot+=e.rs*dt;if(e.flash>0)e.flash-=dt;
+    if(e.move==='drift'){e.y+=e.vy*dt;e.x=e.x0+Math.sin(e.t*e.f+e.ph)*e.amp;}
+    else if(e.move==='sine'){e.y+=e.vy*.9*dt;e.x=e.x0+Math.sin(e.t*2.2+e.ph)*e.amp;}
+    else if(e.move==='dive'){
+      if(e.t<e.hold){e.y+=(e.ty-e.y)*Math.min(1,dt*2.4);e.x=e.x0+Math.sin(e.t*3)*26;}
+      else{if(!e.locked){e.locked=true;const tx=attract?e.x:player.x,ty=attract?H:player.y;const dx=tx-e.x,dy=ty-e.y,dd=Math.hypot(dx,dy)||1,s=e.def.spd*2.6;e.vx=dx/dd*s;e.vy=Math.abs(dy/dd*s)+40;}
+        e.x+=e.vx*dt;e.y+=e.vy*dt;}}
+    if(e.y>H+70||e.x<-120||e.x>W+120){enemies.splice(i,1);continue;}
+    if(!attract&&e.def.fire&&e.y>10&&e.y<H*.62){e.fireT-=dt;if(e.fireT<=0){e.fireT=(1/(e.def.fire*diff()))*rand(.6,1.4);enemyFire(e);}}
+  }
+}
+
+/* ---------- Efectos ---------- */
+function burst(x,y,col,n,spd,life,size){for(let i=0;i<n;i++){const a=rand(0,Math.PI*2),s=rand(spd*.3,spd);parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(life*.5,life),max:life,size:rand(size*.5,size),col,t:'s'});}}
+function explode(x,y,col,big){burst(x,y,col,big?40:22,big?320:220,.7,big?16:11);burst(x,y,'#ffffff',8,120,.35,8);
+  parts.push({x,y,life:.45,max:.45,size:big?90:52,col,t:'r'});parts.push({x,y,life:.25,max:.25,size:big?140:80,col,t:'f'});
+  G.shake=Math.max(G.shake,big?14:5);SFX.boom(big);}
+function floatText(x,y,txt,col){texts.push({x,y,txt,col,life:1.1});}
+let toastT=null;
+function toast(msg,ms=1800){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+
+/* ---------- Disparo del jugador ---------- */
+let fireHeld=false;
+function tryFire(){
+  if(G.fireCD>0) return;
+  if(G.ammo<=0){SFX.empty();const a=$('ammoBox');a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash');G.fireCD=.25;return;}
+  G.ammo--;G.fireCD=.15;bullets.push({x:player.x,y:player.y-30,vy:-920});SFX.shoot();hud();
+}
+
+/* ---------- Bucle principal ---------- */
+function update(dt){
+  G.time+=dt; if(G.fireCD>0)G.fireCD-=dt; if(G.shake>0)G.shake=Math.max(0,G.shake-dt*30);
+  if(state==='menu'){ G.spawnT-=dt; if(G.spawnT<=0){G.spawnT=rand(.8,1.6); if(enemies.length<10){const ks=Object.keys(ET),k=ks[Math.floor(Math.random()*ks.length)];addEnemy(k,rand(PX0+40,PX0+PW-40),-50,Math.random()<.5?'drift':'sine',{amp:rand(30,90)});}}
+    updateEnemies(dt,true); updateParts(dt); return; }
+  if(state!=='play'&&state!=='dying'&&state!=='ending'){ return; }
+  updateParts(dt);
+  if(state==='dying'){G.endT-=dt;updateEnemies(dt,true);if(G.endT<=0)gameOver();return;}
+  if(state==='ending'){G.endT-=dt;if(G.endT<=0)phaseClear();return;}
+
+  // movimiento por teclado
+  const p=player; let mx=0,my=0;
+  if(keys.ArrowLeft||keys.KeyA)mx-=1; if(keys.ArrowRight||keys.KeyD)mx+=1; if(keys.ArrowUp||keys.KeyW)my-=1; if(keys.ArrowDown||keys.KeyS)my+=1;
+  p.x+=mx*430*dt; p.y+=my*430*dt;
+  p.x=clamp(p.x,PX0+22,PX0+PW-22); p.y=clamp(p.y,H*.3,maxY());
+  p.vx=(p.x-p.lastx||0)/Math.max(dt,.001); p.lastx=p.x; p.tilt+=(clamp(p.vx/900,-.35,.35)-p.tilt)*Math.min(1,dt*10);
+  if(p.inv>0)p.inv-=dt;
+  if(fireHeld||keys.Space) tryFire();
+
+  // generación de oleadas
+  G.spawnT-=dt; if(G.spawnT<=0){G.spawnT=Math.max(.75,1.9-G.phase*.2)*rand(.75,1.25);spawnGroup();}
+  updateEnemies(dt,false);
+
+  // balas del jugador
+  for(let i=bullets.length-1;i>=0;i--){const b=bullets[i];b.y+=b.vy*dt;if(b.y<-20){bullets.splice(i,1);continue;}
+    for(let j=enemies.length-1;j>=0;j--){const e=enemies[j],hr=e.def.r*(e.k==='mitocondria'||e.k==='cloroplasto'?1.15:1)+4;
+      if(Math.abs(b.x-e.x)<hr&&Math.abs(b.y-e.y)<hr&&Math.hypot(b.x-e.x,b.y-e.y)<hr){
+        bullets.splice(i,1);e.hp--;e.flash=.12;burst(b.x,b.y,e.def.col,5,140,.3,6);SFX.hit();
+        if(e.hp<=0){enemies.splice(j,1);const pts=Math.round(e.def.pts*(1+G.phase*.25));G.score+=pts;G.kills++;
+          explode(e.x,e.y,e.def.col,e.def.r>=30);floatText(e.x,e.y-e.def.r,`+${pts} ${e.def.name}`,e.def.col);hud();}
+        break;}}}
+  // balas enemigas
+  for(let i=ebullets.length-1;i>=0;i--){const b=ebullets[i];b.x+=b.vx*dt;b.y+=b.vy*dt;
+    if(b.y>H+20||b.y<-30||b.x<-20||b.x>W+20){ebullets.splice(i,1);continue;}
+    if(p.inv<=0&&Math.hypot(b.x-p.x,b.y-p.y)<b.r+p.r*.75){ebullets.splice(i,1);damage(12);}}
+  // choque con organelos
+  if(p.inv<=0) for(let j=enemies.length-1;j>=0;j--){const e=enemies[j];if(Math.hypot(e.x-p.x,e.y-p.y)<e.def.r*.85+p.r){
+      damage(25);if(e.k==='nucleo'){e.hp-=2;e.flash=.2;if(e.hp<=0){enemies.splice(j,1);explode(e.x,e.y,e.def.col,true);}}else{enemies.splice(j,1);explode(e.x,e.y,e.def.col,false);}break;}}
+
+  // munición agotada → pregunta automática
+  if(G.ammo<=0&&bullets.length===0){
+    if(G.correct<10){G.emptyT+=dt;$('bReload').classList.add('urge');if(G.emptyT>1.1){G.emptyT=0;openQuiz();}}
+    else {state='ending';G.endT=1.2;enemies.forEach(e=>explode(e.x,e.y,e.def.col,false));enemies=[];ebullets=[];}
+  } else {G.emptyT=0;$('bReload').classList.remove('urge');}
+}
+function damage(n){const p=player;G.hp=Math.max(0,G.hp-n);p.inv=1.1;G.shake=12;SFX.hurt();burst(p.x,p.y,'#ff5fa2',14,200,.5,9);hud();
+  if(G.hp<=0){p.dead=true;explode(p.x,p.y,'#38e8ff',true);explode(p.x,p.y,'#ff5fa2',true);state='dying';G.endT=1.4;fireHeld=false;}}
+function updateParts(dt){
+  for(let i=parts.length-1;i>=0;i--){const q=parts[i];q.life-=dt;if(q.life<=0){parts.splice(i,1);continue;}if(q.t==='s'){q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=.96;q.vy*=.96;}}
+  for(let i=texts.length-1;i>=0;i--){const t=texts[i];t.life-=dt;t.y-=40*dt;if(t.life<=0)texts.splice(i,1);}
+}
+
+/* ---------- Dibujo ---------- */
+function drawEnemy(e){
+  ctx.save();ctx.translate(e.x,e.y);
+  if(e.k==='adn') drawADN(e);
+  else{const s=SPR[e.k];ctx.rotate(e.rot);ctx.drawImage(s.c,-s.S/2,-s.S/2,s.S,s.S);
+    if(e.flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(1,e.flash*8);ctx.drawImage(s.c,-s.S/2,-s.S/2,s.S,s.S);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';}
+    ctx.rotate(-e.rot);}
+  ctx.font='600 11px "Chakra Petch",sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillText(e.def.name,1,e.def.r+15);
+  ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillText(e.def.name,0,e.def.r+14);
+  ctx.restore();
+}
+function drawADN(e){
+  const R=e.def.r,Lh=R*2.6,Nn=12;ctx.rotate(Math.sin(e.t*1.3)*.35);
+  ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.5;const g=glowSpr(e.def.col);ctx.drawImage(g,-R*1.6,-Lh*.75,R*3.2,Lh*1.5);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  const pts=[];for(let i=0;i<=Nn;i++){const ph=e.t*4+i*.62;pts.push({y:-Lh/2+i*Lh/Nn,x:Math.sin(ph)*R*.72,z:Math.cos(ph)});}
+  ctx.lineWidth=2.6;pts.forEach((q,i)=>{ctx.strokeStyle=i%2?'#ffd54a':'#52e3ff';ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(-q.x,q.y);ctx.stroke();});
+  const strand=(sgn,col)=>{ctx.strokeStyle=col;ctx.lineWidth=4.5;ctx.lineCap='round';ctx.beginPath();pts.forEach((q,i)=>{const x=q.x*sgn;i?ctx.lineTo(x,q.y):ctx.moveTo(x,q.y);});ctx.stroke();
+    pts.forEach(q=>{const z=q.z*sgn,r=3+z*1.3;const gr=ctx.createRadialGradient(q.x*sgn-1,q.y-1,0,q.x*sgn,q.y,r+1);gr.addColorStop(0,'#fff');gr.addColorStop(.5,col);gr.addColorStop(1,'#20103a');ctx.fillStyle=gr;ctx.beginPath();ctx.arc(q.x*sgn,q.y,Math.max(1.5,r),0,7);ctx.fill();});};
+  strand(-1,'#7a8cff');strand(1,'#ff5fa2');
+  if(e.flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.7;ctx.drawImage(g,-R*1.4,-Lh*.6,R*2.8,Lh*1.2);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';}
+}
+function pill(g,x,y,w,h){const r=w/2;g.beginPath();g.moveTo(x,y+r);g.arc(x+r,y+r,r,Math.PI,0);g.lineTo(x+w,y+h-r);g.arc(x+r,y+h-r,r,0,Math.PI);g.closePath();}
+function drawPlayer(){
+  const p=player;if(!p||p.dead)return;
+  ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.tilt);
+  if(p.inv>0&&Math.floor(p.inv*16)%2)ctx.globalAlpha=.45;
+  // propulsor
+  const fl=1+Math.sin(G.time*42)*.12+Math.random()*.12;ctx.globalCompositeOperation='lighter';
+  let gr=ctx.createRadialGradient(0,30,0,0,36,24*fl);gr.addColorStop(0,'rgba(220,255,255,.95)');gr.addColorStop(.35,'rgba(56,232,255,.6)');gr.addColorStop(1,'rgba(0,60,255,0)');
+  ctx.fillStyle=gr;ctx.beginPath();ctx.ellipse(0,40,9*fl,24*fl,0,0,7);ctx.fill();
+  ctx.drawImage(glowSpr('#38e8ff'),-34,-40,68,90);ctx.globalCompositeOperation='source-over';
+  // aletas
+  gr=ctx.createLinearGradient(-26,0,26,0);gr.addColorStop(0,'#7a1046');gr.addColorStop(.5,'#ff8fc0');gr.addColorStop(1,'#7a1046');ctx.fillStyle=gr;
+  ctx.beginPath();ctx.moveTo(-12,2);ctx.lineTo(-27,24);ctx.lineTo(-23,30);ctx.lineTo(-11,22);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(12,2);ctx.lineTo(27,24);ctx.lineTo(23,30);ctx.lineTo(11,22);ctx.closePath();ctx.fill();
+  // cuerpo (cápsula metálica)
+  gr=ctx.createLinearGradient(-14,0,14,0);gr.addColorStop(0,'#24324f');gr.addColorStop(.22,'#9fb4d4');gr.addColorStop(.42,'#ffffff');gr.addColorStop(.68,'#8aa0c4');gr.addColorStop(1,'#18233c');
+  ctx.fillStyle=gr;pill(ctx,-14,-31,28,60);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;ctx.stroke();
+  // mitad inferior color (como cápsula de medicamento)
+  ctx.save();pill(ctx,-14,-31,28,60);ctx.clip();gr=ctx.createLinearGradient(-14,0,14,0);gr.addColorStop(0,'#5a0a30');gr.addColorStop(.42,'#ff9ac4');gr.addColorStop(1,'#4a0826');
+  ctx.fillStyle=gr;ctx.fillRect(-14,6,28,30);ctx.fillStyle='rgba(56,232,255,.9)';ctx.fillRect(-14,4,28,3);ctx.restore();
+  // cabina de vidrio
+  gr=ctx.createRadialGradient(-3,-19,1,0,-14,12);gr.addColorStop(0,'#eaffff');gr.addColorStop(.4,'#38c8ff');gr.addColorStop(1,'#062a5c');
+  ctx.fillStyle=gr;ctx.beginPath();ctx.ellipse(0,-14,8.5,11,0,0,7);ctx.fill();spec(ctx,-3,-19,4,2.4,.9);
+  ctx.restore();
+  if(p.inv>0){ctx.strokeStyle=`rgba(56,232,255,${Math.min(.6,p.inv)})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,34,0,7);ctx.stroke();}
+}
+function render(){
+  ctx.setTransform(DPR*scale,0,0,DPR*scale,0,0);
+  const sx=G.shake?rand(-G.shake,G.shake)*.5:0, sy=G.shake?rand(-G.shake,G.shake)*.5:0;
+  ctx.translate(sx,sy);
+  drawBG(lastDt);
+  for(const e of enemies) drawEnemy(e);
+  // balas enemigas
+  ctx.globalCompositeOperation='lighter';
+  for(const b of ebullets){ctx.drawImage(glowSpr(b.col),b.x-b.r*3,b.y-b.r*3,b.r*6,b.r*6);ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(b.x,b.y,b.r*.55,0,7);ctx.fill();}
+  // balas del jugador
+  const bg=glowSpr('#38e8ff');
+  for(const b of bullets){ctx.drawImage(bg,b.x-12,b.y-22,24,44);ctx.fillStyle='#eaffff';pill(ctx,b.x-2.5,b.y-11,5,22);ctx.fill();}
+  // partículas
+  for(const q of parts){const a=q.life/q.max;
+    if(q.t==='s'){ctx.globalAlpha=a;const s=q.size*(.5+a*.5);ctx.drawImage(glowSpr(q.col),q.x-s,q.y-s,s*2,s*2);}
+    else if(q.t==='r'){ctx.globalAlpha=a;ctx.strokeStyle=q.col;ctx.lineWidth=3*a+1;ctx.beginPath();ctx.arc(q.x,q.y,q.size*(1-a)+6,0,7);ctx.stroke();}
+    else{ctx.globalAlpha=a*.9;const s=q.size*(1.2-a*.4);ctx.drawImage(glowSpr('#ffffff'),q.x-s,q.y-s,s*2,s*2);}}
+  ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
+  if(state!=='menu') drawPlayer();
+  // textos flotantes
+  ctx.textAlign='center';ctx.font='700 13px "Chakra Petch",sans-serif';
+  for(const t of texts){ctx.globalAlpha=Math.min(1,t.life*1.5);ctx.fillStyle=t.col;ctx.fillText(t.txt,t.x,t.y);}
+  ctx.globalAlpha=1;
+  ctx.setTransform(DPR*scale,0,0,DPR*scale,0,0);
+  drawVignette();
+}
+let last=performance.now(), lastDt=0;
+function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;lastDt=(state==='play'||state==='menu'||state==='dying'||state==='ending')?dt:dt*.15;update(dt);render();requestAnimationFrame(loop);}
+
+/* =========================================================
+   HUD
+   ========================================================= */
+function hud(){
+  $('hPhase').innerHTML=`Fase <b>${G.phase+1}</b>/5`;
+  $('hScore').textContent=G.score.toLocaleString('es-CL');
+  $('hHp').style.width=G.hp+'%';$('hHpBar').classList.toggle('low',G.hp<=35);
+  $('hAmmo').textContent=G.ammo;$('ammoBox').classList.toggle('empty',G.ammo<=0);
+  const q=$('hQ');let h='<small>PREGUNTAS</small>';for(let i=0;i<10;i++)h+=`<i class="${i<G.correct?'on':''}"></i>`;q.innerHTML=h;
+  $('bReload').disabled=G.correct>=10;
+}
+function showPlayUI(on){$('hud').hidden=!on;$('ctrls').hidden=!on;if(on)requestAnimationFrame(resize);}
+
+/* =========================================================
+   PANTALLAS
+   ========================================================= */
+const scr=$('screen');
+function screen(html){scr.innerHTML=`<div class="card">${html}</div>`;scr.hidden=false;const b=scr.querySelector('.btn.primary,.btn.go');if(b&&matchMedia('(hover:hover)').matches)b.focus({preventScroll:true});}
+function closeScreen(){scr.hidden=true;scr.innerHTML='';}
+scr.addEventListener('click',ev=>{const b=ev.target.closest('[data-a]');if(!b||b.disabled)return;SFX.init();const a=b.dataset.a,v=+b.dataset.v;
+  if(a==='play')introPhase(Math.min(unlocked,5)-1);
+  else if(a==='phase')introPhase(v);
+  else if(a==='how')howTo();
+  else if(a==='menu')menu();
+  else if(a==='start')beginPhase();
+  else if(a==='resume')resume();
+  else if(a==='retry')introPhase(G.phase);
+  else if(a==='next')introPhase(G.phase+1);
+  else if(a==='teacher'){teacher=!teacher;menu();}
+  else if(a==='full'){const el=document.documentElement;try{(el.requestFullscreen||el.webkitRequestFullscreen).call(el).catch(()=>{});}catch(e){}}
+});
+
+function menu(){
+  state='menu';showPlayUI(false);enemies=[];ebullets=[];bullets=[];G.phase=0;
+  const open=teacher?5:unlocked;
+  let ph='';PHASES.forEach((p,i)=>{ph+=`<button class="ph ${i<unlocked-1?'done':''}" data-a="phase" data-v="${i}" ${i<open?'':'disabled'}><b>FASE ${i+1}</b><span>${p.topic}</span></button>`;});
+  screen(`<p class="eyebrow">Biología celular · Juego de naves</p>
+    <h1 class="title">CÁPSULA<span>MOLECULAR</span></h1>
+    <p class="lead">Pilotea una nanocápsula dentro de la célula. Esquiva y destruye organelos, pero cuida tus balas: <b style="color:var(--atp)">cada respuesta correcta te da 15 balas</b>. Responde 10 preguntas por fase para avanzar: 5 fases, 50 preguntas.</p>
+    <div class="btns"><button class="btn primary" data-a="play">${unlocked>1?'Continuar · Fase '+Math.min(unlocked,5):'Jugar'}</button><button class="btn" data-a="how">Cómo jugar</button><button class="btn" data-a="full">Pantalla completa</button></div>
+    <div class="phases">${ph}</div>
+    <p class="small">Récord: <b>${best.toLocaleString('es-CL')}</b> puntos · <button class="link" data-a="teacher">${teacher?'Desactivar':'Activar'} modo docente (todas las fases abiertas)</button></p>`);
+}
+function howTo(){
+  screen(`<p class="eyebrow">Instrucciones</p><h2>Cómo jugar</h2>
+    <ol class="howto">
+      <li>Cada fase comienza <b>sin balas</b>. Responde una pregunta: si aciertas recibes <b>+15 balas</b> y reparas un poco tu membrana.</li>
+      <li>Si te equivocas no recibes balas, lees la explicación y la pregunta vuelve más tarde.</li>
+      <li>Cuando se acaban las balas aparece otra pregunta. También puedes tocar <b>Recargar</b> cuando quieras.</li>
+      <li>Al completar <b>10 respuestas correctas</b>, gasta tus últimas balas y la fase termina. Son <b>5 fases</b>.</li>
+      <li>Los organelos que chocan contigo o sus disparos dañan tu <b>membrana</b>. Si llega a cero, repites la fase.</li>
+    </ol>
+    <div class="keys">
+      <kbd>Teléfono / tablet</kbd><span>Desliza el dedo en cualquier parte para mover la cápsula. Mantén apretado DISPARAR.</span>
+      <kbd>Flechas o WASD</kbd><span>Mover</span>
+      <kbd>Espacio</kbd><span>Disparar (mantener)</span>
+      <kbd>R</kbd><span>Responder pregunta para recargar</span>
+      <kbd>P / Esc</kbd><span>Pausa</span>
+    </div>
+    <div class="btns"><button class="btn primary" data-a="menu">Volver</button></div>`);
+}
+function introPhase(i){
+  G.phase=clamp(i,0,4);state='intro';showPlayUI(false);enemies=[];ebullets=[];bullets=[];parts=[];
+  const P=PHASES[G.phase];
+  const en=P.enemies.map(k=>`<span><i style="background:${ET[k].col};box-shadow:0 0 8px ${ET[k].col}"></i>${ET[k].name}</span>`).join('');
+  screen(`<p class="eyebrow">Fase ${G.phase+1} de 5</p><h2 style="font-size:clamp(26px,7vw,38px)">${P.name}</h2>
+    <p class="lead">Tema: <b>${P.topic}</b></p>
+    <div><p class="small" style="margin-bottom:8px">Organelos en esta zona</p><div class="enemies">${en}</div></div>
+    <p class="lead">Meta: <b style="color:var(--chloro)">10 respuestas correctas</b>. Cada acierto = <b style="color:var(--atp)">+15 balas</b>.</p>
+    <div class="btns"><button class="btn go" data-a="start">Comenzar: primera pregunta</button><button class="btn" data-a="menu">Menú</button></div>`);
+}
+function beginPhase(){
+  closeScreen();
+  G.correct=0;G.ammo=0;G.hp=100;G.kills=0;G.wrongIds=new Set();G.wrongPhase=0;G.finalNotice=false;G.emptyT=0;G.spawnT=2.2;
+  G.phaseStartScore=G.score=(G.phase===0?0:G.phaseStartScore);
+  G.queue=shuffle(PHASES[G.phase].qs.map((_,j)=>j));
+  enemies=[];ebullets=[];bullets=[];parts=[];texts=[];
+  showPlayUI(true);player=newPlayer();state='play';hud();
+  setTimeout(()=>{if(state==='play')openQuiz();},350);
+}
+function pause(){if(state!=='play')return;state='pause';fireHeld=false;$('bFire').classList.remove('down');
+  screen(`<p class="eyebrow">Fase ${G.phase+1} · ${PHASES[G.phase].name}</p><h2>Pausa</h2>
+    <p class="lead">Correctas ${G.correct}/10 · Balas ${G.ammo} · Membrana ${G.hp}%</p>
+    <div class="btns"><button class="btn primary" data-a="resume">Continuar</button><button class="btn" data-a="retry">Reiniciar fase</button><button class="btn" data-a="menu">Menú</button></div>`);}
+function resume(){closeScreen();state='play';last=performance.now();}
+function gameOver(){state='over';showPlayUI(false);
+  screen(`<p class="eyebrow" style="color:var(--danger)">Membrana destruida</p><h2>La cápsula fue desintegrada</h2>
+    <p class="lead">Llegaste a ${G.correct}/10 respuestas correctas en la fase ${G.phase+1}. Vuelve a intentarlo: esquiva los disparos y usa bien tus balas.</p>
+    <div class="btns"><button class="btn primary" data-a="retry">Reintentar fase ${G.phase+1}</button><button class="btn" data-a="menu">Menú</button></div>`);}
+function phaseClear(){
+  state='clear';showPlayUI(false);SFX.win();
+  const bonus=G.hp*20;G.score+=bonus;G.phaseStartScore=G.score;
+  G.stats[G.phase]={wrong:G.wrongPhase,first:10-G.wrongIds.size};
+  if(G.phase+2>unlocked){unlocked=Math.min(5,G.phase+2);store.set('cm_unlocked',unlocked);}
+  if(G.score>best){best=G.score;store.set('cm_best',best);}
+  const st=`<div class="stats"><div class="stat"><small>Correctas</small><b>10/10</b></div><div class="stat"><small>Al primer intento</small><b>${10-G.wrongIds.size}/10</b></div>
+    <div class="stat"><small>Organelos</small><b>${G.kills}</b></div><div class="stat"><small>Bono membrana</small><b>+${bonus}</b></div><div class="stat"><small>Puntaje</small><b>${G.score.toLocaleString('es-CL')}</b></div></div>`;
+  if(G.phase===4){
+    const wrong=G.stats.reduce((s,x)=>s+(x?x.wrong:0),0), first=G.stats.reduce((s,x)=>s+(x?x.first:0),0), played=G.stats.filter(Boolean).length;
+    screen(`<p class="eyebrow" style="color:var(--chloro)">Misión cumplida</p><h1 class="title" style="font-size:clamp(34px,9vw,58px)">¡CÉLULA<span>DOMINADA!</span></h1>
+      <p class="lead">Respondiste las ${played*10} preguntas de ${played===5?'las 5 fases':played+' fase(s)'} y atravesaste la célula de punta a punta.</p>${st}
+      <div class="stats"><div class="stat"><small>Total al primer intento</small><b>${first}/${played*10}</b></div><div class="stat"><small>Respuestas erradas</small><b>${wrong}</b></div></div>
+      <div class="btns"><button class="btn primary" data-a="menu">Volver al menú</button></div>`);
+  } else {
+    screen(`<p class="eyebrow" style="color:var(--chloro)">Fase ${G.phase+1} superada</p><h2 style="font-size:clamp(26px,7vw,38px)">${PHASES[G.phase].name}: ¡completada!</h2>${st}
+      <p class="lead">Siguiente zona: <b>${PHASES[G.phase+1].name}</b> · ${PHASES[G.phase+1].topic}</p>
+      <div class="btns"><button class="btn go" data-a="next">Ir a la fase ${G.phase+2}</button><button class="btn" data-a="menu">Menú</button></div>`);
+  }
+}
+
+/* =========================================================
+   PREGUNTAS (recarga de balas)
+   ========================================================= */
+let curQ=null;
+function openQuiz(){
+  if(state!=='play')return;
+  if(G.correct>=10){toast('Ya respondiste las 10 preguntas. ¡Gasta tus balas!');return;}
+  state='quiz';fireHeld=false;$('bFire').classList.remove('down');$('bReload').classList.remove('urge');
+  const id=G.queue[0], q=PHASES[G.phase].qs[id];
+  const order=shuffle([0,1,2,3]);curQ={id,q,order,done:false};
+  $('qTag').textContent=`Recarga · Fase ${G.phase+1}`;
+  $('qCount').textContent=`Correctas ${G.correct}/10`;
+  $('qTopic').textContent=PHASES[G.phase].topic+(G.wrongIds.has(id)?' · Pregunta repetida':'');
+  $('qText').textContent=q.t;
+  const fig=$('qFig');if(q.f){fig.innerHTML=FIG[q.f]();fig.hidden=false;}else{fig.innerHTML='';fig.hidden=true;}
+  $('qOpts').innerHTML=order.map((oi,k)=>`<button class="opt" data-o="${oi}"><span class="k">${'ABCD'[k]}</span><span>${q.o[oi]}</span></button>`).join('');
+  $('qFb').hidden=true;$('qNext').hidden=true;
+  $('quiz').hidden=false;$('quiz').querySelector('.card').scrollTop=0;
+}
+$('qOpts').addEventListener('click',ev=>{const b=ev.target.closest('.opt');if(b)answer(+b.dataset.o);});
+function answer(oi){
+  if(!curQ||curQ.done)return;curQ.done=true;const ok=oi===0,q=curQ.q;
+  $('qOpts').querySelectorAll('.opt').forEach(b=>{const o=+b.dataset.o;b.disabled=true;if(o===0)b.classList.add('ok');else if(o===oi)b.classList.add('bad');else b.classList.add('dim');});
+  const fb=$('qFb');fb.hidden=false;
+  if(ok){G.queue.shift();G.correct++;G.ammo+=15;G.hp=Math.min(100,G.hp+10);G.score+=500;SFX.ok();
+    fb.className='fb ok';fb.innerHTML=`<strong>¡Correcto! +15 balas · +10 membrana</strong>${q.e}`;
+    $('qNext').textContent=G.correct>=10?'¡10/10! Volver a disparar':'Volver a disparar';}
+  else{G.queue.push(G.queue.shift());G.wrongIds.add(curQ.id);G.wrongPhase++;SFX.bad();
+    fb.className='fb bad';fb.innerHTML=`<strong>Incorrecto. La respuesta era: ${q.o[0]}</strong>${q.e} <em>Esta pregunta volverá más adelante.</em>`;
+    $('qNext').textContent=G.ammo>0?'Volver al juego':'Intentar otra pregunta';}
+  $('qCount').textContent=`Correctas ${G.correct}/10`;
+  hud();$('qNext').hidden=false;$('qNext').focus({preventScroll:true});
+  setTimeout(()=>{const c=$('quiz').querySelector('.card');c.scrollTo({top:c.scrollHeight,behavior:'smooth'});},60);
+}
+$('qNext').addEventListener('click',()=>{
+  $('quiz').hidden=true;state='play';last=performance.now();
+  if(G.ammo<=0&&G.correct<10){openQuiz();return;}
+  if(G.correct>=10&&!G.finalNotice){G.finalNotice=true;toast('¡10/10! Usa tus últimas balas: la fase termina cuando se agoten',2800);}
+  else toast(`+15 balas · Correctas ${G.correct}/10`,1300);
+});
+
+/* =========================================================
+   CONTROLES
+   ========================================================= */
+const keys={};
+addEventListener('keydown',e=>{
+  if(!$('quiz').hidden){const n={'1':0,'2':1,'3':2,'4':3,a:0,b:1,c:2,d:3}[e.key.toLowerCase()];
+    if(n!==undefined&&curQ&&!curQ.done){const b=$('qOpts').children[n];if(b)b.click();}return;}
+  if(!scr.hidden)return;
+  keys[e.code]=true;SFX.init();
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
+  if(e.code==='KeyR'&&state==='play')openQuiz();
+  if((e.code==='KeyP'||e.code==='Escape')&&state==='play')pause();
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;fireHeld=false;});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();});
+
+// arrastre relativo en cualquier parte de la pantalla
+let drag=null;
+cv.addEventListener('pointerdown',e=>{SFX.init();if(state!=='play'||!player)return;drag={id:e.pointerId,x:e.clientX,y:e.clientY};try{cv.setPointerCapture(e.pointerId);}catch(_){}});
+cv.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||state!=='play')return;const k=1.35/scale;
+  player.x=clamp(player.x+(e.clientX-drag.x)*k,PX0+22,PX0+PW-22);player.y=clamp(player.y+(e.clientY-drag.y)*k,H*.3,maxY());drag.x=e.clientX;drag.y=e.clientY;});
+const endDrag=e=>{if(drag&&drag.id===e.pointerId)drag=null;};
+cv.addEventListener('pointerup',endDrag);cv.addEventListener('pointercancel',endDrag);
+const fb=$('bFire');
+fb.addEventListener('pointerdown',e=>{e.preventDefault();SFX.init();fireHeld=true;fb.classList.add('down');try{fb.setPointerCapture(e.pointerId);}catch(_){}});
+['pointerup','pointercancel','lostpointercapture'].forEach(t=>fb.addEventListener(t,()=>{fireHeld=false;fb.classList.remove('down');}));
+fb.addEventListener('contextmenu',e=>e.preventDefault());
+$('bReload').addEventListener('click',()=>{SFX.init();openQuiz();});
+$('bPause').addEventListener('click',()=>pause());
+const muteIcon=()=>{$('bMute').innerHTML=SFX.on?'<svg viewBox="0 0 24 24" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#e8f4ff"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="#e8f4ff" stroke-width="2" stroke-linecap="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="#e8f4ff"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';};
+$('bMute').addEventListener('click',()=>{SFX.on=!SFX.on;store.set('cm_sound',SFX.on);muteIcon();});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+/* =========================================================
+   INICIO
+   ========================================================= */
+SFX.on=store.get('cm_sound',true);muteIcon();
+buildSprites();resize();addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,200));
+menu();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
