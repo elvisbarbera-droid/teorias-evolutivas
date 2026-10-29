@@ -1,0 +1,1905 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Turno de Residencia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Juego 3D en primera persona: recorre un hospital, atiende pacientes y resuelve casos sobre métodos anticonceptivos e ITS. Para 7° básico.">
+<meta name="theme-color" content="#0b171c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@500;600;700&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* Concepto: pantalla de juego a sangre; HUD translúcido tipo monitor clínico sobre el 3D y una libreta de papel para todo lo que se lee. */
+:root{
+  --bg:#0b171c;
+  --panel:rgba(9,22,28,.80);
+  --panel-solid:#10232a;
+  --line:rgba(160,215,220,.24);
+  --fg:#eaf3f2;
+  --muted:#9cb6b9;
+  --scrub:#3fb8a9;
+  --scrub-deep:#1d6f73;
+  --signal:#f2c14e;
+  --its:#cf5a86;
+  --ok:#3ddc84;
+  --bad:#ff5f5f;
+  --warn:#ff9f43;
+  --paper:#fbf8ef;
+  --paper-edge:#e9e2cf;
+  --rule:#cfe0ea;
+  --margin:#e9a6a6;
+  --pen:#1d2f5c;
+  --pen-soft:#4c5b7e;
+  --sticky:#fff0a6;
+  --f-sign:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",Roboto,Arial,sans-serif;
+  --f-hand:Kalam,"Segoe Print","Comic Sans MS",cursive;
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+  --sal:env(safe-area-inset-left,0px);
+  --sar:env(safe-area-inset-right,0px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);overflow:hidden;font-family:var(--f-body);
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#touch{position:fixed;inset:0;z-index:2;touch-action:none}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;z-index:5;pointer-events:none}
+#hud>*{pointer-events:auto}
+#obj{position:absolute;left:calc(10px + var(--sal));top:calc(10px + var(--sat));max-width:min(320px,40vw);
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px 10px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);pointer-events:none}
+.obj-k{font:600 11px/1 var(--f-sign);letter-spacing:.16em;color:var(--scrub)}
+#objText{font:700 17px/1.15 var(--f-sign);margin-top:4px;text-wrap:balance}
+.bar{position:relative;height:7px;background:rgba(255,255,255,.12);border-radius:4px;margin-top:7px;overflow:visible}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--scrub),#7fe0d3);width:0;transition:width .5s}
+.bar b{position:absolute;top:-4px;width:2px;height:15px;background:var(--signal);border-radius:1px}
+#objSub{font-size:12px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+#tools{position:absolute;right:calc(10px + var(--sar));top:calc(10px + var(--sat));display:flex;gap:8px}
+#tools button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;padding:0}
+#tools button svg{width:22px;height:22px;stroke:var(--fg);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#tools button.off svg{opacity:.45}
+#mini{position:absolute;right:calc(10px + var(--sar));top:calc(62px + var(--sat));width:118px;height:118px;border-radius:50%;
+  border:2px solid var(--line);background:rgba(6,16,20,.72);cursor:pointer}
+#zone{position:absolute;right:calc(10px + var(--sar));top:calc(186px + var(--sat));width:118px;text-align:center;font:600 12px/1.15 var(--f-sign);letter-spacing:.06em;color:var(--muted);text-transform:uppercase;pointer-events:none;text-shadow:0 1px 2px #000}
+#cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.75);box-shadow:0 0 0 2px rgba(0,0,0,.25);pointer-events:none}
+#act{position:absolute;right:calc(18px + var(--sar));bottom:calc(22px + var(--sab));min-width:150px;max-width:min(300px,46vw);min-height:64px;padding:10px 16px 10px 10px;
+  border-radius:16px;border:2px solid var(--signal);background:rgba(20,30,20,.82);display:flex;align-items:center;gap:10px;cursor:pointer;
+  font:700 19px/1.1 var(--f-sign);letter-spacing:.02em;text-align:left;box-shadow:0 0 0 0 rgba(242,193,78,.6);animation:pulse 1.6s infinite}
+#act .k{flex:none;width:40px;height:40px;border-radius:10px;background:var(--signal);color:#1b1606;display:grid;place-items:center;font:700 20px/1 var(--f-sign)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,193,78,.55)}70%{box-shadow:0 0 0 14px rgba(242,193,78,0)}100%{box-shadow:0 0 0 0 rgba(242,193,78,0)}}
+#joy{position:absolute;left:calc(28px + var(--sal));bottom:calc(28px + var(--sab));width:132px;height:132px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.28);background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.03));pointer-events:none;transition:opacity .2s}
+#joy.idle{opacity:.55}
+#knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.6)}
+#joyHint{position:absolute;left:calc(28px + var(--sal));bottom:calc(166px + var(--sab));font:600 12px/1 var(--f-sign);letter-spacing:.1em;color:rgba(255,255,255,.6);pointer-events:none;text-transform:uppercase}
+#lookHint{position:absolute;right:calc(28px + var(--sar));bottom:calc(100px + var(--sab));font:600 12px/1 var(--f-sign);letter-spacing:.1em;color:rgba(255,255,255,.6);pointer-events:none;text-transform:uppercase}
+#toast{position:absolute;left:50%;top:calc(14px + var(--sat));transform:translate(-50%,-140%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);
+  max-width:min(520px,calc(100vw - 32px));background:var(--panel-solid);border:1px solid var(--signal);border-radius:12px;padding:10px 16px;font-size:15px;line-height:1.35;text-align:center;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#toast.show{transform:translate(-50%,0)}
+#toast b{color:var(--signal)}
+#vign{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.42) 100%)}
+#flash{position:fixed;inset:0;z-index:4;pointer-events:none;background:#fff;opacity:0;transition:opacity .6s}
+
+/* ---------- Pantallas a pantalla completa ---------- */
+.screen{position:fixed;inset:0;z-index:20;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-top:calc(16px + var(--sat));padding-bottom:calc(16px + var(--sab));padding-left:max(16px,var(--sal));padding-right:max(16px,var(--sar))}
+#loading{display:grid;place-items:center;background:var(--bg);z-index:40;text-align:center}
+#loading .ring{width:56px;height:56px;border-radius:50%;border:4px solid rgba(255,255,255,.12);border-top-color:var(--scrub);margin:0 auto 16px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading p{font:600 15px/1.3 var(--f-sign);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0}
+#loadErr{max-width:440px;margin-top:14px;font-size:15px;line-height:1.45;color:var(--fg)}
+
+#start{background:linear-gradient(180deg,rgba(6,15,19,.55) 0%,rgba(6,15,19,.78) 55%,rgba(6,15,19,.94) 100%)}
+.start-wrap{max-width:980px;margin:0 auto;min-height:100%;display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center}
+.brand-k{font:600 13px/1.2 var(--f-sign);letter-spacing:.2em;text-transform:uppercase;color:var(--scrub)}
+.brand-t{font:700 clamp(44px,8.4vw,92px)/.88 var(--f-sign);letter-spacing:-.01em;margin:10px 0 0;text-transform:uppercase;text-wrap:balance}
+.brand-t span{color:var(--signal)}
+.brand-d{font-size:17px;line-height:1.5;color:#cfe0e0;max-width:56ch;margin:14px 0 0}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.step{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:rgba(9,22,28,.6);min-width:0}
+.step b{display:block;font:700 26px/1 var(--f-sign);color:var(--signal)}
+.step span{display:block;font-size:13.5px;line-height:1.35;color:#d6e4e4;margin-top:4px}
+.card{background:var(--paper);color:var(--pen);border-radius:6px 12px 12px 6px;padding:20px 20px 18px 34px;position:relative;
+  box-shadow:0 18px 50px rgba(0,0,0,.5);background-image:repeating-linear-gradient(180deg,transparent 0 31px,var(--rule) 31px 32px);background-position:0 12px}
+.card::before{content:"";position:absolute;left:22px;top:0;bottom:0;width:2px;background:var(--margin)}
+.card::after{content:"";position:absolute;left:5px;top:16px;bottom:16px;width:10px;background:radial-gradient(circle at 5px 8px,#9aa3a8 0 3.5px,transparent 4px) 0 0/10px 26px repeat-y}
+.card h2{font:700 30px/1 var(--f-hand);margin:0 0 6px;color:var(--pen)}
+.card label{display:block;font:700 14px/1.2 var(--f-body);color:var(--pen-soft);margin-top:12px}
+.card input[type=text]{width:100%;margin-top:6px;font:400 24px/1.2 var(--f-hand);color:var(--pen);background:rgba(255,255,255,.65);border:2px solid #c6d3db;border-radius:8px;padding:8px 10px;-webkit-user-select:text;user-select:text}
+.pills{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.pills button{flex:1 1 0;min-height:46px;border-radius:10px;border:2px solid #c6d3db;background:#fff;color:var(--pen);font:700 17px/1 var(--f-body);cursor:pointer}
+.pills button[aria-pressed=true]{border-color:var(--pen);background:var(--pen);color:#fff}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:54px;margin-top:14px;border:0;border-radius:12px;cursor:pointer;
+  font:700 21px/1 var(--f-sign);letter-spacing:.06em;text-transform:uppercase}
+.btn.primary{background:var(--scrub-deep);color:#fff;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.btn.ghost{background:transparent;color:var(--pen);border:2px solid var(--pen);min-height:46px;font-size:18px}
+.controls{margin-top:14px;font-size:13px;line-height:1.45;color:var(--pen-soft)}
+.controls b{color:var(--pen)}
+#rotateTip{display:none;margin-top:12px;font-size:13px;color:var(--pen);background:var(--sticky);border-radius:6px;padding:8px 10px;line-height:1.35}
+
+/* ---------- Libreta ---------- */
+#book{background:rgba(4,10,13,.66);z-index:30;display:flex;align-items:flex-start;justify-content:center}
+.nb{width:min(760px,100%);margin:auto 0;background:var(--paper);color:var(--pen);border-radius:8px;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.6);
+  padding:30px 22px 22px 46px;background-image:repeating-linear-gradient(180deg,transparent 0 33px,var(--rule) 33px 34px);background-position:0 70px;animation:nbIn .35s cubic-bezier(.2,.9,.3,1.1)}
+@keyframes nbIn{from{transform:translateY(40px) rotate(-1.5deg);opacity:0}to{transform:none;opacity:1}}
+.nb::before{content:"";position:absolute;left:32px;top:0;bottom:0;width:2px;background:var(--margin)}
+.nb::after{content:"";position:absolute;left:8px;top:18px;bottom:18px;width:14px;background:radial-gradient(circle at 7px 10px,#8f989d 0 4.5px,transparent 5px) 0 0/14px 30px repeat-y}
+.nb-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:2px solid var(--pen);padding-bottom:8px;margin-bottom:14px}
+.nb-kick{font:700 12px/1.2 var(--f-sign);letter-spacing:.16em;text-transform:uppercase;color:var(--pen-soft)}
+.nb-title{font:700 clamp(26px,5vw,34px)/1.05 var(--f-hand);margin:2px 0 0;text-wrap:balance}
+.nb-x{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--pen);background:transparent;color:var(--pen);font:700 22px/1 var(--f-body);cursor:pointer}
+.nb p{font-size:17px;line-height:1.55;margin:0 0 12px;max-width:62ch}
+.who{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+.avatar{flex:none;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font:700 26px/1 var(--f-sign);color:#fff;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.who b{display:block;font:700 22px/1.1 var(--f-hand)}
+.who small{display:block;font-size:13px;color:var(--pen-soft);margin-top:2px}
+.speech{position:relative;background:#fff;border:2px solid #cdd8de;border-radius:14px;padding:12px 14px;font-size:17px;line-height:1.55;margin:0 0 14px;min-height:3em}
+.speech::before{content:"";position:absolute;left:26px;top:-11px;width:18px;height:18px;background:#fff;border-left:2px solid #cdd8de;border-top:2px solid #cdd8de;transform:rotate(45deg)}
+.facts{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.facts li{position:relative;padding:8px 10px 8px 34px;background:rgba(255,255,255,.7);border-radius:8px;font-size:16px;line-height:1.45}
+.facts li::before{content:"";position:absolute;left:11px;top:13px;width:12px;height:12px;border-radius:3px;background:var(--scrub-deep)}
+.qhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.dots{display:flex;gap:6px}
+.dots i{width:12px;height:12px;border-radius:50%;border:2px solid var(--pen);display:block}
+.dots i.on{background:var(--pen)}
+.dots i.okd{background:var(--ok);border-color:#1e8a52}
+.dots i.badd{background:var(--bad);border-color:#a23131}
+.qtag{font:700 12px/1 var(--f-sign);letter-spacing:.14em;text-transform:uppercase;color:var(--pen-soft)}
+.qtext{font:700 21px/1.35 var(--f-body);margin:0 0 14px;text-wrap:pretty}
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px 10px 10px;text-align:left;border-radius:12px;border:2px solid #c3d0d8;background:#fff;color:var(--pen);cursor:pointer;font:400 17px/1.35 var(--f-body);transition:transform .08s,border-color .15s}
+.opt:active{transform:scale(.985)}
+.opt .l{flex:none;width:34px;height:34px;border-radius:8px;display:grid;place-items:center;background:#e7eef2;font:700 18px/1 var(--f-sign)}
+.opt.ok{border-color:#1e8a52;background:#e3f8ea}
+.opt.ok .l{background:var(--ok);color:#06331a}
+.opt.bad{border-color:#b23a3a;background:#fde8e8}
+.opt.bad .l{background:var(--bad);color:#fff}
+.opt[disabled]{cursor:default}
+.opt.dim{opacity:.55}
+.fb{margin-top:14px;background:var(--sticky);border-radius:4px;padding:12px 14px 12px 14px;transform:rotate(-.4deg);box-shadow:0 6px 14px rgba(0,0,0,.15);animation:nbIn .3s}
+.fb h4{margin:0 0 4px;font:700 22px/1.1 var(--f-hand)}
+.fb h4.y{color:#17703f}
+.fb h4.n{color:#a42c2c}
+.fb p{font-size:16px;margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.row .btn{flex:1 1 220px;margin-top:0}
+.chip{display:inline-flex;align-items:center;gap:6px;font:700 13px/1 var(--f-sign);letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:6px 10px;border:2px solid currentColor;white-space:nowrap}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{min-height:40px;padding:0 14px;border-radius:999px;border:2px solid var(--pen);background:transparent;color:var(--pen);font:700 15px/1 var(--f-body);cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--pen);color:#fff}
+.tbl-wrap{overflow-x:auto;margin:0 0 14px}
+table.rooms{width:100%;border-collapse:collapse;font-size:15px;min-width:460px}
+table.rooms th{font:700 12px/1.2 var(--f-sign);letter-spacing:.12em;text-transform:uppercase;color:var(--pen-soft);text-align:left;padding:6px 8px;border-bottom:2px solid var(--pen)}
+table.rooms td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:middle;font-variant-numeric:tabular-nums}
+.sec{font:700 24px/1.1 var(--f-hand);margin:16px 0 8px}
+.review{border-top:2px dashed #b9c7cf;padding-top:12px;margin-top:12px}
+.review .qtext{font-size:18px}
+.goal{background:#fff;border:2px solid var(--pen);border-radius:10px;padding:10px 12px;margin:6px 0 14px;font-size:15.5px;line-height:1.45}
+.goal b{font-variant-numeric:tabular-nums}
+.banner{margin:0 0 14px;border-radius:10px;padding:12px 14px;background:#2a1430;color:#fff;font:700 18px/1.3 var(--f-sign);letter-spacing:.03em;border-left:6px solid var(--its)}
+
+/* ---------- Mapa ---------- */
+#map{background:rgba(4,10,13,.86);z-index:28;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#mapC{width:min(96vw,1100px);height:auto;max-height:70vh;object-fit:contain;border-radius:14px;border:1px solid var(--line);background:#0a161b}
+.map-bar{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;font-size:13px;color:var(--muted);max-width:560px}
+.map-bar span{display:inline-flex;align-items:center;gap:6px}
+.map-bar i{width:12px;height:12px;border-radius:3px;display:inline-block}
+#mapClose{min-width:200px;width:auto;padding:0 22px;background:var(--scrub-deep);color:#fff}
+
+/* ---------- Certificado ---------- */
+#end{background:rgba(4,10,13,.82);z-index:32;display:flex;justify-content:center;align-items:flex-start}
+.cert{width:min(760px,100%);margin:auto 0;background:#fffdf6;color:#1f2b33;border-radius:6px;padding:26px 24px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.6);
+  border:10px solid #fffdf6;outline:2px solid #b89a4b;outline-offset:-18px}
+.cert .k{font:700 13px/1 var(--f-sign);letter-spacing:.24em;text-transform:uppercase;color:#8a6d22;text-align:center}
+.cert h2{font:700 clamp(30px,6vw,46px)/1 var(--f-sign);text-transform:uppercase;text-align:center;margin:10px 0 4px;letter-spacing:.02em}
+.cert .nm{font:700 clamp(30px,6vw,44px)/1.1 var(--f-hand);text-align:center;color:var(--pen);margin:8px 0}
+.cert p{font-size:16px;line-height:1.5;text-align:center;max-width:58ch;margin:0 auto 10px}
+.scores{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.scores div{border:2px solid #d9cfb0;border-radius:10px;padding:10px;text-align:center;min-width:0}
+.scores b{display:block;font:700 34px/1 var(--f-sign);font-variant-numeric:tabular-nums;color:#1f2b33}
+.scores span{display:block;font-size:12.5px;color:#5b6870;margin-top:4px;line-height:1.25}
+.stars{text-align:center;font-size:34px;letter-spacing:6px;color:#c79a2a}
+.keys{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.keys li{font-size:15px;line-height:1.45;padding-left:22px;position:relative}
+.keys li::before{content:"";position:absolute;left:4px;top:7px;width:9px;height:9px;border-radius:2px;background:#b89a4b}
+.cert .row .btn.primary{background:#1d6f73}
+.cert .row .btn.ghost{color:#1f2b33;border-color:#1f2b33}
+
+@media (max-width:760px){
+  .start-wrap{grid-template-columns:1fr;gap:16px;align-items:start}
+  .brand-d{font-size:15.5px}
+  .steps{grid-template-columns:1fr;gap:6px}
+  .step{display:flex;gap:10px;align-items:center;padding:8px 10px}
+  .step span{margin:0}
+}
+@media (max-width:1100px){ #toast{top:calc(118px + var(--sat))} }
+@media (max-height:520px){
+  #obj{padding:6px 10px 8px}
+  #objText{font-size:15px}
+  #joy{width:112px;height:112px;bottom:calc(16px + var(--sab));left:calc(18px + var(--sal))}
+  #knob{width:50px;height:50px;margin:-25px 0 0 -25px}
+  #joyHint{bottom:calc(134px + var(--sab));left:calc(18px + var(--sal))}
+  #mini{width:96px;height:96px}
+  #zone{width:96px;top:calc(162px + var(--sat))}
+  #act{bottom:calc(14px + var(--sab));min-height:56px}
+  .nb{padding:22px 16px 16px 40px}
+  .qtext{font-size:19px}
+  .opt{min-height:50px;font-size:16px}
+}
+@media (orientation:portrait) and (max-width:760px){ #rotateTip{display:block} #toast{top:auto;bottom:calc(196px + var(--sab));transform:translate(-50%,200%)} #toast.show{transform:translate(-50%,0)} }
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+</style>
+</head>
+<body>
+<canvas id="c" aria-label="Vista en primera persona del hospital"></canvas>
+<div id="touch"></div>
+<div id="vign"></div>
+<div id="flash"></div>
+
+<div id="hud" hidden>
+  <div id="obj"><div class="obj-k">Objetivo del turno</div><div id="objText"></div><div class="bar"><i id="objBar"></i><b id="objMark"></b></div><div id="objSub"></div></div>
+  <div id="tools">
+    <button id="bBook" aria-label="Abrir libreta"><svg viewBox="0 0 24 24"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M4 7h4M4 12h4M4 17h4M10 8h6M10 12h6"/></svg></button>
+    <button id="bMap" aria-label="Ver mapa del hospital"><svg viewBox="0 0 24 24"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></button>
+    <button id="bSnd" aria-label="Activar o silenciar sonido"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="w" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg></button>
+    <button id="bFs" aria-label="Pantalla completa"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+  <canvas id="mini" width="236" height="236" aria-label="Minimapa: toca para ampliar"></canvas>
+  <div id="zone"></div>
+  <div id="cross"></div>
+  <div id="joy" class="idle"><div id="knob"></div></div>
+  <div id="joyHint">Caminar</div>
+  <div id="lookHint">Desliza para mirar</div>
+  <button id="act" hidden><span class="k">E</span><span id="actText">Hablar</span></button>
+  <div id="toast"></div>
+</div>
+
+<div id="loading" class="screen"><div><div class="ring"></div><p id="loadMsg">Preparando el hospital</p><div id="loadErr" hidden></div></div></div>
+
+<div id="start" class="screen" hidden>
+  <div class="start-wrap">
+    <div>
+      <div class="brand-k">Hospital Escuela Esperanza · Unidad de Salud Sexual y Reproductiva</div>
+      <h1 class="brand-t">Turno de <span>Residencia</span></h1>
+      <p class="brand-d">Eres el médico residente de turno. Con tu libreta en la mano recorres el hospital, entras a cada sala, atiendes pacientes y resuelves casos sobre métodos anticonceptivos. Si aciertas lo suficiente, se abre el Pabellón de Infecciones de Transmisión Sexual (ITS).</p>
+      <div class="steps">
+        <div class="step"><b>10 salas</b><span>5 consultas con pacientes y 5 salas de métodos: 15 preguntas.</span></div>
+        <div class="step"><b>10 de 15</b><span>Con 10 respuestas correctas se desbloquea el Pabellón ITS.</span></div>
+        <div class="step"><b>5 boxes ITS</b><span>VIH, clamidia, sífilis, gonorrea y prevención: 15 preguntas más.</span></div>
+      </div>
+    </div>
+    <form class="card" id="startForm" autocomplete="off">
+      <h2>Ficha del residente</h2>
+      <label for="docName">Tu nombre (aparecerá en tu credencial)</label>
+      <input type="text" id="docName" maxlength="24" placeholder="Ej: Martina Rojas">
+      <label id="lblTitle">Te presentas como</label>
+      <div class="pills" role="group" aria-labelledby="lblTitle">
+        <button type="button" id="tDra" aria-pressed="true">Doctora</button>
+        <button type="button" id="tDr" aria-pressed="false">Doctor</button>
+      </div>
+      <button type="submit" class="btn primary" id="bStart">Comenzar turno</button>
+      <button type="button" class="btn ghost" id="bNew" hidden>Empezar de cero</button>
+      <div class="controls"><b>En el teléfono:</b> el círculo de la izquierda sirve para caminar; desliza el dedo por la derecha para mirar. Cuando aparezca el botón amarillo, tócalo para atender.<br><b>En computador:</b> W A S D o flechas para caminar, arrastra con el mouse para mirar, tecla E para atender.</div>
+      <div id="rotateTip">Consejo: gira el teléfono en horizontal para ver mejor el hospital.</div>
+    </form>
+  </div>
+</div>
+
+<div id="book" class="screen" hidden><div class="nb" id="nb" role="dialog" aria-modal="true" aria-labelledby="nbTitle"></div></div>
+
+<div id="map" class="screen" hidden>
+  <canvas id="mapC" width="1100" height="300" aria-label="Mapa del hospital"></canvas>
+  <div class="map-bar">
+    <span><i style="background:#3aa0ff"></i>Por atender</span>
+    <span><i style="background:#ffc94a"></i>En curso</span>
+    <span><i style="background:#3ddc84"></i>Todo correcto</span>
+    <span><i style="background:#ff9f43"></i>Con errores</span>
+    <span><i style="background:#ff4d4d"></i>Repasar</span>
+  </div>
+  <button class="btn" id="mapClose">Volver al juego</button>
+</div>
+
+<div id="end" class="screen" hidden><div class="cert" id="cert"></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>window.THREE||document.write('<script src="https://unpkg.com/three@0.149.0/build/three.min.js"><\/script>')</script>
+<script>
+'use strict';
+/* =====================================================================
+   DATOS DEL JUEGO: preguntas, salas y pacientes
+   En cada pregunta, "ok" es la respuesta correcta y "no" las incorrectas.
+   El orden se mezcla al mostrarlas.
+   ===================================================================== */
+const UNLOCK = 10;
+
+const Q = {
+  /* ---------- CONSULTAS (pacientes) ---------- */
+  c1:{q:'¿Qué método le recomiendas a Valentina para prevenir el embarazo y también las ITS?',
+      ok:'El condón, en cada relación sexual',
+      no:['La pastilla anticonceptiva diaria','El DIU de cobre colocado en el útero','La inyección anticonceptiva mensual'],
+      exp:'El condón (masculino o femenino) es el único método que protege del embarazo y de las ITS al mismo tiempo. Los demás métodos solo previenen el embarazo. Lo ideal es la "doble protección": condón más otro método.'},
+  c2:{q:'Andrea olvida la pastilla muy seguido. ¿Qué opción es mejor para ella?',
+      ok:'Un implante en el brazo o un DIU, que duran años',
+      no:['Tomar todas las pastillas olvidadas juntas','Tomar la pastilla solo los días que tenga pareja','Cambiar a contar los días fértiles del calendario'],
+      exp:'El implante (una varilla pequeña bajo la piel del brazo) y el DIU son métodos de larga duración: funcionan por años sin tener que acordarse todos los días. Ojo: no protegen de ITS.'},
+  c3:{q:'A Javiera se le rompió el condón anoche. ¿Qué le indicas?',
+      ok:'Tomar la píldora de emergencia lo antes posible',
+      no:['Esperar un mes para ver si llega la regla','Hacerse un lavado vaginal con agua y mucho jabón','Esperar y hacerse un test de embarazo mañana'],
+      exp:'La píldora anticonceptiva de emergencia funciona mejor mientras antes se tome (idealmente dentro de los 3 primeros días). En Chile se entrega gratis en los centros de salud. No es para usar siempre y no protege de ITS, así que también conviene hacerse exámenes.'},
+  c4:{q:'Patricia busca un método definitivo. ¿Cuál le corresponde a ella?',
+      ok:'La ligadura de trompas',
+      no:['El condón femenino','El espermicida en gel','La píldora de emergencia'],
+      exp:'La ligadura de trompas es una cirugía que bloquea las trompas de Falopio. Es permanente, por eso se elige solo cuando la persona está segura de no querer más hijos. En los hombres, el método definitivo es la vasectomía.'},
+  c5:{q:'Matías escuchó que en la primera relación sexual no hay embarazo. ¿Qué le respondes?',
+      ok:'Es falso: sí puede haber embarazo la primera vez',
+      no:['Es verdad: el cuerpo no está listo la primera vez','Es verdad, pero solo si la mujer es muy joven','Es falso, pero solo si no usan ningún gel'],
+      exp:'Basta una relación sexual sin protección para que pueda haber embarazo, aunque sea la primera vez. Por eso es importante informarse y usar un método desde el comienzo.'},
+
+  /* ---------- SALAS DE MÉTODOS ---------- */
+  m1a:{q:'¿Qué tienen en común el condón masculino y el femenino?',
+      ok:'Ambos protegen de embarazo y de ITS',
+      no:['Ambos se usan solo una vez por semana','Ambos se colocan dentro del útero','Ambos se pueden lavar y volver a usar'],
+      exp:'Los dos condones forman una barrera que impide el paso de los espermatozoides y de los microbios. Por eso protegen del embarazo y también de las ITS.'},
+  m1b:{q:'¿Cuál es una forma correcta de usar el condón?',
+      ok:'Revisar la fecha de vencimiento antes de usarlo',
+      no:['Usar dos condones juntos para tener más seguridad','Guardarlo en la billetera durante muchos meses','Ponerse uno masculino y uno femenino a la vez'],
+      exp:'Un condón vencido o dañado se puede romper. Hay que revisar la fecha y que el envase no esté roto, y usar uno nuevo en cada relación. Usar dos al mismo tiempo es un error: el roce hace que se rompan.'},
+  m2a:{q:'¿En qué se diferencian el DIU de cobre y el DIU hormonal?',
+      ok:'El de cobre no usa hormonas y el hormonal sí',
+      no:['El de cobre se traga y el hormonal se inyecta','El de cobre protege de ITS y el hormonal no','El de cobre dura un mes y el hormonal un año'],
+      exp:'Los dos tienen forma de T y van dentro del útero. El DIU de cobre NO tiene hormonas: el cobre afecta a los espermatozoides (dura hasta 10 años). El DIU hormonal libera una pequeña cantidad de hormona (dura alrededor de 5 años). Ninguno protege de ITS.'},
+  m2b:{q:'¿Quién coloca el DIU y en qué parte del cuerpo?',
+      ok:'Un profesional de salud, dentro del útero',
+      no:['La misma persona, debajo de la piel del brazo','Un farmacéutico, dentro de las trompas','La misma persona, dentro de la vagina'],
+      exp:'El DIU lo coloca y lo retira un profesional de salud (matrona o médico) dentro del útero, en una consulta breve. Se puede sacar cuando la persona lo decida.'},
+  m3a:{q:'¿Qué se hace en una ligadura de trompas?',
+      ok:'Se bloquean las trompas de Falopio',
+      no:['Se retira el útero para que no haya regla','Se coloca una T de cobre en los ovarios','Se corta el conducto que lleva la orina'],
+      exp:'Al cortar o bloquear las trompas de Falopio, el óvulo y el espermatozoide no se pueden encontrar. El útero y los ovarios siguen en su lugar y la menstruación continúa.'},
+  m3b:{q:'¿Qué característica tiene la ligadura de trompas?',
+      ok:'Es permanente y no protege de ITS',
+      no:['Es temporal y se revierte con pastillas','Es permanente y además protege de ITS','Es temporal y dura solo cinco años'],
+      exp:'Es un método definitivo: no se piensa como algo que se pueda deshacer fácilmente. Además, como todos los métodos excepto el condón, no protege de ITS.'},
+  m4a:{q:'¿Qué se corta en una vasectomía?',
+      ok:'Los conductos que llevan los espermatozoides',
+      no:['Los conductos que llevan la sangre al corazón','Las trompas de Falopio de la pareja','Los conductos que llevan la orina al exterior'],
+      exp:'En la vasectomía se cortan los conductos deferentes. Los testículos siguen funcionando y no cambian la erección ni la eyaculación; solo que los espermatozoides ya no salen.'},
+  m4b:{q:'Después de una vasectomía, ¿desde cuándo es efectiva?',
+      ok:'Después de unos 3 meses y un examen',
+      no:['Desde el mismo día de la operación','Solo durante el primer año completo','Desde que se sacan los puntos, a la semana'],
+      exp:'Quedan espermatozoides "guardados" en los conductos. Por eso hay que usar otro método (como el condón) durante unos 3 meses, hasta que un examen confirme que ya no hay espermatozoides.'},
+  m5a:{q:'¿Qué hace el espermicida?',
+      ok:'Inmoviliza o destruye a los espermatozoides',
+      no:['Elimina los virus y bacterias de las ITS','Impide que los ovarios produzcan óvulos','Cambia la hormona que produce la menstruación'],
+      exp:'El espermicida es una sustancia (gel, espuma u óvulo) que se coloca en la vagina antes de la relación y actúa sobre los espermatozoides. NO elimina virus ni bacterias, así que no protege de ITS.'},
+  m5b:{q:'¿Cuál es la mejor forma de usar el espermicida?',
+      ok:'Junto con el condón, porque solo es poco eficaz',
+      no:['Solo, porque es el método más eficaz que existe hoy','Después de la relación, para limpiar la vagina','Tomado por boca, como una pastilla diaria'],
+      exp:'Usado solo, el espermicida falla bastante. Por eso se recomienda como apoyo, junto con el condón, que además protege de ITS.'},
+
+  /* ---------- PABELLÓN ITS ---------- */
+  v1:{q:'¿Cuál de estas situaciones NO transmite el VIH?',
+      ok:'Dar un abrazo o compartir un vaso',
+      no:['Compartir jeringas o agujas usadas','Tener relaciones sexuales sin condón','De la madre al bebé si no hay tratamiento'],
+      exp:'El VIH NO se transmite por abrazos, besos, compartir vasos o cubiertos, usar el mismo baño ni por picaduras de mosquito. Se transmite por relaciones sexuales sin condón, por sangre (jeringas compartidas) y de la madre al bebé si no hay tratamiento.'},
+  v2:{q:'¿Qué parte del cuerpo ataca el VIH?',
+      ok:'Las defensas del cuerpo (sistema inmune)',
+      no:['Los huesos y los músculos de las piernas','La piel de la cara y del cuero cabelludo','Los pulmones, igual que un resfrío común'],
+      exp:'El VIH (Virus de Inmunodeficiencia Humana) ataca las defensas del cuerpo. Sin tratamiento, con los años las defensas se debilitan mucho y aparece el SIDA, que es la etapa avanzada de la infección.'},
+  v3:{q:'Si el examen de Tomás sale positivo, ¿qué es lo correcto?',
+      ok:'Iniciar su tratamiento, que controla el virus',
+      no:['No hacer nada: el VIH se cura solo con el tiempo','Tomar antibióticos por una semana y queda curado','Aislarse de su familia para no contagiar a nadie'],
+      exp:'El VIH tiene tratamiento. No lo cura, pero lo controla: la persona puede tener una vida larga y sana. Con el tratamiento tomado todos los días, el virus baja tanto que no se transmite por vía sexual. En Chile el examen y el tratamiento son gratuitos y confidenciales.'},
+  l1:{q:'¿Por qué Fernanda podría tener clamidia aunque se sienta bien?',
+      ok:'Porque muchas veces no da ningún síntoma',
+      no:['Porque la clamidia solo afecta a los hombres','Porque los síntomas aparecen a los diez años','Porque solo se nota con fiebre muy alta'],
+      exp:'A la clamidia la llaman "infección silenciosa": muchas personas no sienten nada. Por eso es importante hacerse exámenes si hubo una relación sin condón.'},
+  l2:{q:'¿Qué puede pasar si la clamidia NO se trata?',
+      ok:'Puede dañar las trompas y causar infertilidad',
+      no:['Se transforma en VIH después de algunos meses','Desaparece siempre sola, sin dejar ningún problema','Solo provoca un poco de picazón en la piel'],
+      exp:'Sin tratamiento, la clamidia puede subir al útero y a las trompas de Falopio, causar dolor y dificultar tener hijos en el futuro (infertilidad).'},
+  l3:{q:'Fernanda recibe antibióticos. ¿Qué más es importante?',
+      ok:'Que su pareja también se trate y usen condón',
+      no:['Que deje el antibiótico apenas se sienta bien','Que comparta sus pastillas con su pareja','Que no vuelva nunca más a un control médico'],
+      exp:'La clamidia la causa una bacteria y se cura con antibióticos indicados por un profesional. La pareja también debe tratarse; si no, se vuelven a contagiar entre ellos. Y hay que terminar el tratamiento completo.'},
+  s1:{q:'¿Cuál suele ser la primera señal de la sífilis?',
+      ok:'Una llaga que no duele, en la zona de contagio',
+      no:['Un resfrío muy fuerte con tos durante un mes','Manchas azules en las uñas de ambas manos y pies','Un dolor muy fuerte de cabeza todos los días'],
+      exp:'La sífilis la causa una bacteria. Su primera señal suele ser una llaga que no duele (se llama chancro) en la zona por donde entró la bacteria.'},
+  s2:{q:'La llaga de Ricardo desapareció sola. ¿Qué significa?',
+      ok:'Que la infección sigue y necesita tratamiento',
+      no:['Que se curó y ya no necesita ir al médico','Que la llaga era solo una alergia sin importancia','Que ahora es inmune y no se contagia otra vez'],
+      exp:'Aunque la llaga desaparezca, la bacteria sigue en el cuerpo y avanza a otras etapas que pueden dañar la piel, el corazón y el cerebro. Se cura con penicilina indicada por un profesional.'},
+  s3:{q:'¿Por qué a las embarazadas se les hace el examen de sífilis?',
+      ok:'Porque la sífilis puede pasar al bebé',
+      no:['Porque la sífilis hace que el parto sea antes','Porque así se sabe el grupo de sangre del bebé','Porque la sífilis solo afecta a embarazadas'],
+      exp:'La sífilis puede pasar de la madre al bebé durante el embarazo y causarle problemas graves. Si se detecta a tiempo, se trata y se protege al bebé. Por eso en Chile este examen es parte de los controles del embarazo.'},
+  g1:{q:'¿Qué síntomas de Sebastián son típicos de la gonorrea?',
+      ok:'Ardor al orinar y una secreción amarilla',
+      no:['Manchas rojas en todo el cuerpo y fiebre','Pérdida de pelo y uñas muy quebradizas','Visión borrosa y dolor fuerte de oídos'],
+      exp:'La gonorrea la causa una bacteria. Los síntomas más comunes son ardor al orinar y una secreción (como pus) por el pene o la vagina. Ojo: muchas personas, sobre todo mujeres, no tienen síntomas.'},
+  g2:{q:'¿Qué debe hacer Sebastián?',
+      ok:'Ir al centro de salud a examinarse y tratarse',
+      no:['Tomar las pastillas que le sobraron a su amigo','Esperar a que el ardor se le pase con agua','Ponerse una crema cualquiera de la farmacia'],
+      exp:'Nunca hay que automedicarse: un antibiótico equivocado o incompleto no cura y hace que las bacterias se vuelvan resistentes. El profesional indica el tratamiento correcto, también para la pareja.'},
+  g3:{q:'Si Sebastián se cura, ¿puede volver a tener gonorrea?',
+      ok:'Sí, si vuelve a tener relaciones sin condón',
+      no:['No, porque el cuerpo queda protegido para siempre','No, porque la gonorrea solo da una vez','Sí, pero solo si come comida contaminada'],
+      exp:'Curarse no deja protección. Si vuelve a tener relaciones sin condón con alguien que tiene la infección, puede contagiarse otra vez.'},
+  p1:{q:'¿Contra qué ITS existe una vacuna que en Chile se pone gratis en el colegio?',
+      ok:'Contra el VPH',
+      no:['Contra el VIH','Contra la sífilis','Contra la gonorrea'],
+      exp:'La vacuna contra el VPH (Virus Papiloma Humano) se pone gratis en 4° y 5° básico, a niñas y niños. El VPH puede causar verrugas genitales y algunos tipos de cáncer, como el de cuello del útero.'},
+  p2:{q:'¿Qué es verdad sobre el herpes genital?',
+      ok:'No tiene cura, pero se pueden controlar los brotes',
+      no:['Se cura para siempre con una inyección en el brazo','Solo se contagia al compartir la ropa y las toallas','Aparece solamente en personas mayores de 60 años'],
+      exp:'El herpes genital lo causa un virus. Produce ampollas dolorosas que aparecen y desaparecen (brotes). No tiene cura, pero hay tratamiento que controla los brotes. El condón disminuye el riesgo de contagio.'},
+  p3:{q:'¿Cómo puede saber Ignacia si tiene una ITS?',
+      ok:'Haciéndose un examen en un centro de salud',
+      no:['Mirándose al espejo para ver si hay manchas','Esperando a sentir dolor fuerte o fiebre','Preguntándole a sus amigos en redes sociales'],
+      exp:'Muchas ITS no dan síntomas, así que la única forma segura de saberlo es con un examen. En Chile, los adolescentes pueden consultar en el CESFAM o en un Espacio Amigable, con atención confidencial y gratuita.'}
+};
+
+/* Apariencia de las personas: piel, pelo, ropa */
+const LOOK = {
+  valentina:{skin:'#c99272',hair:'long',hairColor:'#2b1a12',top:'#d8664f',bottom:'#3a5578',female:true},
+  andrea:{skin:'#a8714f',hair:'bun',hairColor:'#120d0b',top:'#d9a22e',bottom:'#2a2a2e',female:true},
+  javiera:{skin:'#e2b598',hair:'ponytail',hairColor:'#7a3a1c',top:'#5b84b8',bottom:'#5a5f66',female:true},
+  patricia:{skin:'#8a5a3e',hair:'curly',hairColor:'#18110d',top:'#3f8f6a',bottom:'#25324a',female:true},
+  matias:{skin:'#b98361',hair:'short',hairColor:'#15100c',top:'#b8323a',bottom:'#34507a',female:false},
+  tomas:{skin:'#e0b393',hair:'short',hairColor:'#5a3b22',top:'#7d858c',bottom:'#2f4a6e',female:false},
+  fernanda:{skin:'#b47a58',hair:'long',hairColor:'#0f0b09',top:'#a389c9',bottom:'#2a3242',female:true},
+  ricardo:{skin:'#6e4430',hair:'buzz',hairColor:'#0d0a08',top:'#4e7a46',bottom:'#2c2c30',female:false,beard:true},
+  sebastian:{skin:'#d9a982',hair:'short',hairColor:'#b48a4c',top:'#24272c',bottom:'#4a5a70',female:false},
+  ignacia:{skin:'#c08a66',hair:'curlylong',hairColor:'#3a2214',top:'#2f9c95',bottom:'#3b3f4a',female:true},
+  rosa:{skin:'#b07a58',hair:'bun',hairColor:'#2a1c14',top:'#3c78b4',bottom:'#3c78b4',female:true,shoes:'#f2f2f2',sleeve:'short'},
+  soto:{skin:'#d6a688',hair:'cap',hairColor:'#2f6f5e',top:'#3e8a78',bottom:'#3e8a78',female:true,mask:true,shoes:'#e8e8e8',sleeve:'short'},
+  fuentes:{skin:'#9a6648',hair:'cap',hairColor:'#2f6f5e',top:'#3e8a78',bottom:'#3e8a78',female:false,mask:true,shoes:'#e8e8e8',sleeve:'short'},
+  paula:{skin:'#e3b89a',hair:'ponytail',hairColor:'#1d130d',top:'#f4f6f6',bottom:'#3d4a5c',female:true,coat:true}
+};
+
+/* Salas. side: L (pasillo izq.), R (pasillo der.), E (fondo). zc: posición de la puerta en el pasillo. */
+const ROOMS = [
+  {id:'r101',block:'met',kind:'consulta',num:'101',name:'Consulta 101',sign:'Paciente: Valentina',side:'L',zc:-6,qs:['c1'],
+   person:{key:'valentina',name:'Valentina',age:21,role:'Paciente'},
+   say:'Hola, {doc}. Con mi pololo queremos cuidarnos. Por ahora no queremos un embarazo y tampoco queremos contagiarnos de ninguna infección. ¿Existe un método que sirva para las dos cosas?',
+   facts:['El condón es el único método que protege del embarazo y de las ITS al mismo tiempo.','Doble protección: condón más otro método anticonceptivo.']},
+  {id:'r102',block:'met',kind:'consulta',num:'102',name:'Consulta 102',sign:'Paciente: Andrea',side:'L',zc:-14,qs:['c2'],
+   person:{key:'andrea',name:'Andrea',age:26,role:'Paciente'},
+   say:'{Doc}, tomo pastillas anticonceptivas, pero trabajo de noche y se me olvidan muy seguido. Nunca las tomo a la misma hora. ¿Hay algo que no tenga que recordar todos los días?',
+   facts:['La pastilla se toma todos los días, idealmente a la misma hora.','El implante (en el brazo) y el DIU (en el útero) duran años y no hay que recordarlos a diario.']},
+  {id:'r103',block:'met',kind:'consulta',num:'103',name:'Consulta 103',sign:'Paciente: Javiera',side:'L',zc:-22,qs:['c3'],
+   person:{key:'javiera',name:'Javiera',age:23,role:'Paciente'},
+   say:'{Doc}, estoy muy asustada. Anoche, con mi pareja, el condón se rompió. No sé qué hacer ahora.',
+   facts:['La píldora de emergencia funciona mejor mientras antes se tome (idealmente en los 3 primeros días).','Es para emergencias, no para usar siempre. En Chile se entrega gratis en los centros de salud.']},
+  {id:'r104',block:'met',kind:'consulta',num:'104',name:'Consulta 104',sign:'Paciente: Patricia',side:'L',zc:-30,qs:['c4'],
+   person:{key:'patricia',name:'Patricia',age:39,role:'Paciente'},
+   say:'Tengo tres hijos y ya lo pensé con calma: no quiero tener más. Busco un método definitivo, para no preocuparme nunca más de un embarazo.',
+   facts:['Los métodos definitivos son cirugías: ligadura de trompas (mujeres) y vasectomía (hombres).','Se eligen solo cuando la persona está segura, porque son permanentes.']},
+  {id:'r105',block:'met',kind:'consulta',num:'105',name:'Consulta 105',sign:'Paciente: Matías',side:'L',zc:-38,qs:['c5'],
+   person:{key:'matias',name:'Matías',age:19,role:'Paciente'},
+   say:'{Doc}, tengo una duda. Mis amigos dicen que en la primera relación sexual una mujer no puede quedar embarazada. ¿Es verdad eso?',
+   facts:['Puede haber embarazo desde la primera relación sexual sin protección.','Informarse antes y usar un método desde el inicio es parte de cuidarse.']},
+
+  {id:'r201',block:'met',kind:'expo',num:'201',name:'Sala de Métodos 201',sign:'Condón masculino y femenino',side:'R',zc:-6,qs:['m1a','m1b'],model:'condones',
+   intro:'Frente a ti hay dos modelos gigantes: el condón masculino y el condón femenino. Lee la ficha de la pared y anota en tu libreta.',
+   facts:['Condón masculino: funda delgada de látex que cubre el pene erecto.','Condón femenino: funda más ancha, con dos anillos, que se coloca dentro de la vagina.','Son los únicos métodos que protegen del embarazo y de las ITS.','Uno nuevo en cada relación. Revisar la fecha de vencimiento. Nunca usar dos a la vez.']},
+  {id:'r202',block:'met',kind:'expo',num:'202',name:'Sala de Métodos 202',sign:'DIU de cobre y DIU hormonal',side:'R',zc:-14,qs:['m2a','m2b'],model:'diu',
+   intro:'Dos dispositivos intrauterinos (DIU) en tamaño gigante: uno de cobre y uno hormonal. En la realidad miden unos 3 centímetros.',
+   facts:['El DIU es un dispositivo pequeño en forma de T que se coloca dentro del útero.','DIU de cobre (no hormonal): el cobre afecta a los espermatozoides. Dura hasta 10 años.','DIU hormonal: libera una pequeña cantidad de hormona. Dura alrededor de 5 años.','Lo coloca y lo retira un profesional de salud. No protege de ITS.']},
+  {id:'r203',block:'met',kind:'quirofano',num:'203',name:'Pabellón 203',sign:'Ligadura de trompas',side:'R',zc:-22,qs:['m3a','m3b'],model:'ligadura',
+   person:{key:'soto',name:'Dra. Soto',age:0,role:'Cirujana'},
+   intro:'Estás en un pabellón quirúrgico. La Dra. Soto te muestra un modelo del útero y de las trompas de Falopio.',
+   say:'Bienvenid{a} al pabellón. En la ligadura de trompas cortamos o bloqueamos las trompas de Falopio. Así el óvulo y el espermatozoide no se encuentran.',
+   facts:['Cirugía para personas que no quieren tener más hijos.','Se cortan, amarran o bloquean las trompas de Falopio.','Es permanente. La menstruación continúa igual.','No protege de ITS.']},
+  {id:'r204',block:'met',kind:'quirofano',num:'204',name:'Pabellón 204',sign:'Vasectomía',side:'R',zc:-30,qs:['m4a','m4b'],model:'vasectomia',
+   person:{key:'fuentes',name:'Dr. Fuentes',age:0,role:'Urólogo'},
+   intro:'Otro pabellón. El Dr. Fuentes, urólogo, te explica la vasectomía con un modelo del aparato reproductor masculino.',
+   say:'La vasectomía es una cirugía pequeña, con anestesia local, que dura unos 20 minutos. Cortamos los conductos deferentes, que llevan los espermatozoides.',
+   facts:['Cirugía pequeña para hombres, con anestesia local.','Se cortan los conductos deferentes, que llevan los espermatozoides desde los testículos.','No es inmediata: hay que esperar unos 3 meses y confirmar con un examen.','Es permanente y no protege de ITS.']},
+  {id:'r205',block:'met',kind:'lab',num:'205',name:'Laboratorio 205',sign:'Espermicida',side:'R',zc:-38,qs:['m5a','m5b'],model:'espermicida',
+   person:{key:'paula',name:'Paula Ríos',age:0,role:'Tecnóloga médica'},
+   intro:'Laboratorio. En la pantalla grande se ve cómo actúa el espermicida sobre los espermatozoides, aumentado muchas veces.',
+   say:'Mira la pantalla: cuando los espermatozoides llegan al gel espermicida, quedan inmóviles. Pero ojo, usado solo falla bastante.',
+   facts:['Gel, espuma u óvulo que se coloca en la vagina antes de la relación.','Inmoviliza o destruye a los espermatozoides.','Usado solo es poco eficaz: se recomienda junto con el condón.','No protege de ITS.']},
+
+  {id:'r301',block:'its',kind:'its',num:'301',name:'Box 301',sign:'VIH · Paciente: Tomás',side:'L',zc:-54,qs:['v1','v2','v3'],microbe:'vih',
+   person:{key:'tomas',name:'Tomás',age:28,role:'Paciente'},
+   say:'{Doc}, me hice el test rápido de VIH porque nunca me lo había hecho. Estoy nervioso. Un compañero de trabajo dice que si salgo positivo no me va a abrazar nunca más.',
+   facts:['VIH: virus que ataca las defensas del cuerpo. El SIDA es su etapa avanzada.','Se transmite por relaciones sexuales sin condón, por sangre y de madre a bebé sin tratamiento.','NO se transmite por abrazos, besos, vasos ni mosquitos.','Tiene tratamiento gratuito: no lo cura, pero lo controla.']},
+  {id:'r302',block:'its',kind:'its',num:'302',name:'Box 302',sign:'Clamidia · Paciente: Fernanda',side:'R',zc:-54,qs:['l1','l2','l3'],microbe:'clamidia',
+   person:{key:'fernanda',name:'Fernanda',age:19,role:'Paciente'},
+   say:'A mi pareja le salió clamidia en un examen y le dijeron que yo también tenía que venir. Pero yo me siento perfecta, {doc}. No tengo ningún síntoma.',
+   facts:['Clamidia: bacteria. Muchas veces no da síntomas ("infección silenciosa").','Sin tratamiento puede dañar las trompas y causar infertilidad.','Se cura con antibióticos. La pareja también debe tratarse.']},
+  {id:'r303',block:'its',kind:'its',num:'303',name:'Box 303',sign:'Sífilis · Paciente: Ricardo',side:'L',zc:-66,qs:['s1','s2','s3'],microbe:'sifilis',
+   person:{key:'ricardo',name:'Ricardo',age:30,role:'Paciente'},
+   say:'Hace unas semanas me salió una llaga en la zona genital. No me dolía y después desapareció sola. Entonces ya estoy sano, ¿cierto?',
+   facts:['Sífilis: bacteria. Primera señal: una llaga que no duele.','Aunque la llaga desaparezca, la infección sigue y avanza.','Se cura con penicilina. Puede pasar al bebé durante el embarazo.']},
+  {id:'r304',block:'its',kind:'its',num:'304',name:'Box 304',sign:'Gonorrea · Paciente: Sebastián',side:'R',zc:-66,qs:['g1','g2','g3'],microbe:'gonorrea',
+   person:{key:'sebastian',name:'Sebastián',age:22,role:'Paciente'},
+   say:'{Doc}, hace tres días me arde mucho al orinar y me sale una secreción amarilla. Un amigo me dijo que me tomara unas pastillas que le sobraron.',
+   facts:['Gonorrea: bacteria. Síntomas comunes: ardor al orinar y secreción.','Nunca automedicarse: el tratamiento lo indica un profesional.','Curarse no deja protección: se puede volver a contagiar.']},
+  {id:'r305',block:'its',kind:'amigable',num:'305',name:'Espacio Amigable 305',sign:'Prevención · Paciente: Ignacia',side:'E',zc:-76,qs:['p1','p2','p3'],microbe:'vph',
+   person:{key:'ignacia',name:'Ignacia',age:17,role:'Consulta adolescente'},
+   say:'Hola. Vine al Espacio Amigable porque tengo dudas. Leí sobre el VPH y el herpes, y no sé cómo puedo saber si una persona tiene una ITS.',
+   facts:['VPH: virus. Existe una vacuna gratuita en 4° y 5° básico.','Herpes genital: virus sin cura, pero con tratamiento que controla los brotes.','Muchas ITS no dan síntomas: la forma segura de saber es un examen.','Adolescentes pueden consultar gratis y en forma confidencial en el CESFAM o Espacio Amigable.']}
+];
+const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
+const BLOCK_QS = {met:[], its:[]};
+ROOMS.forEach(r => r.qs.forEach(id => BLOCK_QS[r.block].push(id)));
+</script>
+<script>
+'use strict';
+(function(){
+/* =====================================================================
+   MOTOR: utilidades, guardado y audio
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const lerp = (a,b,t) => a+(b-a)*t;
+let _seed = 20241029;
+function rnd(){_seed|=0;_seed=_seed+0x6D2B79F5|0;let t=Math.imul(_seed^_seed>>>15,1|_seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}
+const rr = (a,b) => a+rnd()*(b-a);
+const shuffle = a => {for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nextFrame = () => new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
+
+function fatal(msg){
+  $('#loadMsg').textContent='No se pudo iniciar';
+  const e=$('#loadErr'); e.hidden=false; e.textContent=msg;
+}
+if(!window.THREE){ fatal('No se pudo cargar el motor 3D. Revisa la conexión a internet y vuelve a abrir la página.'); return; }
+const T = THREE;
+if(T.ColorManagement && 'legacyMode' in T.ColorManagement) T.ColorManagement.legacyMode = false;
+
+const SAVE_KEY = 'turnoResidencia.v1';
+const S = {name:'',fem:true,ans:{},itsOpen:false,seen:{},ended:false,pos:null,met:false};
+let hadSave = false;
+try{ const d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if(d&&d.ans){Object.assign(S,d);hadSave=true;} }catch(e){}
+function save(){ try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){} }
+function wipe(){ try{localStorage.removeItem(SAVE_KEY);}catch(e){} }
+const docWord = () => S.fem?'doctora':'doctor';
+const docTitle = () => (S.fem?'Dra. ':'Dr. ')+(S.name||'Residente');
+const fmt = s => s.replace(/\{doc\}/g,docWord()).replace(/\{Doc\}/g,S.fem?'Doctora':'Doctor').replace(/\{a\}/g,S.fem?'a':'o');
+
+function stats(block){const ids=BLOCK_QS[block];let ok=0,first=0,done=0;for(const id of ids){const a=S.ans[id];if(a){done++;if(a.ok)ok++;if(a.first)first++;}}return{ok,first,done,total:ids.length};}
+function needsReview(){const s=stats('met');return !S.itsOpen&&s.done===s.total&&s.ok<UNLOCK;}
+function roomStatus(r){
+  if(r.block==='its'&&!S.itsOpen) return 'locked';
+  const a=r.qs.map(id=>S.ans[id]);
+  if(a.every(x=>!x)) return 'new';
+  if(a.some(x=>!x)) return 'part';
+  if(a.every(x=>x.ok)) return 'ok';
+  return (r.block==='met'&&needsReview())?'review':'err';
+}
+const ST_COL={new:'#3aa0ff',part:'#ffc94a',ok:'#3ddc84',err:'#ff9f43',review:'#ff4d4d',locked:'#56656b'};
+const ST_TXT={new:'Por atender',part:'En curso',ok:'Todo correcto',err:'Con errores',review:'Repasar',locked:'Bloqueado'};
+
+const AU={ctx:null,master:null,on:true};
+function audioInit(){
+  if(AU.ctx){ if(AU.ctx.state==='suspended') AU.ctx.resume(); return; }
+  const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+  try{ AU.ctx=new C(); }catch(e){ return; }
+  const c=AU.ctx; AU.master=c.createGain(); AU.master.gain.value=AU.on?.75:0; AU.master.connect(c.destination);
+  const len=c.sampleRate*2, bb=c.createBuffer(1,len,c.sampleRate), d=bb.getChannelData(0); let last=0;
+  for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.5;}
+  const wb=c.createBuffer(1,c.sampleRate,c.sampleRate), wd=wb.getChannelData(0); for(let i=0;i<wd.length;i++) wd[i]=Math.random()*2-1; AU.white=wb;
+  const src=c.createBufferSource(); src.buffer=bb; src.loop=true; const f=c.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260;
+  const g=c.createGain(); g.gain.value=.08; src.connect(f); f.connect(g); g.connect(AU.master); src.start();
+  const o=c.createOscillator(); o.frequency.value=120; const og=c.createGain(); og.gain.value=.005; o.connect(og); og.connect(AU.master); o.start();
+}
+function tone(f,dur,{type='sine',vol=.18,at=0,to=null}={}){
+  const c=AU.ctx; if(!c||!AU.on) return; const t=c.currentTime+at;
+  const o=c.createOscillator(); o.type=type; o.frequency.setValueAtTime(f,t); if(to) o.frequency.exponentialRampToValueAtTime(to,t+dur);
+  const g=c.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+.012); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(AU.master); o.start(t); o.stop(t+dur+.05);
+}
+function noise(dur,{freq=800,q=1,vol=.2,at=0,type='bandpass',sweep=null}={}){
+  const c=AU.ctx; if(!c||!AU.on||!AU.white) return; const t=c.currentTime+at;
+  const s=c.createBufferSource(); s.buffer=AU.white; const f=c.createBiquadFilter(); f.type=type; f.frequency.setValueAtTime(freq,t);
+  if(sweep) f.frequency.exponentialRampToValueAtTime(sweep,t+dur); f.Q.value=q;
+  const g=c.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(AU.master); s.start(t); s.stop(t+dur+.05);
+}
+const SFX={
+  step(){noise(.09,{freq:rr(380,520),q:.9,vol:.11,type:'lowpass'});noise(.04,{freq:2600,q:2,vol:.02});},
+  door(){noise(.5,{freq:300,sweep:1100,q:.7,vol:.1});tone(92,.18,{type:'triangle',vol:.05,at:.02});},
+  slide(){noise(1.1,{freq:200,sweep:700,q:.5,vol:.14});tone(55,1,{type:'sawtooth',vol:.02});},
+  ok(){tone(660,.16,{vol:.16});tone(990,.28,{vol:.16,at:.11});tone(1320,.35,{vol:.07,at:.2});},
+  bad(){tone(196,.32,{type:'square',vol:.06});tone(147,.4,{type:'square',vol:.06,at:.16});},
+  click(){tone(1200,.05,{type:'triangle',vol:.05});},
+  page(){noise(.2,{freq:3000,q:.6,vol:.06,sweep:1500});},
+  unlock(){[523,659,784,1047,1319].forEach((f,i)=>tone(f,.55,{vol:.12,at:i*.11,type:'triangle'}));},
+  beep(v){tone(1046,.08,{vol:.05*v});},
+  denied(){tone(330,.12,{type:'square',vol:.05});tone(262,.2,{type:'square',vol:.05,at:.12});}
+};
+const buzz = p => { try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} };
+
+/* =====================================================================
+   RENDER: renderizador, cámara, luz y mapa de entorno
+   ===================================================================== */
+const canvas=$('#c');
+const isTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
+let renderer, scene, camera, ANISO=4, maxPR=1, curPR=1;
+const H=3.2, WT=0.2;
+
+function initRenderer(){
+  renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance',stencil:false});
+  maxPR=Math.min(window.devicePixelRatio||1,isTouch?1.6:2);
+  curPR=isTouch?Math.min(maxPR,1.3):maxPR;
+  renderer.setPixelRatio(curPR);
+  renderer.setSize(innerWidth,innerHeight,false);
+  renderer.outputEncoding=T.sRGBEncoding;
+  renderer.toneMapping=T.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=.98;
+  ANISO=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  scene=new T.Scene();
+  scene.background=new T.Color('#c3cdcf');
+  scene.fog=new T.Fog('#c3cdcf',18,62);
+  camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,.04,140);
+  camera.rotation.order='YXZ';
+  scene.add(camera);
+  scene.environment=makeEnv();
+  scene.add(new T.HemisphereLight('#f4f8ff','#8c8a84',.5));
+  const d=new T.DirectionalLight('#fff3e2',.55); d.position.set(5,12,7); scene.add(d);
+  const d2=new T.DirectionalLight('#dfe9ff',.2); d2.position.set(-6,8,-10); scene.add(d2);
+  onResize();
+}
+function makeEnv(){
+  const s=new T.Scene(), g=new T.BoxGeometry(1,1,1);
+  const room=new T.Mesh(g,new T.MeshBasicMaterial({color:'#8d9597',side:T.BackSide})); room.scale.set(16,5,30); room.position.y=2.5; s.add(room);
+  const fl=new T.Mesh(g,new T.MeshBasicMaterial({color:'#6c675f'})); fl.scale.set(16,.1,30); fl.position.y=.05; s.add(fl);
+  const lm=new T.MeshBasicMaterial({color:new T.Color(6,6,6)});
+  for(let z=-12;z<=12;z+=4) for(const x of [-4,0,4]){const p=new T.Mesh(g,lm);p.scale.set(1.4,.05,.7);p.position.set(x,4.9,z);s.add(p);}
+  const wl=new T.Mesh(g,new T.MeshBasicMaterial({color:new T.Color(2.4,2.5,2.7)})); wl.scale.set(.1,2,8); wl.position.set(7.9,2.4,0); s.add(wl);
+  const pm=new T.PMREMGenerator(renderer); const tex=pm.fromScene(s,.035).texture; pm.dispose(); return tex;
+}
+function onResize(){
+  if(!renderer) return;
+  const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false);
+  camera.aspect=w/h;
+  const hf=80*Math.PI/180; camera.fov=clamp(2*Math.atan(Math.tan(hf/2)/camera.aspect)*180/Math.PI,52,80);
+  camera.updateProjectionMatrix();
+  if(HAND) HAND.position.set(camera.aspect<1?.15:.32,camera.aspect<1?-.36:-.27,-.55);
+}
+addEventListener('resize',onResize);
+addEventListener('orientationchange',()=>setTimeout(onResize,300));
+
+/* ---------- constructores de geometría ---------- */
+function add(o,p,x=0,y=0,z=0){o.position.set(x,y,z);(p||scene).add(o);return o;}
+function uvBox(g,w,h,d,s){const uv=g.attributes.uv,dims=[[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]];for(let f=0;f<6;f++)for(let i=0;i<4;i++){const k=f*4+i;uv.setXY(k,uv.getX(k)*dims[f][0]/s,uv.getY(k)*dims[f][1]/s);}uv.needsUpdate=true;return g;}
+function B(w,h,d,m,x,y,z,p,s){const g=new T.BoxGeometry(w,h,d);if(s)uvBox(g,w,h,d,s);return add(new T.Mesh(g,m),p,x,y,z);}
+function Cy(rt,rb,h,m,x,y,z,p,seg=18,open=false){return add(new T.Mesh(new T.CylinderGeometry(rt,rb,h,seg,1,open),m),p,x,y,z);}
+function Sp(r,m,x,y,z,p,sx=1,sy=1,sz=1,ws=18,hs=12){const o=add(new T.Mesh(new T.SphereGeometry(r,ws,hs),m),p,x,y,z);o.scale.set(sx,sy,sz);return o;}
+function Ca(r,len,m,x,y,z,p){return add(new T.Mesh(new T.CapsuleGeometry(r,len,5,12),m),p,x,y,z);}
+function Pl(w,h,m,x,y,z,p,ry=0){const o=add(new T.Mesh(new T.PlaneGeometry(w,h),m),p,x,y,z);o.rotation.y=ry;return o;}
+function Tor(r,t,m,x,y,z,p,rx=Math.PI/2){const o=add(new T.Mesh(new T.TorusGeometry(r,t,10,40),m),p,x,y,z);o.rotation.x=rx;return o;}
+function Tube(pts,r,m,p,seg=64,rs=8){const c=new T.CatmullRomCurve3(pts.map(a=>new T.Vector3(...a)));return add(new T.Mesh(new T.TubeGeometry(c,seg,r,rs,false),m),p);}
+function Lathe(pts,m,p,seg=40){return add(new T.Mesh(new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),seg),m),p);}
+function grp(p,x=0,y=0,z=0,ry=0){const g=new T.Group();g.position.set(x,y,z);g.rotation.y=ry;(p||scene).add(g);return g;}
+function dyn(o){o.userData.dyn=true;return o;}
+
+/* Fusiona mallas estáticas por material: menos llamadas de dibujo, más FPS en el teléfono */
+function mergeInto(root,target){
+  root.updateMatrixWorld(true); target.updateMatrixWorld(true);
+  const inv=new T.Matrix4().copy(target.matrixWorld).invert(), mm=new T.Matrix4();
+  const buckets=new Map(), victims=[];
+  (function walk(o){for(const c of o.children){ if(c.userData.dyn) continue;
+    if(c.isMesh&&!c.isInstancedMesh&&!Array.isArray(c.material)&&!c.material.transparent&&!c.userData.keep) victims.push(c);
+    walk(c);} })(root);
+  for(const m of victims){
+    let g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();
+    g.applyMatrix4(mm.multiplyMatrices(inv,m.matrixWorld));
+    if(!g.attributes.uv) g.setAttribute('uv',new T.BufferAttribute(new Float32Array(g.attributes.position.count*2),2));
+    const k=m.material.uuid; if(!buckets.has(k)) buckets.set(k,{mat:m.material,list:[]}); buckets.get(k).list.push(g);
+  }
+  for(const m of victims) m.parent.remove(m);
+  for(const {mat,list} of buckets.values()){
+    let n=0; for(const g of list) n+=g.attributes.position.count;
+    const pos=new Float32Array(n*3),nor=new Float32Array(n*3),uv=new Float32Array(n*2); let o=0;
+    for(const g of list){pos.set(g.attributes.position.array,o*3);nor.set(g.attributes.normal.array,o*3);uv.set(g.attributes.uv.array,o*2);o+=g.attributes.position.count;g.dispose();}
+    const geo=new T.BufferGeometry(); geo.setAttribute('position',new T.BufferAttribute(pos,3)); geo.setAttribute('normal',new T.BufferAttribute(nor,3)); geo.setAttribute('uv',new T.BufferAttribute(uv,2));
+    geo.computeBoundingSphere(); target.add(new T.Mesh(geo,mat));
+  }
+}
+
+/* =====================================================================
+   TEXTURAS PROCEDURALES (todo se pinta en canvas: cero archivos externos)
+   ===================================================================== */
+const FONT={sign:'"Barlow Condensed","Arial Narrow",sans-serif',body:'"Atkinson Hyperlegible",Arial,sans-serif',hand:'Kalam,"Comic Sans MS",cursive'};
+const font=(w,px,k='sign')=>`${w} ${Math.round(px)}px ${FONT[k]}`;
+function cvs(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function ctex(c,srgb=true){const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=ANISO;if(srgb)t.encoding=T.sRGBEncoding;return t;}
+function paint(w,h,fn,srgb=true){const c=cvs(w,h);fn(c.getContext('2d'),w,h);return ctex(c,srgb);}
+function speck(g,w,h,n,cols,r0,r1,a0=.35,a1=.9){for(let i=0;i<n;i++){g.globalAlpha=rr(a0,a1);g.fillStyle=cols[(rnd()*cols.length)|0];const r=rr(r0,r1);g.beginPath();g.ellipse(rnd()*w,rnd()*h,r,r*rr(.55,1),rnd()*3,0,7);g.fill();}g.globalAlpha=1;}
+function grain(g,w,h,amt){const id=g.getImageData(0,0,w,h),d=id.data;for(let i=0;i<d.length;i+=4){const n=(rnd()-.5)*amt;d[i]+=n;d[i+1]+=n;d[i+2]+=n;}g.putImageData(id,0,0);}
+function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function wrapText(g,text,x,y,maxW,lh,draw=true){const words=String(text).split(' ');let line='';for(const w of words){const t=line?line+' '+w:w;if(g.measureText(t).width>maxW&&line){if(draw)g.fillText(line,x,y);y+=lh;line=w;}else line=t;}if(line){if(draw)g.fillText(line,x,y);y+=lh;}return y;}
+function fitFont(g,text,w0,px,maxW,k='sign'){let p=px;g.font=font(w0,p,k);while(g.measureText(text).width>maxW&&p>10){p-=2;g.font=font(w0,p,k);}return p;}
+function radial(c0,c1,size=128){return paint(size,size,(g,w)=>{const gr=g.createRadialGradient(w/2,w/2,0,w/2,w/2,w/2);gr.addColorStop(0,c0);gr.addColorStop(1,c1);g.fillStyle=gr;g.fillRect(0,0,w,w);});}
+
+const TX={}, MAT={};
+function buildTextures(){
+  TX.floorCorr=paint(512,512,(g,w,h)=>{g.fillStyle='#d3d6cf';g.fillRect(0,0,w,h);grain(g,w,h,10);
+    speck(g,w,h,3200,['#9aa09a','#7d837f','#f6f6f1','#b7bbb2','#6a8d93','#c9c2b0'],.6,1.9);
+    g.strokeStyle='rgba(70,72,70,.28)';g.lineWidth=2;g.strokeRect(1,1,w-2,h-2);});
+  TX.floorCorrB=paint(512,512,(g,w,h)=>{g.fillStyle='#d1ccd3';g.fillRect(0,0,w,h);grain(g,w,h,10);
+    speck(g,w,h,3200,['#9c97a2','#7d7884','#f6f3f7','#b9b1bd','#8c6a86'],.6,1.9);
+    g.strokeStyle='rgba(70,62,72,.28)';g.lineWidth=2;g.strokeRect(1,1,w-2,h-2);});
+  TX.floorRoom=paint(512,512,(g,w,h)=>{g.fillStyle='#ddd7ca';g.fillRect(0,0,w,h);grain(g,w,h,8);
+    speck(g,w,h,2200,['#b9b2a2','#a49c8b','#f2eee5'],.5,1.4);g.strokeStyle='rgba(90,84,70,.22)';g.lineWidth=2;
+    for(let i=0;i<=2;i++){g.beginPath();g.moveTo(i*w/2,0);g.lineTo(i*w/2,h);g.stroke();g.beginPath();g.moveTo(0,i*h/2);g.lineTo(w,i*h/2);g.stroke();}});
+  TX.floorLobby=paint(512,512,(g,w,h)=>{const n=2,s=w/n;for(let i=0;i<n;i++)for(let j=0;j<n;j++){const v=rr(-8,8);g.fillStyle=`rgb(${226+v},${221+v},${212+v})`;g.fillRect(i*s,j*s,s,s);
+      g.save();g.beginPath();g.rect(i*s,j*s,s,s);g.clip();for(let k=0;k<7;k++){g.strokeStyle=`rgba(120,110,98,${rr(.06,.16)})`;g.lineWidth=rr(.8,2.6);g.beginPath();g.moveTo(i*s+rnd()*s,j*s);g.bezierCurveTo(i*s+rnd()*s,j*s+rnd()*s,i*s+rnd()*s,j*s+rnd()*s,i*s+rnd()*s,j*s+s);g.stroke();}g.restore();}
+    grain(g,w,h,6);g.strokeStyle='rgba(95,88,80,.55)';g.lineWidth=3;for(let i=0;i<=n;i++){g.beginPath();g.moveTo(i*s,0);g.lineTo(i*s,h);g.stroke();g.beginPath();g.moveTo(0,i*s);g.lineTo(w,i*s);g.stroke();}});
+  TX.floorOR=paint(512,512,(g,w,h)=>{g.fillStyle='#b8c9c3';g.fillRect(0,0,w,h);grain(g,w,h,9);speck(g,w,h,2600,['#9fb3ac','#d8e4df','#8aa199'],.5,1.5);});
+  TX.floorDark=paint(512,512,(g,w,h)=>{g.fillStyle='#30373b';g.fillRect(0,0,w,h);grain(g,w,h,10);speck(g,w,h,1800,['#4b555a','#252b2e','#5d6a70'],.5,1.6);
+    g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2;g.strokeRect(1,1,w-2,h-2);});
+  TX.wall=paint(256,256,(g,w,h)=>{g.fillStyle='#ebe8e1';g.fillRect(0,0,w,h);grain(g,w,h,7);speck(g,w,h,300,['#d9d5cc','#f6f4ef'],.5,2,.2,.5);});
+  TX.ceil=paint(512,512,(g,w,h)=>{g.fillStyle='#efefeb';g.fillRect(0,0,w,h);grain(g,w,h,6);speck(g,w,h,5000,['#b9b9b2','#cfcfc8'],.4,.9,.4,.8);
+    g.strokeStyle='#c7c7c0';g.lineWidth=5;const s=w/4;for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*s,0);g.lineTo(i*s,h);g.stroke();g.beginPath();g.moveTo(0,i*s);g.lineTo(w,i*s);g.stroke();}});
+  TX.tile=paint(256,256,(g,w,h)=>{const s=w/4;for(let i=0;i<4;i++)for(let j=0;j<4;j++){const v=rr(-6,6);g.fillStyle=`rgb(${206+v},${226+v},${219+v})`;g.fillRect(i*s,j*s,s,s);
+      const gr=g.createLinearGradient(i*s,j*s,i*s+s,j*s+s);gr.addColorStop(0,'rgba(255,255,255,.25)');gr.addColorStop(1,'rgba(0,0,0,.05)');g.fillStyle=gr;g.fillRect(i*s,j*s,s,s);}
+    g.strokeStyle='#9ab0a9';g.lineWidth=3;for(let i=0;i<=4;i++){g.beginPath();g.moveTo(i*s,0);g.lineTo(i*s,h);g.stroke();g.beginPath();g.moveTo(0,i*s);g.lineTo(w,i*s);g.stroke();}});
+  TX.wood=paint(512,512,(g,w,h)=>{g.fillStyle='#b98a5d';g.fillRect(0,0,w,h);for(let i=0;i<140;i++){const y=rnd()*h;g.strokeStyle=`rgba(${rnd()<.5?'90,55,30':'215,175,130'},${rr(.08,.25)})`;g.lineWidth=rr(.6,3);g.beginPath();
+      for(let x=0;x<=w;x+=16){const yy=y+Math.sin(x*.02+i)*rr(1,4);x?g.lineTo(x,yy):g.moveTo(x,yy);}g.stroke();}grain(g,w,h,10);});
+  TX.fabric=paint(128,128,(g,w,h)=>{g.fillStyle='#ffffff';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=2){g.fillStyle='rgba(0,0,0,.05)';g.fillRect(0,y,w,1);}for(let x=0;x<w;x+=2){g.fillStyle='rgba(0,0,0,.04)';g.fillRect(x,0,1,h);}grain(g,w,h,22);});
+  TX.pool=radial('rgba(255,250,235,1)','rgba(255,250,235,0)');
+  TX.glow=radial('rgba(255,255,255,1)','rgba(255,255,255,0)');
+  TX.led=paint(128,32,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(.5,'rgba(255,255,255,1)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;rrect(g,6,6,w-12,h-12,8);g.fill();g.globalCompositeOperation='destination-in';const gx=g.createLinearGradient(0,0,w,0);gx.addColorStop(0,'rgba(0,0,0,0)');gx.addColorStop(.15,'#000');gx.addColorStop(.85,'#000');gx.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gx;g.fillRect(0,0,w,h);});
+  TX.shadow=radial('rgba(0,0,0,.55)','rgba(0,0,0,0)');
+  TX.cone=paint(64,256,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'rgba(255,255,255,.0)');gr.addColorStop(.05,'rgba(255,255,255,.9)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);});
+  TX.window=paint(256,192,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#9fd0f4');gr.addColorStop(.7,'#e9f4fb');gr.addColorStop(1,'#cfe3c6');g.fillStyle=gr;g.fillRect(0,0,w,h);
+    g.fillStyle='#b8c7cf';for(let i=0;i<7;i++){const bw=rr(18,40),bh=rr(30,80);g.fillRect(rr(0,w),h*.78-bh,bw,bh);}g.fillStyle='#6e9a62';for(let i=0;i<16;i++){g.beginPath();g.arc(rr(0,w),h*.82,rr(8,20),0,7);g.fill();}
+    g.fillStyle='rgba(245,245,240,.92)';for(let y=0;y<h*.42;y+=7)g.fillRect(0,y,w,5);g.fillStyle='rgba(0,0,0,.08)';for(let y=0;y<h*.42;y+=7)g.fillRect(0,y+5,w,1);});
+}
+function buildMaterials(){
+  const S_=(o)=>new T.MeshStandardMaterial(Object.assign({envMapIntensity:.7},o));
+  MAT.wall=S_({map:TX.wall,color:'#ffffff',roughness:.85});
+  MAT.floorCorr=S_({map:TX.floorCorr,roughness:.32,envMapIntensity:.55});
+  MAT.floorCorrB=S_({map:TX.floorCorrB,roughness:.32,envMapIntensity:.55});
+  MAT.floorRoom=S_({map:TX.floorRoom,roughness:.42});
+  MAT.floorLobby=S_({map:TX.floorLobby,roughness:.18,envMapIntensity:.8});
+  MAT.floorOR=S_({map:TX.floorOR,roughness:.3});
+  MAT.floorDark=S_({map:TX.floorDark,roughness:.22,envMapIntensity:.9});
+  MAT.ceil=S_({map:TX.ceil,roughness:.95,envMapIntensity:.3,emissive:new T.Color(.42,.42,.41)});
+  MAT.tile=S_({map:TX.tile,roughness:.25,envMapIntensity:.8});
+  MAT.wood=S_({map:TX.wood,roughness:.5});
+  MAT.woodDark=S_({map:TX.wood,color:'#8a6a4c',roughness:.45});
+  MAT.frame=mat('#d7dbdc',.4,.3);
+  MAT.steel=mat('#b9c0c4',.3,.9);
+  MAT.chrome=mat('#e6eaec',.12,1);
+  MAT.black=mat('#16191b',.35,.2);
+  MAT.white=mat('#f1f1ee',.55);
+  MAT.lam=mat('#e4e1da',.6);
+  MAT.counter=mat('#cfd6d6',.3,.05);
+  MAT.base=mat('#4a5054',.6);
+  MAT.glassDark=mat('#22323b',.08,.4);
+  MAT.doorMet=S_({map:TX.wood,color:'#a9c6d3',roughness:.55});
+  MAT.doorIts=S_({map:TX.wood,color:'#c9a9c6',roughness:.55});
+  MAT.glass=S_({color:'#cfe6ec',roughness:.04,metalness:0,transparent:true,opacity:.16,depthWrite:false,envMapIntensity:1.4});
+  MAT.eyeW=mat('#f4f2ee',.3); MAT.iris=mat('#2a1d14',.25); MAT.lip=mat('#9a4b48',.6); MAT.mask=mat('#9cc6e0',.85);
+  MAT.panel=new T.MeshBasicMaterial({color:'#f6fbff',toneMapped:false});
+  MAT.pool=new T.MeshBasicMaterial({map:TX.pool,color:'#fff6e0',transparent:true,opacity:.17,blending:T.AdditiveBlending,depthWrite:false,fog:true});
+  MAT.shadow=new T.MeshBasicMaterial({map:TX.shadow,transparent:true,depthWrite:false,opacity:.75});
+  MAT.leaf=[mat('#3d7a3a',.6),mat('#4f8f43',.6),mat('#2f6a36',.6)];
+  MAT.pot=mat('#d9d3c8',.6);
+  MAT.plasticTeal=mat('#2c8d8d',.45);
+  MAT.vinylTeal=S_({map:TX.fabric,color:'#5aa7a6',roughness:.5});
+  MAT.curtain=S_({map:TX.fabric,color:'#8fc1d3',roughness:.9,side:T.DoubleSide});
+  MAT.paper=mat('#fbfbf7',.9);
+  MAT.red=mat('#c4302b',.4,.1);
+  MAT.yellow=mat('#f1c232',.5);
+  MAT.latexB=S_({color:'#f0d9a6',roughness:.25,transparent:true,opacity:.55,side:T.BackSide,depthWrite:false});
+  MAT.latexF=S_({color:'#f0d9a6',roughness:.22,transparent:true,opacity:.62,side:T.FrontSide,depthWrite:false,envMapIntensity:1.3});
+  MAT.polyB=S_({color:'#e5f1f5',roughness:.1,transparent:true,opacity:.32,side:T.BackSide,depthWrite:false});
+  MAT.polyF=S_({color:'#e5f1f5',roughness:.08,transparent:true,opacity:.4,side:T.FrontSide,depthWrite:false,envMapIntensity:1.5});
+  MAT.copper=mat('#c9773d',.28,1);
+  MAT.iudPlastic=mat('#f4f3ef',.35);
+  MAT.organ=mat('#df8a83',.45); MAT.organDark=mat('#b9615c',.5); MAT.ovary=mat('#e9b7a3',.5);
+  MAT.vas=mat('#4b7fd6',.4); MAT.testis=mat('#e2b39f',.5); MAT.prostate=mat('#c98bb0',.5);
+  MAT.clip=mat('#2a2f33',.3,.7); MAT.cutGlow=new T.MeshBasicMaterial({color:'#ff3b3b',toneMapped:false});
+  MAT.ped=mat('#20282c',.35,.4); MAT.pedRing=new T.MeshBasicMaterial({color:'#5ff0de',toneMapped:false});
+  MAT.cone=new T.MeshBasicMaterial({map:TX.cone,color:'#fff8e8',transparent:true,opacity:.075,blending:T.AdditiveBlending,depthWrite:false,side:T.DoubleSide});
+  MAT.windowSky=new T.MeshBasicMaterial({map:TX.window,toneMapped:false,color:'#e8eef0'});
+}
+const MC={};
+function mat(color,rough=.6,metal=0){const k=color+'|'+rough+'|'+metal;if(MC[k])return MC[k];return MC[k]=new T.MeshStandardMaterial({color,roughness:rough,metalness:metal,envMapIntensity:.7});}
+function basic(tex,o={}){return new T.MeshBasicMaterial(Object.assign({map:tex,toneMapped:false},o));}
+function litTex(tex,em=.35){return new T.MeshStandardMaterial({map:tex,roughness:.55,emissiveMap:tex,emissive:new T.Color(em,em,em),envMapIntensity:.4});}
+
+/* ---------- carteles, letreros y láminas ---------- */
+function drawSign(g,w,h,r){{
+    const its=r.block==='its';
+    g.fillStyle=its?'#5c2347':'#174d5e';rrect(g,0,0,w,h,14);g.fill();
+    g.fillStyle=its?'#cf5a86':'#3fb8a9';g.fillRect(0,h-10,w,10);
+    g.fillStyle='#fff';g.beginPath();g.arc(74,h/2-4,52,0,7);g.fill();
+    g.fillStyle=its?'#5c2347':'#174d5e';g.font=font(700,50);g.textAlign='center';g.textBaseline='middle';g.fillText(r.num,74,h/2-2);
+    g.textAlign='left';g.fillStyle='#fff';fitFont(g,r.name.toUpperCase(),700,46,w-160);g.fillText(r.name.toUpperCase(),146,48);
+    g.fillStyle='rgba(255,255,255,.85)';fitFont(g,r.sign,500,36,w-160);g.fillText(r.sign,146,98);
+  }
+}
+function drawFlag(g,w,h,r){{const its=r.block==='its';g.fillStyle='#f6f7f5';g.fillRect(0,0,w,h);
+    g.fillStyle=its?'#5c2347':'#174d5e';g.fillRect(0,0,w,92);g.fillStyle='#fff';g.font=font(700,74);g.textAlign='center';g.textBaseline='middle';g.fillText(r.num,w/2,50);
+    g.fillStyle='#1d2a30';fitFont(g,r.sign.split('·')[0].trim(),700,52,w-40);g.fillText(r.sign.split('·')[0].trim(),w/2,150);
+    g.fillStyle='#5b6a70';g.font=font(500,34);g.fillText(r.kind==='consulta'||r.kind==='its'||r.kind==='amigable'?'Atención de pacientes':'Sala de estudio',w/2,208);}
+}
+/* Atlas: todos los letreros de puerta comparten una sola textura (una sola llamada de dibujo) */
+function makeAtlas(cw,ch,n,draw){const cols=2,rows=Math.ceil(n/cols),c=cvs(cw*cols,ch*rows),g=c.getContext('2d'),cells=[];
+  for(let i=0;i<n;i++){const x=(i%cols)*cw,y=Math.floor(i/cols)*ch;g.save();g.translate(x+2,y+2);g.scale((cw-4)/cw,(ch-4)/ch);g.beginPath();g.rect(0,0,cw,ch);g.clip();draw(g,cw,ch,i);g.restore();
+    cells.push([(x+2)/c.width,1-(y+ch-2)/c.height,(cw-4)/c.width,(ch-4)/c.height]);}
+  const t=ctex(c);t.wrapS=t.wrapT=T.ClampToEdgeWrapping;return{mat:basic(t),cells};}
+function atlasPlane(at,i,w,h,x,y,z,p,ry=0){const g=new T.PlaneGeometry(w,h),uv=g.attributes.uv,[u0,v0,du,dv]=at.cells[i];for(let k=0;k<uv.count;k++)uv.setXY(k,u0+uv.getX(k)*du,v0+uv.getY(k)*dv);
+  const o=add(new T.Mesh(g,at.mat),p,x,y,z);o.rotation.y=ry;return o;}
+let SIGN_AT=null,FLAG_AT=null;
+function labelSprite(text,sub,col='#174d5e',w=1.25){
+  const t=paint(512,sub?150:96,(g,W,Hh)=>{g.fillStyle='rgba(255,255,255,.94)';rrect(g,4,4,W-8,Hh-8,16);g.fill();g.fillStyle=col;g.fillRect(4,4,12,Hh-8);
+    g.fillStyle='#14232a';fitFont(g,text,700,52,W-50);g.textBaseline='middle';g.fillText(text,30,sub?48:Hh/2+2);
+    if(sub){g.fillStyle='#4d5d63';fitFont(g,sub,500,34,W-50,'body');g.fillText(sub,30,108);}});
+  const s=new T.Sprite(new T.SpriteMaterial({map:t,toneMapped:false,depthWrite:false}));s.scale.set(w,w*(sub?150:96)/512,1);return s;
+}
+/* Lámina informativa de pared */
+function posterTex(o,W=600,Hh=800){
+  return paint(W,Hh,(g)=>{
+    g.fillStyle='#f8f7f2';g.fillRect(0,0,W,Hh);
+    const band=Hh*(o.art?.19:.21);g.fillStyle=o.color;g.fillRect(0,0,W,band);
+    g.fillStyle='rgba(255,255,255,.82)';g.font=font(600,W*.04);g.textBaseline='alphabetic';g.fillText((o.kicker||'').toUpperCase(),W*.06,W*.075);
+    g.fillStyle='#fff';const tp=fitFont(g,o.title,700,W*.098,W*.88);g.fillText(o.title,W*.06,band-W*.045);
+    let y=band+W*.07;
+    if(o.art){const ah=Hh*.36;g.save();o.art(g,W*.05,band+W*.03,W*.9,ah);g.restore();y=band+ah+W*.1;}
+    g.textBaseline='alphabetic';
+    for(const b of o.bullets||[]){g.fillStyle=o.color;g.fillRect(W*.06,y-W*.03,W*.024,W*.024);g.fillStyle='#1d282c';g.font=font(400,W*.04,'body');y=wrapText(g,b,W*.11,y,W*.83,W*.052)+W*.022;}
+    g.fillStyle='#7b8a8f';g.font=font(600,W*.03);g.fillText('HOSPITAL ESCUELA ESPERANZA · UNIDAD DE SALUD SEXUAL Y REPRODUCTIVA',W*.06,Hh-W*.04);
+  });
+}
+function lbl(g,t,x,y,lx,ly,size=19){g.strokeStyle='#33444b';g.lineWidth=2;g.beginPath();g.moveTo(x,y);g.lineTo(lx,ly);g.stroke();g.fillStyle='#33444b';g.beginPath();g.arc(lx,ly,4,0,7);g.fill();g.font=font(700,size);g.fillStyle='#1d282c';g.fillText(t,x+(x>lx?4:-g.measureText(t).width-4),y);}
+function artBox(fn){return (g,x,y,w,h)=>{g.translate(x,y);const k=Math.min(w/600,h/400);g.translate((w-600*k)/2,(h-400*k)/2);g.scale(k,k);g.fillStyle='#eef3f3';rrect(g,0,0,600,400,18);g.fill();fn(g);};}
+const artUterus=(opt={})=>artBox(g=>{
+  g.lineCap='round';
+  for(const s of [-1,1]){const X=v=>300+s*v;
+    g.strokeStyle='#d9837d';g.lineWidth=13;g.beginPath();g.moveTo(X(48),128);g.bezierCurveTo(X(100),58,X(170),70,X(196),132);g.stroke();
+    g.strokeStyle='#c4655f';g.lineWidth=3;for(let i=0;i<5;i++){g.beginPath();g.moveTo(X(196),132);g.lineTo(X(206+i*3),140+i*6);g.stroke();}
+    g.fillStyle='#ecbaa6';g.strokeStyle='#bf8a76';g.lineWidth=3;g.beginPath();g.ellipse(X(165),185,33,21,s*.3,0,7);g.fill();g.stroke();
+    if(opt.cut){const cx=X(118),cy=82;g.fillStyle='#eef3f3';g.beginPath();g.arc(cx,cy,13,0,7);g.fill();g.fillStyle='#2a2f33';g.fillRect(cx-16,cy-12,7,22);g.fillRect(cx+9,cy-12,7,22);
+      g.strokeStyle='#e0302b';g.lineWidth=5;g.beginPath();g.moveTo(cx-10,cy-30);g.lineTo(cx+10,cy-50);g.moveTo(cx+10,cy-30);g.lineTo(cx-10,cy-50);g.stroke();}
+  }
+  g.fillStyle='#e48f88';g.strokeStyle='#b85c58';g.lineWidth=4;g.beginPath();g.moveTo(245,105);g.quadraticCurveTo(300,90,355,105);g.quadraticCurveTo(382,116,372,160);g.quadraticCurveTo(360,232,326,266);
+  g.lineTo(318,300);g.lineTo(282,300);g.lineTo(274,266);g.quadraticCurveTo(240,232,228,160);g.quadraticCurveTo(218,116,245,105);g.closePath();g.fill();g.stroke();
+  g.fillStyle='#f6cdc7';g.beginPath();g.moveTo(262,128);g.quadraticCurveTo(300,120,338,128);g.quadraticCurveTo(330,190,305,240);g.lineTo(295,240);g.quadraticCurveTo(270,190,262,128);g.fill();
+  g.fillStyle='#eaa39d';rrect(g,283,298,34,84,10);g.fill();g.fillStyle='#f6cdc7';g.fillRect(295,300,10,80);
+  if(opt.iud){g.strokeStyle='#ffffff';g.lineWidth=8;g.beginPath();g.moveTo(300,140);g.lineTo(300,232);g.moveTo(272,142);g.lineTo(328,142);g.stroke();
+    if(opt.iud==='cobre'){g.strokeStyle='#c9773d';g.lineWidth=3;g.beginPath();for(let yy=155;yy<225;yy+=5){g.moveTo(293,yy);g.lineTo(307,yy+2.5);}g.stroke();}
+    else{g.fillStyle='#fffdf4';g.strokeStyle='#8c8c8c';g.lineWidth=2;rrect(g,292,158,16,56,5);g.fill();g.stroke();}
+    g.strokeStyle='#3b4a52';g.lineWidth=2;g.beginPath();g.moveTo(300,232);g.lineTo(300,336);g.stroke();}
+  lbl(g,'Trompa de Falopio',36,40,150,82);lbl(g,'Ovario',40,250,128,196);lbl(g,'Útero',440,250,352,205);lbl(g,'Vagina',440,360,318,350);
+});
+const artMale=(opt={})=>artBox(g=>{
+  g.lineCap='round';
+  for(const s of[-1,1]){const X=v=>300+s*v;
+    g.strokeStyle='#4b7fd6';g.lineWidth=10;g.beginPath();g.moveTo(X(84),262);g.bezierCurveTo(X(130),200,X(110),118,X(40),100);g.bezierCurveTo(X(16),94,X(6),112,X(2),132);g.stroke();
+    g.fillStyle='#e2b39f';g.strokeStyle='#b5806b';g.lineWidth=3;g.beginPath();g.ellipse(X(60),300,44,58,0,0,7);g.fill();g.stroke();
+    g.strokeStyle='#c9917b';g.lineWidth=9;g.beginPath();g.arc(X(60),300,52,s<0?Math.PI*1.1:-Math.PI*.35,s<0?Math.PI*1.45:-Math.PI*.05);g.stroke();
+    if(opt.cut){const cx=X(118),cy=190;g.fillStyle='#eef3f3';g.beginPath();g.arc(cx,cy,13,0,7);g.fill();g.fillStyle='#2a2f33';g.fillRect(cx-8,cy-18,18,7);g.fillRect(cx-8,cy+11,18,7);
+      g.strokeStyle='#e0302b';g.lineWidth=5;g.beginPath();g.moveTo(cx+18,cy-10);g.lineTo(cx+38,cy+10);g.moveTo(cx+38,cy-10);g.lineTo(cx+18,cy+10);g.stroke();}
+  }
+  g.fillStyle='#c98bb0';g.beginPath();g.arc(300,142,24,0,7);g.fill();g.strokeStyle='#e3a07b';g.lineWidth=13;g.beginPath();g.moveTo(300,168);g.lineTo(300,232);g.stroke();
+  lbl(g,'Conducto deferente',24,62,186,150);lbl(g,'Testículo',30,378,212,330);lbl(g,'Próstata',450,62,322,136);lbl(g,'Uretra',450,214,306,214);
+});
+const artCondoms=artBox(g=>{
+  g.fillStyle='rgba(240,217,166,.85)';g.strokeStyle='#b99659';g.lineWidth=4;
+  g.beginPath();g.moveTo(140,330);g.lineTo(140,130);g.quadraticCurveTo(140,92,180,90);g.quadraticCurveTo(220,92,220,130);g.lineTo(220,330);g.closePath();g.fill();g.stroke();
+  g.beginPath();g.arc(180,80,13,0,7);g.fill();g.stroke();g.beginPath();g.ellipse(180,334,46,13,0,0,7);g.fill();g.stroke();
+  g.fillStyle='rgba(214,234,240,.9)';g.strokeStyle='#7aa2ae';
+  g.beginPath();g.moveTo(360,330);g.lineTo(365,120);g.quadraticCurveTo(410,84,455,120);g.lineTo(460,330);g.closePath();g.fill();g.stroke();
+  g.beginPath();g.ellipse(410,334,62,17,0,0,7);g.stroke();g.setLineDash([7,6]);g.beginPath();g.ellipse(410,150,32,10,0,0,7);g.stroke();g.setLineDash([]);
+  g.font=font(700,28);g.fillStyle='#1d282c';g.textAlign='center';g.fillText('Masculino',180,385);g.fillText('Femenino',410,385);
+  g.font=font(600,19);g.fillStyle='#4d5d63';g.fillText('anillo interno',410,200);g.fillText('anillo externo',410,300);g.fillText('depósito',245,70);g.textAlign='left';
+});
+const artIUDs=artBox(g=>{
+  const T_=(cx,cop)=>{g.strokeStyle='#ffffff';g.lineCap='round';g.lineWidth=16;g.beginPath();g.moveTo(cx,92);g.lineTo(cx,300);g.moveTo(cx-90,92);g.lineTo(cx+90,92);g.stroke();
+    g.strokeStyle='#9aa4a8';g.lineWidth=2;g.beginPath();g.moveTo(cx,92);g.lineTo(cx,300);g.stroke();
+    if(cop){g.strokeStyle='#c9773d';g.lineWidth=5;g.beginPath();for(let y=120;y<280;y+=9){g.moveTo(cx-13,y);g.lineTo(cx+13,y+4.5);}g.stroke();}
+    else{g.fillStyle='#fffdf4';g.strokeStyle='#8c8c8c';g.lineWidth=3;rrect(g,cx-17,128,34,140,10);g.fill();g.stroke();}
+    g.strokeStyle='#3b4a52';g.lineWidth=2;g.beginPath();g.moveTo(cx-3,300);g.lineTo(cx-6,360);g.moveTo(cx+3,300);g.lineTo(cx+6,360);g.stroke();};
+  T_(160,true);T_(440,false);g.font=font(700,28);g.fillStyle='#1d282c';g.textAlign='center';g.fillText('DIU de cobre',160,46);g.fillText('DIU hormonal',440,46);
+  g.font=font(600,19);g.fillStyle='#4d5d63';g.fillText('cobre',225,200);g.fillText('hormona',525,200);g.fillText('Tamaño real: unos 3 cm',300,390);g.textAlign='left';
+});
+const artSperm=artBox(g=>{
+  g.fillStyle='rgba(120,190,230,.35)';g.beginPath();g.ellipse(430,200,150,150,0,0,7);g.fill();g.strokeStyle='rgba(60,140,190,.6)';g.lineWidth=3;g.stroke();
+  const sp=(x,y,a,stopped)=>{g.save();g.translate(x,y);g.rotate(a);g.fillStyle=stopped?'#9aa3a8':'#f2f2ee';g.strokeStyle=stopped?'#6c757a':'#55646b';g.lineWidth=2;g.beginPath();g.ellipse(0,0,13,9,0,0,7);g.fill();g.stroke();
+    g.beginPath();g.moveTo(-13,0);for(let i=1;i<=24;i++)g.lineTo(-13-i*4,Math.sin(i*.7)*(stopped?2:7));g.stroke();
+    if(stopped){g.strokeStyle='#e0302b';g.lineWidth=3;g.beginPath();g.moveTo(-6,-16);g.lineTo(6,-28);g.moveTo(6,-16);g.lineTo(-6,-28);g.stroke();}g.restore();};
+  sp(150,110,.15,false);sp(120,220,-.1,false);sp(200,300,.05,false);sp(380,150,.3,true);sp(420,260,-.4,true);sp(470,190,.1,true);
+  g.font=font(700,26);g.fillStyle='#1d5f80';g.fillText('Gel espermicida',350,48);g.fillStyle='#1d282c';g.fillText('Espermatozoides',30,48);
+});
+function microbeArt(kind){return artBox(g=>{
+  g.translate(300,200);g.lineCap='round';
+  if(kind==='vih'){for(let i=0;i<22;i++){const a=i/22*Math.PI*2;g.strokeStyle='#d9a93a';g.lineWidth=5;g.beginPath();g.moveTo(Math.cos(a)*112,Math.sin(a)*112);g.lineTo(Math.cos(a)*142,Math.sin(a)*142);g.stroke();g.fillStyle='#e8c35a';g.beginPath();g.arc(Math.cos(a)*146,Math.sin(a)*146,10,0,7);g.fill();}
+    g.fillStyle='#c98ab0';g.beginPath();g.arc(0,0,116,0,7);g.fill();g.fillStyle='#8f4f7c';g.beginPath();g.moveTo(-26,-60);g.lineTo(26,-60);g.lineTo(44,50);g.lineTo(-44,50);g.closePath();g.fill();}
+  if(kind==='clamidia'){g.fillStyle='rgba(243,198,184,.8)';g.beginPath();g.ellipse(0,0,190,140,0,0,7);g.fill();g.strokeStyle='#c98e7c';g.lineWidth=4;g.stroke();g.fillStyle='rgba(200,150,220,.6)';g.beginPath();g.arc(-20,10,80,0,7);g.fill();
+    g.fillStyle='#7a3fb0';for(let i=0;i<30;i++){g.beginPath();g.arc(-20+rr(-60,60),10+rr(-55,55),rr(7,11),0,7);g.fill();}g.fillStyle='#9b6c5c';g.beginPath();g.arc(110,-50,30,0,7);g.fill();}
+  if(kind==='sifilis'){g.strokeStyle='#e7a64d';g.lineWidth=12;g.beginPath();for(let i=0;i<=120;i++){const x=-230+i*3.8,y=Math.sin(i*.42)*34;i?g.lineTo(x,y):g.moveTo(x,y);}g.stroke();}
+  if(kind==='gonorrea'){g.fillStyle='#d8607a';g.strokeStyle='#9c3550';g.lineWidth=3;for(const [x,y,a] of [[-130,-60,.3],[90,-90,-.4],[-40,80,.1],[150,70,.8]]){g.save();g.translate(x,y);g.rotate(a);for(const s of[-1,1]){g.beginPath();g.ellipse(s*30,0,30,40,0,0,7);g.fill();g.stroke();}g.restore();}}
+  if(kind==='vph'){g.fillStyle='#79c2b5';g.strokeStyle='#3d8a7e';g.lineWidth=4;g.beginPath();for(let i=0;i<6;i++){const a=i/6*Math.PI*2+Math.PI/6;i?g.lineTo(Math.cos(a)*150,Math.sin(a)*150):g.moveTo(Math.cos(a)*150,Math.sin(a)*150);}g.closePath();g.fill();g.stroke();
+    g.fillStyle='#a8e0d5';for(let r=0;r<3;r++)for(let i=0;i<6*(r||1);i++){const a=i/(6*(r||1))*Math.PI*2;g.beginPath();g.arc(Math.cos(a)*r*50,Math.sin(a)*r*50,16,0,7);g.fill();g.stroke();}}
+});}
+const artDouble=artBox(g=>{
+  g.fillStyle='rgba(240,217,166,.9)';g.strokeStyle='#b99659';g.lineWidth=4;g.beginPath();g.moveTo(120,320);g.lineTo(120,140);g.quadraticCurveTo(120,100,160,98);g.quadraticCurveTo(200,100,200,140);g.lineTo(200,320);g.closePath();g.fill();g.stroke();
+  g.fillStyle='#1d282c';g.font=font(700,120);g.textAlign='center';g.fillText('+',300,250);
+  g.fillStyle='#dfe7ea';g.strokeStyle='#8a9ca3';rrect(g,380,110,140,200,16);g.fill();g.stroke();g.fillStyle='#e2799c';for(let i=0;i<3;i++)for(let j=0;j<4;j++){g.beginPath();g.arc(410+i*40,140+j*45,13,0,7);g.fill();}
+  g.font=font(700,26);g.fillText('Condón',160,370);g.fillText('Otro método',450,370);g.textAlign='left';
+});
+const artHands=artBox(g=>{
+  g.fillStyle='#7bb6e0';for(const [x,y,r] of [[160,140,26],[220,90,16],[120,230,18]]){g.beginPath();g.moveTo(x,y-r*1.8);g.quadraticCurveTo(x+r,y-r*.2,x+r,y+r*.3);g.arc(x,y+r*.3,r,0,Math.PI);g.quadraticCurveTo(x-r,y-r*.2,x,y-r*1.8);g.fill();}
+  g.strokeStyle='#9fc4da';g.lineWidth=4;for(let i=0;i<12;i++){g.beginPath();g.arc(rr(300,520),rr(80,330),rr(10,34),0,7);g.stroke();}
+  g.fillStyle='#1d282c';g.font=font(700,64);g.fillText('20 s',330,230);
+});
+function tablePosterTex(){
+  return paint(1024,720,(g,w,h)=>{
+    g.fillStyle='#f8f7f2';g.fillRect(0,0,w,h);g.fillStyle='#174d5e';g.fillRect(0,0,w,104);
+    g.fillStyle='rgba(255,255,255,.8)';g.font=font(600,24);g.fillText('TABLA COMPARATIVA',36,36);g.fillStyle='#fff';g.font=font(700,52);g.fillText('Métodos anticonceptivos',36,88);
+    const cols=[36,300,470,620,780],heads=['Método','Tipo','¿Hormonas?','¿Protege de ITS?','Duración o uso'];
+    g.fillStyle='#2b3b41';g.font=font(700,24);heads.forEach((t,i)=>g.fillText(t.toUpperCase(),cols[i],144));
+    TABLE.forEach((r,j)=>{const y=186+j*52;if(j%2===0){g.fillStyle='#eef2f2';g.fillRect(24,y-34,w-48,52);}
+      g.fillStyle='#14232a';g.font=font(700,28);g.fillText(r[0],cols[0],y);g.font=font(400,24,'body');g.fillStyle='#33444b';g.fillText(r[1],cols[1],y);g.fillText(r[2],cols[2],y);
+      if(r[3]==='Sí'){g.fillStyle='#1e8a52';g.font=font(700,26,'body');}else{g.fillStyle='#b23a3a';}g.fillText(r[3],cols[3],y);g.fillStyle='#33444b';g.font=font(400,24,'body');g.fillText(r[4],cols[4],y);});
+    g.fillStyle='#7b8a8f';g.font=font(600,20);g.fillText('Solo el condón (masculino o femenino) protege de las ITS. Doble protección: condón + otro método.',36,h-18);
+  });
+}
+const TABLE=[['Condón masculino','Barrera','No','Sí','Uno nuevo por relación'],['Condón femenino','Barrera','No','Sí','Uno nuevo por relación'],['Espermicida','Químico','No','No','Antes de cada relación'],
+  ['Pastilla','Hormonal','Sí','No','Una al día'],['Inyección','Hormonal','Sí','No','Mensual o trimestral'],['Implante','Hormonal','Sí','No','3 a 5 años'],
+  ['DIU de cobre','Dispositivo','No','No','Hasta 10 años'],['DIU hormonal','Dispositivo','Sí','No','Alrededor de 5 años'],['Ligadura de trompas','Quirúrgico','No','No','Permanente'],['Vasectomía','Quirúrgico','No','No','Permanente']];
+
+function poster(p,tex,w,h,x,y,z,ry){const g=grp(p,x,y,z,ry);B(w+.06,h+.06,.025,MAT.frame,0,0,0,g);Pl(w,h,litTex(tex),0,0,.016,g);return g;}
+
+/* =====================================================================
+   MUNDO: muros, pisos, colisiones
+   ===================================================================== */
+let STATIC;
+const COLL=[], DOORS=[], INTER=[], NPCS=[], ANIMS=[], PANELS=[];
+let itsDoor=null, HAND=null, clipCtx=null, clipTex=null, itsLine=null, itsSign=null;
+function solid(x1,x2,z1,z2,cond){COLL.push({x1:Math.min(x1,x2),x2:Math.max(x1,x2),z1:Math.min(z1,z2),z2:Math.max(z1,z2),cond});}
+function L2W(tr,lx,lz){const c=Math.cos(tr.ry),s=Math.sin(tr.ry);return[tr.x+lx*c+lz*s,tr.z-lx*s+lz*c];}
+function solidL(tr,x1,x2,z1,z2,cond){const a=L2W(tr,x1,z1),b=L2W(tr,x2,z2);solid(a[0],b[0],a[1],b[1],cond);}
+function wall(axis,c,a1,a2,opens=[]){
+  let cur=a1;const segs=[];
+  const mk=(s,e,y0,y1,col)=>{const L=e-s,mid=(s+e)/2,hh=y1-y0;
+    if(axis==='x'){B(L,hh,WT,MAT.wall,mid,y0+hh/2,c,STATIC,2);if(col)solid(s,e,c-WT/2,c+WT/2);}
+    else{B(WT,hh,L,MAT.wall,c,y0+hh/2,mid,STATIC,2);if(col)solid(c-WT/2,c+WT/2,s,e);}};
+  for(const o of opens.slice().sort((a,b)=>a.at-b.at)){const s=o.at-o.w/2,e=o.at+o.w/2;if(s>cur)segs.push([cur,s]);mk(s,e,o.h,H,false);cur=e;}
+  if(a2>cur)segs.push([cur,a2]);for(const[s,e]of segs)mk(s,e,0,H,true);
+}
+const CLAD={
+  met:{col:'#7fa9b8',h:1.12,rail:true},its:{col:'#a684a6',h:1.12,rail:true},lobby:{col:'#9a7652',h:1.05,rail:false,wood:true},
+  room:{col:'#9fc0b4',h:1.0,rail:false},roomIts:{col:'#c7aec4',h:1.0,rail:false},or:{tile:true,h:2.3},expo:{col:'#2a3438',h:3.0},lab:{col:'#cfd9dc',h:1.0},amigable:{col:'#f0b46a',h:1.0}
+};
+function clad(axis,c,side,a1,a2,gaps,style,p=STATIC){
+  const st=CLAD[style],segs=[];let cur=a1;
+  for(const gp of gaps.slice().sort((a,b)=>a.at-b.at)){const s=gp.at-gp.w/2,e=gp.at+gp.w/2;if(s>cur)segs.push([cur,s]);cur=Math.max(cur,e);}
+  if(a2>cur)segs.push([cur,a2]);
+  const m=st.tile?MAT.tile:st.wood?MAT.woodDark:mat(st.col,.55);
+  for(const[s,e]of segs){const L=e-s,mid=(s+e)/2;if(L<.02)continue;
+    const put=(h,t,y,mm,off)=>{const o=c+side*(WT/2+off);if(axis==='x')B(L,h,t,mm,mid,y,o,p,st.tile?.6:2);else B(t,h,L,mm,o,y,mid,p,st.tile?.6:2);};
+    put(st.h,.02,st.h/2,m,.012);
+    if(!st.tile&&style!=='expo'){put(.03,.035,st.h,mat('#5d6a70',.4,.3),.02);}
+    put(.1,.03,.05,mat('#3d4347',.5),.016);
+    if(st.rail){put(.07,.06,.93,MAT.wood,.06);}
+  }
+}
+function floorRect(x1,x2,z1,z2,m,s,p=STATIC,y=0){
+  const w=x2-x1,d=z2-z1,g=new T.PlaneGeometry(w,d),uv=g.attributes.uv;
+  for(let i=0;i<uv.count;i++)uv.setXY(i,uv.getX(i)*w/s,uv.getY(i)*d/s);
+  const o=add(new T.Mesh(g,m),p,(x1+x2)/2,y,(z1+z2)/2);o.rotation.x=-Math.PI/2;return o;
+}
+
+/* Paneles de luz instanciados + charcos de luz en el piso (luz "horneada" barata) */
+function lightAt(x,z,pool=true){PANELS.push([x,z,pool]);}
+function buildLights(){
+  const n=PANELS.length,pg=new T.BoxGeometry(1.2,.04,.6),lg=new T.PlaneGeometry(3.4,3.4);
+  const pm=new T.InstancedMesh(pg,MAT.panel,n),pl=new T.InstancedMesh(lg,MAT.pool,n),fr=new T.InstancedMesh(new T.BoxGeometry(1.3,.03,.7),mat('#c9cdcc',.5,.4),n);
+  const m=new T.Matrix4(),q=new T.Quaternion().setFromEuler(new T.Euler(-Math.PI/2,0,0)),one=new T.Vector3(1,1,1),v=new T.Vector3();
+  PANELS.forEach(([x,z,pool],i)=>{m.makeTranslation(x,H-.03,z);pm.setMatrixAt(i,m);m.makeTranslation(x,H-.012,z);fr.setMatrixAt(i,m);
+    m.compose(v.set(x,.012,z),q,pool?one:new T.Vector3(0,0,0));pl.setMatrixAt(i,m);});
+  scene.add(fr,pm,pl);
+}
+
+/* ---------- mobiliario ---------- */
+function plant(p,x,z,s=1){const g=grp(p,x,0,z);Cy(.24*s,.19*s,.5*s,MAT.pot,0,.25*s,0,g,20);Cy(.22*s,.22*s,.02,mat('#3b2a1e',.9),0,.49*s,0,g);
+  for(let i=0;i<22;i++){const a=rnd()*Math.PI*2,r=rr(.05,.32)*s,y=rr(.65,1.55)*s;const l=Sp(rr(.1,.17)*s,MAT.leaf[i%3],Math.cos(a)*r,y,Math.sin(a)*r,g,1,.5,1.6,8,6);l.rotation.set(rr(-.6,.6),a,rr(-.5,.5));}
+  Cy(.02*s,.03*s,1.1*s,mat('#5a4330',.8),0,.95*s,0,g,6);return g;}
+function bench(p,x,z,ry){const g=grp(p,x,0,z,ry);B(1.7,.06,.46,MAT.wood,0,.46,0,g,1);B(1.7,.42,.05,MAT.wood,0,.78,-.22,g,1).rotation.x=-.12;
+  for(const s of[-.7,.7]){B(.05,.44,.42,MAT.steel,s,.22,0,g);B(.05,.4,.05,MAT.steel,s,.64,-.21,g);}return g;}
+function chairV(p,x,z,ry,col='#2c8d8d'){const g=grp(p,x,0,z,ry);const m=mat(col,.45);B(.48,.05,.46,m,0,.46,0,g);B(.48,.46,.05,m,0,.72,-.22,g).rotation.x=-.08;
+  for(const[a,b]of[[-.2,-.19],[.2,-.19],[-.2,.19],[.2,.19]])Cy(.015,.015,.46,MAT.steel,a,.23,b,g,6);return g;}
+function officeChair(p,x,z,ry){const g=grp(p,x,0,z,ry);const m=mat('#25303a',.7);B(.5,.08,.48,m,0,.5,0,g);B(.46,.55,.07,m,0,.86,-.24,g);Cy(.03,.03,.38,MAT.steel,0,.29,0,g,8);
+  for(let i=0;i<5;i++){const a=i/5*Math.PI*2;const l=B(.3,.03,.04,MAT.base,Math.cos(a)*.15,.07,Math.sin(a)*.15,g);l.rotation.y=-a;Sp(.03,MAT.black,Math.cos(a)*.29,.03,Math.sin(a)*.29,g);}return g;}
+function screenTex(title,lines,col='#1c6f7a'){return paint(256,160,(g,w,h)=>{g.fillStyle='#0d1c22';g.fillRect(0,0,w,h);g.fillStyle=col;g.fillRect(0,0,w,26);g.fillStyle='#fff';g.font=font(700,18);g.fillText(title,8,19);
+  g.font=font(400,13,'body');g.fillStyle='#bfe3e6';lines.forEach((l,i)=>g.fillText(l,10,48+i*18));g.fillStyle='rgba(63,184,169,.5)';g.fillRect(10,h-26,w*.6,8);});}
+function desk(p,x,z,ry,scr){const g=grp(p,x,0,z,ry);B(1.5,.04,.72,MAT.wood,0,.75,0,g,1.2);for(const s of[-.7,.7])B(.04,.73,.68,MAT.lam,s,.365,0,g);B(1.36,.45,.02,MAT.lam,0,.5,.32,g);
+  B(.5,.6,.68,MAT.lam,.45,.38,0,g);for(let i=0;i<3;i++)B(.44,.005,.01,MAT.base,.45,.22+i*.19,-.345,g);
+  Cy(.09,.1,.02,MAT.black,-.2,.78,.12,g);B(.04,.22,.03,MAT.black,-.2,.9,.14,g);B(.6,.36,.03,MAT.black,-.2,1.12,.13,g);
+  Pl(.56,.32,basic(scr||screenTex('Ficha clínica',['Paciente en espera','Signos vitales: normales','Alergias: no refiere'])),-.2,1.12,.111,g,Math.PI);
+  B(.44,.02,.15,mat('#2a2d30',.6),-.2,.775,-.12,g);B(.07,.02,.11,mat('#2a2d30',.6),.18,.775,-.14,g);
+  B(.22,.01,.3,MAT.paper,.4,.775,-.05,g).rotation.y=.2;Cy(.04,.04,.1,mat('#3a6ea5',.5),.62,.82,.2,g,10);
+  return g;}
+function examBed(p,x,z,ry){const g=grp(p,x,0,z,ry);B(.62,.5,1.8,MAT.white,0,.3,0,g);B(.56,.04,1.7,MAT.steel,0,.06,0,g);B(.68,.1,1.86,MAT.vinylTeal,0,.6,0,g,.5);
+  const hr=B(.68,.1,.6,MAT.vinylTeal,0,.78,-.75,g,.5);hr.rotation.x=.55;B(.62,.006,1.6,MAT.paper,0,.66,.12,g);Cy(.07,.07,.66,MAT.paper,0,.62,.98,g,12).rotation.z=Math.PI/2;
+  B(.5,.18,.35,MAT.steel,0,.09,1.2,g);return g;}
+function curtain(p,x,z,len,ry){const g=grp(p,x,0,z,ry);Cy(.015,.015,len,MAT.steel,0,2.45,0,g,6).rotation.z=Math.PI/2;
+  const geo=new T.PlaneGeometry(len*.55,1.95,30,1),pos=geo.attributes.position;for(let i=0;i<pos.count;i++)pos.setZ(i,Math.sin(pos.getX(i)*28)*.04);geo.computeVertexNormals();
+  const c=add(new T.Mesh(geo,MAT.curtain),g,-len*.22,1.45,0);c.userData.keep=false;return g;}
+function cabinet(p,x,z,ry,w=1.6,sink=false){const g=grp(p,x,0,z,ry);B(w,.86,.58,MAT.lam,0,.45,0,g);B(w+.04,.04,.62,MAT.counter,0,.9,0,g);B(w,.1,.5,MAT.base,0,.05,.02,g);
+  const n=Math.round(w/.4);for(let i=0;i<n;i++){B(.004,.78,.004,MAT.base,-w/2+i*w/n,.48,-.291,g);B(.1,.015,.02,MAT.steel,-w/2+(i+.5)*w/n,.8,-.3,g);}
+  B(w,.7,.36,MAT.lam,0,1.85,.1,g);for(let i=0;i<n;i++)B(.1,.015,.02,MAT.steel,-w/2+(i+.5)*w/n,1.56,-.09,g);
+  if(sink){B(.5,.03,.38,MAT.steel,-w/4,.915,-.02,g);Cy(.015,.015,.28,MAT.chrome,-w/4,1.05,.18,g,8);B(.02,.02,.16,MAT.chrome,-w/4,1.18,.11,g);B(.12,.2,.08,MAT.white,w/4,1.3,.25,g);}
+  B(.3,.36,.12,MAT.white,w/2-.3,1.35,.22,g);return g;}
+function ivStand(p,x,z){const g=grp(p,x,0,z);Cy(.012,.012,2,MAT.steel,0,1,0,g,6);for(let i=0;i<5;i++){const a=i/5*Math.PI*2;B(.3,.02,.03,MAT.steel,Math.cos(a)*.14,.05,Math.sin(a)*.14,g).rotation.y=-a;}
+  B(.24,.01,.01,MAT.steel,0,1.98,0,g);Sp(.07,mat('#e6f0f3',.15),.1,1.82,0,g,1,1.5,.5);Cy(.004,.004,1,mat('#dfe9ec',.2),.1,1.2,.0,g,4);return g;}
+function windowOut(p,x,y,z,ry,w=1.6,h=1.15){const g=grp(p,x,y,z,ry);B(w+.12,h+.12,.08,MAT.frame,0,0,0,g);Pl(w,h,MAT.windowSky,0,0,.045,g);B(w,.012,.012,MAT.frame,0,0,.06,g);B(w+.2,.04,.18,MAT.counter,0,-h/2-.06,.08,g);return g;}
+function clock(p,x,y,z,ry){const c=cvs(256,256),ctx=c.getContext('2d'),t=ctex(c);const g=grp(p,x,y,z,ry);Cy(.2,.2,.05,MAT.black,0,0,0,g,28).rotation.x=Math.PI/2;
+  const face=Pl(.36,.36,basic(t,{transparent:true}),0,0,.03,g);face.userData.keep=true;
+  const draw=()=>{const d=new Date();ctx.clearRect(0,0,256,256);ctx.fillStyle='#fafafa';ctx.beginPath();ctx.arc(128,128,124,0,7);ctx.fill();ctx.fillStyle='#222';
+    for(let i=0;i<60;i++){const a=i/60*Math.PI*2;ctx.save();ctx.translate(128,128);ctx.rotate(a);ctx.fillRect(-1.5,-118,3,i%5?6:16);ctx.restore();}
+    const hand=(a,l,w,c)=>{ctx.save();ctx.translate(128,128);ctx.rotate(a);ctx.fillStyle=c;ctx.fillRect(-w/2,-l,w,l+12);ctx.restore();};
+    hand((d.getHours()%12+d.getMinutes()/60)/12*Math.PI*2,62,8,'#222');hand(d.getMinutes()/60*Math.PI*2,92,5,'#222');hand(d.getSeconds()/60*Math.PI*2,100,2,'#d33');t.needsUpdate=true;};
+  draw();ANIMS.push({every:1,fn:draw});return g;}
+function sanitizer(p,x,y,z,ry){const g=grp(p,x,y,z,ry);B(.12,.24,.1,MAT.white,0,0,0,g);B(.06,.08,.012,mat('#7cc4e4',.2),0,.02,.051,g);B(.05,.03,.05,MAT.base,0,-.13,.02,g);return g;}
+function extinguisher(p,x,z,ry){const g=grp(p,x,0,z,ry);B(.42,.8,.24,mat('#b8261f',.4),0,1.2,0,g);B(.36,.7,.01,MAT.glassDark,0,1.2,.125,g);Cy(.07,.07,.5,MAT.red,0,1.15,.0,g);B(.3,.08,.01,MAT.paper,0,1.68,.126,g);return g;}
+function hangSign(p,x,z,ry,lines,w=4){const t=paint(1024,170,(g,W,Hh)=>{g.fillStyle='#163f4c';g.fillRect(0,0,W,Hh);g.fillStyle='#3fb8a9';g.fillRect(0,Hh-10,W,10);g.fillStyle='#fff';g.textBaseline='middle';
+    const n=lines.length;lines.forEach((l,i)=>{g.textAlign=n===1?'center':i===0?'left':'right';fitFont(g,l,700,62,W/n-30);g.fillText(l,n===1?W/2:i===0?28:W-28,Hh/2-4);});});
+  const m=basic(t);const g=grp(p,x,2.62,z,ry);B(w+.04,.44,.05,MAT.frame,0,0,0,g);Pl(w,.42,m,0,0,.027,g);Pl(w,.42,m,0,0,-.027,g,Math.PI);
+  for(const s of[-1,1])Cy(.01,.01,.36,MAT.steel,s*w*.4,.39,0,g,6);return g;}
+
+/* ---------- personas ---------- */
+function makePerson(key,pose){
+  const L=LOOK[key],P=dyn(new T.Group());
+  const sk=mat(L.skin,.55),tp=mat(L.coat?'#f6f7f6':L.top,.85),bt=mat(L.bottom,.85),sh=mat(L.shoes||'#2b2b2e',.5),hr=mat(L.hairColor,.65);
+  const sit=pose==='sit',hip=sit?.5:.88;
+  for(const s of[-1,1]){
+    if(sit){const th=Ca(.08,.3,bt,s*.1,hip,.17,P);th.rotation.x=Math.PI/2;Ca(.064,.3,bt,s*.1,.27,.38,P);B(.11,.08,.25,sh,s*.1,.04,.45,P);}
+    else{Ca(.082,.28,bt,s*.1,hip-.2,0,P);Ca(.064,.3,bt,s*.1,.28,0,P);B(.11,.08,.25,sh,s*.1,.04,.05,P);}
+  }
+  Sp(.17,bt,0,hip+.03,sit?.03:0,P,1.1,.62,.8);
+  const tg=grp(P,0,hip+.04,0);
+  const torso=Ca(.155,.3,tp,0,.3,0,tg);torso.scale.set(1.16,1,.74);
+  if(L.coat){const sk2=Cy(.2,.27,.8,tp,0,-.12,0,tg,20,true);sk2.scale.z=.78;sk2.material=new T.MeshStandardMaterial({color:'#f6f7f6',roughness:.85,side:T.DoubleSide});B(.08,.3,.02,mat(L.top==='#f4f6f6'?'#3fb8a9':L.top,.8),0,.42,.118,tg);}
+  if(key==='rosa'){B(.1,.06,.01,MAT.white,.07,.47,.118,tg);}
+  const short=L.sleeve==='short';
+  for(const s of[-1,1]){const sg=grp(tg,s*.205,.5,0);const up=Ca(.05,.22,short?sk:tp,0,-.15,0,sg);if(short)Cy(.06,.062,.13,tp,0,-.05,0,sg,12);
+    const eg=grp(sg,0,-.3,0);Ca(.044,.2,short?sk:tp,0,-.13,0,eg);Sp(.046,sk,0,-.27,0,eg,.8,1,.9);
+    if(sit){sg.rotation.x=-.32;sg.rotation.z=s*.12;eg.rotation.x=-1.1;}else{sg.rotation.z=s*.07;eg.rotation.x=-.18;}}
+  Cy(.05,.055,.1,sk,0,.66,0,tg,12);
+  const hg=grp(tg,0,.79,0);
+  Sp(.108,sk,0,0,0,hg,.93,1.08,1,24,18);
+  for(const s of[-1,1])Sp(.026,sk,s*.1,0,0,hg,.5,1,.8,10,8);
+  Sp(.02,sk,0,-.012,.106,hg,.8,.9,1.2,10,8);
+  const eyes=[];
+  for(const s of[-1,1]){const eg=grp(hg,s*.038,.015,.088);Sp(.019,MAT.eyeW,0,0,0,eg,1,1,.55,12,8);Sp(.0115,MAT.iris,0,0,.01,eg,1,1,1,10,8);eyes.push(eg);
+    B(.042,.009,.012,hr,s*.04,.052,.097,hg).rotation.z=s*-.08;}
+  if(!L.mask)B(.042,.009,.01,MAT.lip,0,-.056,.1,hg);
+  const cap=(tl,r=.118)=>{const m=add(new T.Mesh(new T.SphereGeometry(r,24,14,0,Math.PI*2,0,Math.PI*tl),hr),hg,0,.012,-.006);m.rotation.x=-.3;return m;};
+  const st=L.hair;
+  if(st==='buzz')cap(.47,.112);else cap(st==='short'?.5:.54);
+  if(st==='short')B(.15,.03,.05,hr,0,.085,.08,hg).rotation.x=.4;
+  if(st==='long'||st==='curlylong'){const b=Ca(.1,.22,hr,0,-.11,-.06,hg);b.scale.set(1.15,1,.55);for(const s of[-1,1])Ca(.034,.17,hr,s*.095,-.07,.015,hg);}
+  if(st==='bun')Sp(.056,hr,0,.065,-.12,hg);
+  if(st==='ponytail'){const pt=Ca(.036,.17,hr,0,-.07,-.155,hg);pt.rotation.x=.45;}
+  if(st==='curly'||st==='curlylong'){for(let i=0;i<14;i++){const a=i/14*Math.PI*2;Sp(.046,hr,Math.cos(a)*.09,.05+Math.sin(i*1.7)*.02,Math.sin(a)*.08-.02,hg,1,1,1,8,6);}}
+  if(st==='cap'){B(.17,.02,.02,hr,0,.03,.1,hg);}
+  if(L.beard){const bd=add(new T.Mesh(new T.SphereGeometry(.113,16,10,0,Math.PI,Math.PI*.58,Math.PI*.32),hr),hg,0,-.005,0);}
+  if(L.mask){const mk=add(new T.Mesh(new T.SphereGeometry(.114,16,10,Math.PI*.18,Math.PI*.64,Math.PI*.52,Math.PI*.24),MAT.mask),hg,0,-.005,.004);}
+  const sh_=Pl(.8,.8,MAT.shadow,0,.006,sit?.15:0,P);sh_.rotation.x=-Math.PI/2;
+  eyes.forEach(dyn);mergeInto(hg,hg);dyn(hg);mergeInto(tg,tg);dyn(tg);mergeInto(P,P);
+  return {P,tg,hg,eyes,headY:hip+.04+.79};
+}
+const MARK={};
+function markTex(ch,bg){return paint(128,128,(g,w)=>{g.fillStyle='rgba(0,0,0,.3)';g.beginPath();g.arc(64,68,54,0,7);g.fill();g.fillStyle=bg;g.beginPath();g.arc(64,62,54,0,7);g.fill();
+  g.strokeStyle='#fff';g.lineWidth=6;g.stroke();g.fillStyle='#fff';g.font=font(700,ch==='✓'?70:84);g.textAlign='center';g.textBaseline='middle';g.fillText(ch,64,66);});}
+function npc(key,pose,parent,x,z,ry,room){
+  const p=makePerson(key,pose);p.P.position.set(x,0,z);p.P.rotation.y=ry;parent.add(p.P);
+  const sp=new T.Sprite(new T.SpriteMaterial({map:MARK.new,depthWrite:false,toneMapped:false}));sp.scale.set(.32,.32,1);sp.position.set(0,p.headY+.42,0);p.P.add(sp);
+  const n={...p,room,mark:sp,hy:0,hp:0,ph:rnd()*10,nb:2+rnd()*3,bt:0};NPCS.push(n);return n;
+}
+
+/* ---------- modelos gigantes (sala de métodos) ---------- */
+function pedestal(p,x,z,r=.62,h=.9){const g=grp(p,x,0,z);Cy(r,r+.04,h,MAT.ped,0,h/2,0,g,40);const ring=Tor(r+.005,.012,MAT.pedRing,0,h,0,g);ring.userData.keep=true;
+  Cy(r+.12,r+.14,.04,MAT.ped,0,.02,0,g,40);const cone=add(new T.Mesh(new T.CylinderGeometry(.35,r*1.25,H-h-.05,28,1,true),MAT.cone),g,0,h+(H-h)/2,0);return g;}
+function condomMale(p){const g=grp(p);const pts=[[0,1.36],[.04,1.355],[.064,1.33],[.07,1.29],[.06,1.25],[.075,1.22],[.15,1.19],[.2,1.12],[.215,1.0],[.22,.3],[.222,.12]];
+  const a=Lathe(pts,MAT.latexB,g,48),b=Lathe(pts,MAT.latexF,g,48);a.renderOrder=1;b.renderOrder=2;const r=Tor(.226,.034,MAT.latexF,0,.12,0,g);r.renderOrder=2;return g;}
+function condomFemale(p){const g=grp(p);const pts=[[0,.08],[.1,.085],[.17,.12],[.205,.22],[.21,1.1],[.235,1.25],[.27,1.32]];
+  const a=Lathe(pts,MAT.polyB,g,48),b=Lathe(pts,MAT.polyF,g,48);a.renderOrder=1;b.renderOrder=2;
+  const o=Tor(.275,.03,mat('#dfecef',.2),0,1.32,0,g);const i=Tor(.16,.024,mat('#dfecef',.2),0,.32,0,g);i.rotation.x=Math.PI/2+.35;return g;}
+function iud(p,type){const g=grp(p);const pl=MAT.iudPlastic;Cy(.045,.045,1.22,pl,0,.68,0,g,16);const arm=Cy(.04,.04,1.1,pl,0,1.28,0,g,16);arm.rotation.z=Math.PI/2;
+  for(const s of[-1,1]){Sp(.06,pl,s*.57,1.26,0,g);const tip=Cy(.035,.04,.16,pl,s*.6,1.18,0,g,12);tip.rotation.z=s*.35;}Sp(.065,pl,0,.07,0,g);
+  if(type==='cobre'){const pts=[];for(let i=0;i<=360;i++){const a=i/360*Math.PI*2*15,y=.22+i/360*.86;pts.push([Math.cos(a)*.062,y,Math.sin(a)*.062]);}Tube(pts,.017,MAT.copper,g,600,6);
+    for(const s of[-1,1]){const c=Cy(.052,.052,.18,MAT.copper,s*.32,1.28,0,g,16);c.rotation.z=Math.PI/2;}}
+  else{Cy(.105,.105,.74,mat('#f2eee2',.35),0,.66,0,g,24);Cy(.108,.108,.08,mat('#cf5a86',.5),0,.66,0,g,24);}
+  for(const s of[-1,1])Tube([[s*.012,.02,0],[s*.03,-.2,.02],[s*.02,-.45,-.02]],.007,mat(type==='cobre'?'#3d5f8a':'#3a3a3a',.6),g,16,4);
+  return g;}
+function uterusModel(p){const g=grp(p);
+  const pts=[[0,-.62],[.1,-.62],[.12,-.45],[.15,-.32],[.22,-.18],[.36,.05],[.44,.25],[.42,.42],[.3,.54],[.12,.6],[0,.61]];const u=Lathe(pts,MAT.organ,g,36);u.scale.z=.62;
+  for(const s of[-1,1]){const tube1=Tube([[s*.32,.42,0],[s*.55,.6,0],[s*.78,.62,.04]],.05,MAT.organ,g,24,10);const tube2=Tube([[s*.9,.6,.04],[s*1.12,.52,.06],[s*1.3,.32,.05],[s*1.38,.1,0]],.05,MAT.organ,g,24,10);
+    for(let i=0;i<6;i++){const f=Cy(.012,.02,.14,MAT.organDark,s*(1.38+Math.cos(i)*.05),.04,Math.sin(i)*.06,g,6);f.rotation.z=s*(.4+i*.12);}
+    Sp(.14,MAT.ovary,s*1.08,.1,.0,g,1.3,.85,.8);
+    for(const xx of[.79,.89]){const c=B(.05,.16,.14,MAT.clip,s*xx,.61,.04,g);}
+    const ring=Tor(.07,.012,MAT.cutGlow,s*.84,.61,.04,g,0);ring.rotation.y=Math.PI/2;ring.userData.keep=true;}
+  Cy(.1,.12,.4,MAT.organDark,0,-.8,0,g,16);return g;}
+function vasModel(p){const g=grp(p);
+  for(const s of[-1,1]){Sp(.17,MAT.testis,s*.25,0,0,g,1,1.3,1);Tube([[s*.36,.12,-.05],[s*.42,-.05,-.08],[s*.38,-.2,-.06]],.045,mat('#c9917b',.5),g,20,8);
+    Tube([[s*.38,-.2,-.06],[s*.5,.1,-.1],[s*.46,.45,-.05]],.032,MAT.vas,g,24,8);Tube([[s*.42,.62,0],[s*.32,.95,.05],[s*.14,1.12,.1],[s*.03,1.15,.1]],.032,MAT.vas,g,30,8);
+    for(const yy of[.47,.6])B(.12,.04,.1,MAT.clip,s*.44,yy,-.03,g);const ring=Tor(.06,.01,MAT.cutGlow,s*.44,.535,-.03,g);ring.userData.keep=true;}
+  Sp(.13,MAT.prostate,0,1.18,.1,g,1.2,.9,1);Tube([[0,1.1,.12],[0,.85,.25],[0,.6,.32]],.05,mat('#e3a07b',.5),g,20,10);return g;}
+function gelTube(p){const g=grp(p);const lbl_=paint(512,256,(c,w,h)=>{c.fillStyle='#f6f8f8';c.fillRect(0,0,w,h);c.fillStyle='#1d6f73';c.fillRect(0,0,w,70);c.fillStyle='#fff';c.font=font(700,52);c.fillText('ESPERMICIDA',24,54);
+    c.fillStyle='#1d282c';c.font=font(600,34);c.fillText('Gel vaginal · uso con condón',24,124);c.font=font(400,26,'body');c.fillStyle='#55646b';c.fillText('Aplicar antes de la relación.',24,176);c.fillText('No protege de ITS.',24,214);});
+  const body=Cy(.24,.24,1.0,new T.MeshStandardMaterial({map:lbl_,roughness:.35,envMapIntensity:.8}),0,.6,0,g,40);body.rotation.y=Math.PI;
+  Lathe([[.24,1.1],[.2,1.18],[.09,1.24],[.09,1.3]],mat('#f6f8f8',.35),g,40);Cy(.11,.11,.16,mat('#1d6f73',.4),0,1.38,0,g,24);
+  const fl=B(.5,.05,.03,mat('#e8ecec',.4),0,.08,0,g);Cy(.22,.24,.04,mat('#e8ecec',.4),0,.1,0,g,40);
+  const blob=Sp(.32,new T.MeshStandardMaterial({color:'#8cc8e8',roughness:.05,transparent:true,opacity:.45,depthWrite:false}),.55,.35,.35,g,1,.6,1);return g;}
+function spermModel(p,stopped){const g=dyn(grp(p));const m=mat(stopped?'#a5adb2':'#f1f1ec',.3);Sp(.07,m,0,0,0,g,.75,.62,1.1,14,10);Cy(.02,.028,.08,m,0,0,-.1,g,8).rotation.x=Math.PI/2;
+  const tail=grp(g,0,0,-.14);const segs=[];for(let i=0;i<10;i++){const s=Cy(.012-i*.0009,.012-i*.0009,.06,m,0,0,-i*.055,tail,6);s.rotation.x=Math.PI/2;segs.push(s);}g.userData.segs=segs;g.userData.stopped=stopped;return g;}
+
+/* ---------- microbios gigantes (pabellón ITS) ---------- */
+function fib(n){const out=[];for(let i=0;i<n;i++){const y=1-2*(i+.5)/n,r=Math.sqrt(1-y*y),a=i*2.399963;out.push(new T.Vector3(Math.cos(a)*r,y,Math.sin(a)*r));}return out;}
+function microbe(p,kind){const g=dyn(grp(p));const inner=grp(g);
+  if(kind==='vih'){Sp(.3,mat('#c98ab0',.45),0,0,0,inner,1,1,1,28,20);const sm=mat('#e8c35a',.4),st=mat('#d9a93a',.5);
+    for(const v of fib(34)){const s=grp(inner,v.x*.3,v.y*.3,v.z*.3);s.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v);Cy(.012,.016,.08,st,0,.04,0,s,6);Sp(.034,sm,0,.09,0,s,1,1,1,8,6);}}
+  if(kind==='clamidia'){const cell=Sp(.42,new T.MeshStandardMaterial({color:'#f3c6b8',roughness:.3,transparent:true,opacity:.35,depthWrite:false}),0,0,0,inner,1,.8,1,28,20);
+    Sp(.18,mat('#c6a2d8',.5),-.06,0,.0,inner);for(let i=0;i<26;i++)Sp(.04,mat('#7a3fb0',.4),rr(-.18,.08),rr(-.12,.12),rr(-.1,.1),inner,1,1,1,8,6);Sp(.09,mat('#9b6c5c',.5),.22,.12,.05,inner);}
+  if(kind==='sifilis'){const pts=[];for(let i=0;i<=200;i++){const t=i/200;pts.push([(t-.5)*1.3,Math.sin(t*Math.PI*2*7)*.06,Math.cos(t*Math.PI*2*7)*.06]);}Tube(pts,.022,mat('#e7a64d',.4),inner,500,8);}
+  if(kind==='gonorrea'){const m=mat('#d8607a',.45);for(const [x,y,z,a] of[[-.25,.1,0,.3],[.2,.2,.1,-.5],[0,-.18,-.1,.9],[.28,-.12,.12,.2]]){const pr=grp(inner,x,y,z);pr.rotation.set(a,a*2,0);for(const s of[-1,1])Sp(.09,m,s*.085,0,0,pr,.8,1,1,14,10);}}
+  if(kind==='vph'){const ic=add(new T.Mesh(new T.IcosahedronGeometry(.28,1),new T.MeshStandardMaterial({color:'#79c2b5',roughness:.4,flatShading:true})),inner);
+    const pos=ic.geometry.attributes.position,seen=new Set();for(let i=0;i<pos.count;i++){const v=new T.Vector3().fromBufferAttribute(pos,i);const k=v.toArray().map(n=>n.toFixed(2)).join();if(seen.has(k))continue;seen.add(k);v.multiplyScalar(1.05);Sp(.05,mat('#a8e0d5',.35),v.x,v.y,v.z,inner,1,1,1,8,6);}}
+  mergeInto(inner,inner);g.userData.inner=inner;return g;}
+function displayCase(p,x,z,kind,title,sub){const g=grp(p,x,0,z);B(.9,1,.9,MAT.ped,0,.5,0,g);const ring=B(.92,.02,.92,MAT.pedRing,0,1.0,0,g);ring.userData.keep=true;
+  B(.88,1.0,.88,MAT.glass,0,1.5,0,g);B(.9,.05,.9,MAT.ped,0,2.02,0,g);const m=microbe(g,kind);m.position.y=1.5;ANIMS.push({fn:(t)=>{m.rotation.y=t*.35;m.rotation.x=Math.sin(t*.5)*.25;}});
+  const l=labelSprite(title,sub,'#cf5a86',1.0);l.position.set(0,2.35,0);g.add(l);solidL(p.userData.tr,x-.5,x+.5,z-.5,z+.5);return g;}
+
+/* =====================================================================
+   CONSTRUCCIÓN DEL HOSPITAL
+   ===================================================================== */
+function buildShell(){
+  wall('z',-8,0,14);wall('z',8,0,14);
+  wall('x',14,-8,8,[{at:0,w:3.6,h:2.7}]);solid(-1.8,1.8,13.85,14.15);
+  wall('x',0,-8,8,[{at:0,w:6,h:2.7}]);
+  const dA=[-6,-14,-22,-30,-38].map(z=>({at:z,w:1.36,h:2.28}));
+  wall('z',-3,-46,0,dA);wall('z',3,-46,0,dA);
+  for(const s of[-1,1]){wall('z',11*s,-42,-2);for(const z of[-2,-10,-18,-26,-34,-42])wall('x',z,s<0?-11:3,s<0?-3:11);}
+  wall('x',-46,-3,3,[{at:0,w:3,h:2.75}]);
+  const dB=[-54,-66].map(z=>({at:z,w:1.36,h:2.28}));
+  wall('z',-3,-76,-46,dB);wall('z',3,-76,-46,dB);
+  for(const s of[-1,1]){wall('z',11*s,-72,-48);for(const z of[-48,-60,-72])wall('x',z,s<0?-11:3,s<0?-3:11);}
+  wall('x',-76,-6,6,[{at:0,w:1.36,h:2.28}]);wall('z',-6,-86,-76);wall('z',6,-86,-76);wall('x',-86,-6,6);
+  // pisos y cielo
+  floorRect(-8,8,0,14,MAT.floorLobby,2.4);floorRect(-3,3,-46,0,MAT.floorCorr,2);floorRect(-3,3,-76,-46,MAT.floorCorrB,2);
+  const ce=floorRect(-11.2,11.2,-86.2,14.2,MAT.ceil,2.4,STATIC,H);ce.rotation.x=Math.PI/2;
+  // zócalos y pasamanos
+  const gA=[-6,-14,-22,-30,-38].map(z=>({at:z,w:1.5})),gB=[-54,-66].map(z=>({at:z,w:1.5}));
+  clad('z',-3,1,-46,0,gA,'met');clad('z',3,-1,-46,0,gA,'met');clad('x',-46,1,-3,3,[{at:0,w:3.1}],'met');
+  clad('z',-3,1,-76,-46,gB,'its');clad('z',3,-1,-76,-46,gB,'its');clad('x',-46,-1,-3,3,[{at:0,w:3.1}],'its');clad('x',-76,1,-3,3,[{at:0,w:1.5}],'its');
+  clad('z',-8,1,0,14,[],'lobby');clad('z',8,-1,0,14,[],'lobby');clad('x',14,-1,-8,8,[{at:0,w:3.7}],'lobby');clad('x',0,1,-8,8,[{at:0,w:6.1}],'lobby');
+  // luces
+  for(let z=-2;z>-46;z-=3.2)lightAt(0,z);for(let z=-48.5;z>-76;z-=3.2)lightAt(0,z);
+  for(const x of[-4.6,0,4.6])for(const z of[2.4,6.6,10.8])lightAt(x,z);
+}
+function buildLobby(){
+  const P=STATIC;
+  // entrada de vidrio y exterior
+  const ext=paint(512,256,(g,w,h)=>{const gr=g.createLinearGradient(0,0,0,h);gr.addColorStop(0,'#8fc6ee');gr.addColorStop(.62,'#e8f3f8');gr.addColorStop(.63,'#9fae97');gr.addColorStop(1,'#c9c7bd');g.fillStyle=gr;g.fillRect(0,0,w,h);
+    g.fillStyle='#5d8a52';for(let i=0;i<26;i++){g.beginPath();g.arc(rr(0,w),h*.6,rr(14,34),0,7);g.fill();}g.fillStyle='#d8d6cf';g.fillRect(0,h*.72,w,h*.28);g.strokeStyle='#f6f6f2';g.lineWidth=3;for(let x=10;x<w;x+=46){g.beginPath();g.moveTo(x,h*.76);g.lineTo(x-20,h);g.stroke();}});
+  Pl(10,5,basic(ext),0,2.2,17.5,P,Math.PI);floorRect(-5,5,14,17.5,new T.MeshBasicMaterial({color:'#d9d8d2'}),2,P,.0);
+  for(const s of[-1,1]){const lf=B(1.78,2.66,.03,MAT.glass,s*.9,1.33,14,P);B(.05,2.66,.06,MAT.steel,s*1.79,1.33,14,P);B(.04,.5,.05,MAT.chrome,s*.12,1.1,13.94,P);}
+  B(3.6,.06,.12,MAT.steel,0,2.7,14,P);
+  // logotipo y nombre
+  const logo=paint(1024,300,(g,w,h)=>{g.fillStyle='#174d5e';rrect(g,0,0,w,h,20);g.fill();g.fillStyle='#fff';g.fillRect(70,110,140,80);g.fillRect(100,80,80,140);g.fillStyle='#cf5a86';g.beginPath();g.arc(140,150,20,0,7);g.fill();
+    g.fillStyle='#fff';g.font=font(700,92);g.fillText('HOSPITAL ESCUELA',250,140);g.fillStyle='#7fe0d3';g.font=font(600,74);g.fillText('ESPERANZA',250,222);});
+  Pl(3.6,1.05,basic(logo),-5.5,2.1,.12,P);
+  const ms=paint(1024,96,(g,w,h)=>{g.fillStyle='#10303a';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.font=font(700,54);g.textAlign='center';g.textBaseline='middle';g.fillText('UNIDAD DE SALUD SEXUAL Y REPRODUCTIVA',w/2,h/2+2);});
+  Pl(5.9,.46,basic(ms),0,2.95,.12,P);
+  // admisión
+  const R=grp(P,-5,0,5);B(3.4,1.1,.12,mat('#2f6f78',.45),0,.55,.32,R);B(3.6,.05,.5,MAT.wood,0,1.12,.25,R,1);B(3.2,.75,.6,MAT.lam,0,.375,-.25,R);B(3.3,.04,.66,MAT.counter,0,.77,-.25,R);
+  B(.12,1.1,1.2,mat('#2f6f78',.45),1.74,.55,-.2,R);
+  const ad=paint(512,96,(g,w,h)=>{g.fillStyle='#2f6f78';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.font=font(700,62);g.textAlign='center';g.textBaseline='middle';g.fillText('ADMISIÓN',w/2,h/2+3);});
+  Pl(1.6,.3,basic(ad),0,.72,.385,R);
+  for(const x of[-.9,.6]){B(.56,.36,.04,MAT.black,x,1.1,-.38,R);Pl(.52,.32,basic(screenTex('Admisión',['Turno: Residencia','Pacientes del día: 10','Pabellón ITS: 5'])),x,1.1,-.359,R);}
+  Cy(.05,.06,.05,MAT.chrome,1.2,1.17,.25,R,12);
+  solid(-6.8,-3.2,4.05,5.42);solid(-3.32,-3.15,3.9,5.4);
+  const rosa=npc('rosa','stand',P,-5.2,3.75,0,null);rosa.P.userData.dyn=true;
+  INTER.push({x:-5.2,z:5.9,r:2.6,zone:'lobby',label:()=>'Hablar con la enfermera Rosa',use:briefing,npc:rosa});
+  // sala de espera
+  for(const z of[5.2,7.6])for(let i=0;i<4;i++)chairV(P,3.6+i*.62,z,Math.PI,'#2c8d8d');solid(3.2,6.2,4.9,5.5);solid(3.2,6.2,7.3,7.9);
+  B(2.6,.04,.04,MAT.steel,4.53,.3,5.2,P);B(2.6,.04,.04,MAT.steel,4.53,.3,7.6,P);
+  const tvc=cvs(512,288),tvx=tvc.getContext('2d'),tvt=ctex(tvc);const TVM=[['¿Sabías que…?','El condón es el único método que protege del embarazo y de las ITS.'],['Exámenes gratuitos','El examen de VIH es gratuito y confidencial en todo Chile.'],['Vacuna VPH','Se aplica gratis en 4° y 5° básico a niñas y niños.'],['Espacio Amigable','Atención para adolescentes de 10 a 19 años en tu CESFAM.']];
+  let tvi=-1;const tvDraw=()=>{tvi=(tvi+1)%TVM.length;const[a,b]=TVM[tvi];tvx.fillStyle='#0f2f38';tvx.fillRect(0,0,512,288);tvx.fillStyle='#3fb8a9';tvx.fillRect(0,0,512,8);tvx.fillStyle='#7fe0d3';tvx.font=font(600,30);tvx.fillText('SALUD INFORMA',28,52);
+    tvx.fillStyle='#fff';tvx.font=font(700,52);tvx.fillText(a,28,118);tvx.font=font(400,30,'body');tvx.fillStyle='#d6eef0';wrapText(tvx,b,28,170,456,40);tvt.needsUpdate=true;};tvDraw();
+  B(1.5,.88,.06,MAT.black,5.5,2.1,.14,P);Pl(1.42,.8,basic(tvt),5.5,2.1,.175,P);ANIMS.push({every:6,fn:tvDraw});
+  // directorio
+  const dir=paint(600,800,(g,w,h)=>{g.fillStyle='#163f4c';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.font=font(700,58);g.fillText('DIRECTORIO',36,80);g.fillStyle='#3fb8a9';g.fillRect(36,100,120,6);
+    const rows=[['Consultas 101–105','Pasillo, puertas izquierdas'],['Salas de métodos 201–205','Pasillo, puertas derechas'],['Pabellón ITS 301–305','Fondo del pasillo · acceso con 10 aciertos'],['Admisión','Este hall, a la izquierda']];
+    let y=180;for(const[a,b]of rows){g.fillStyle='#fff';g.font=font(700,44);g.fillText(a,36,y);g.fillStyle='#a9cfd5';g.font=font(400,28,'body');y=wrapText(g,b,36,y+40,w-72,34)+36;}
+    g.fillStyle='#f2c14e';g.font=font(700,34);g.fillText('USTED ESTÁ AQUÍ: HALL CENTRAL',36,h-50);});
+  poster(P,dir,1.05,1.4,-7.86,1.6,9.6,Math.PI/2);INTER.push({x:-7.2,z:9.6,r:1.9,zone:'lobby',label:()=>'Ver el mapa del hospital',use:()=>openMap()});
+  plant(P,-7.3,.8);plant(P,7.3,.8);plant(P,-7.3,13.2);plant(P,7.3,13.2);solid(-7.6,-7,0.5,1.1);solid(7,7.6,.5,1.1);
+  clock(P,7.86,2.4,6,-Math.PI/2);
+  // dispensador de agua y letrero de piso mojado
+  const wd=grp(P,7.4,0,10);B(.34,1.05,.34,MAT.white,0,.53,0,wd);Cy(.15,.15,.42,mat('#7fbfe8',.1),0,1.27,0,wd,20);solid(7.2,7.6,9.8,10.2);
+  const wf=paint(256,320,(g,w,h)=>{g.fillStyle='#f6c400';g.fillRect(0,0,w,h);g.fillStyle='#1a1a1a';g.font=font(700,44);g.textAlign='center';g.fillText('PISO',w/2,200);g.fillText('MOJADO',w/2,246);
+    g.beginPath();g.moveTo(w/2,40);g.lineTo(w/2+60,150);g.lineTo(w/2-60,150);g.closePath();g.lineWidth=8;g.stroke();g.font=font(700,70);g.fillText('!',w/2,140);});
+  const wg=grp(P,1.6,0,1.4,.5);for(const s of[-1,1]){const pl=Pl(.32,.6,new T.MeshStandardMaterial({map:wf,roughness:.5,side:T.DoubleSide}),0,.3,s*.08,wg);pl.rotation.x=s*.2;}
+  // líneas guía del piso
+  B(.1,.004,46+9,new T.MeshBasicMaterial({color:'#2f8fd6'}),-.45,.004,-(46-9)/2,P);
+  itsLine=new T.MeshBasicMaterial({color:'#5b4b58'});B(.1,.004,76+9,itsLine,.45,.004,-(76-9)/2,P);
+}
+function buildCorridors(){
+  const P=STATIC;
+  hangSign(P,0,-1.4,0,['◀ Consultas 101–105','Salas de métodos 201–205 ▶'],5.2);
+  hangSign(P,0,-43.5,0,['▲ Pabellón ITS 301–305'],4.2);
+  hangSign(P,0,-48.6,0,['◀ 301 VIH · 303 Sífilis','302 Clamidia · 304 Gonorrea ▶'],5.2);
+  hangSign(P,0,-73.4,0,['▲ 305 Espacio Amigable'],4.2);
+  bench(P,-2.6,-10,Math.PI/2);bench(P,-2.6,-26,Math.PI/2);bench(P,2.6,-18,-Math.PI/2);bench(P,2.6,-34,-Math.PI/2);
+  bench(P,-2.6,-60,Math.PI/2);bench(P,2.6,-60,-Math.PI/2);
+  for(const z of[-10,-26])solid(-2.95,-2.35,z-.85,z+.85);for(const z of[-18,-34])solid(2.35,2.95,z-.85,z+.85);for(const s of[-1,1])solid(s<0?-2.95:2.35,s<0?-2.35:2.95,-60.85,-59.15);
+  const PO={
+    doble:{kicker:'Prevención',title:'Doble protección',color:'#1f6f8b',art:artDouble,bullets:['Condón + otro método anticonceptivo.','El condón protege de ITS; el otro método refuerza la prevención del embarazo.','Usa un condón nuevo en cada relación.']},
+    mitos:{kicker:'Mitos y verdades',title:'¿Verdad o mito?',color:'#8b5a1f',bullets:['MITO: "La primera vez no hay embarazo". VERDAD: sí puede haber embarazo.','MITO: "Lavarse después evita el embarazo". VERDAD: no sirve.','MITO: "Dos condones protegen más". VERDAD: se rompen con el roce.','MITO: "Si me veo sano, no tengo ITS". VERDAD: muchas no dan síntomas.']},
+    donde:{kicker:'Orientación',title:'¿Dónde consultar?',color:'#2f7a4f',bullets:['CESFAM o consultorio de tu comuna.','Espacio Amigable: atención para adolescentes de 10 a 19 años.','La atención es gratuita y confidencial.','Salud Responde: 600 360 7777, todos los días.']},
+    manos:{kicker:'Seguridad del paciente',title:'Lávate las manos',color:'#2b6cb0',art:artHands,bullets:['Antes y después de atender a cada paciente.','Agua y jabón durante al menos 20 segundos, o alcohol gel.']},
+    emerg:{kicker:'Anticoncepción',title:'Píldora de emergencia',color:'#b0413e',bullets:['Se usa después de una relación sin protección o si falló el método (por ejemplo, se rompió el condón).','Mientras antes se tome, mejor: idealmente en los 3 primeros días.','No es un método para usar siempre y no protege de ITS.','En Chile se entrega gratis en los centros de salud.']},
+    otros:{kicker:'Anticoncepción hormonal',title:'Otros métodos',color:'#6b4fa0',bullets:['Pastilla: una al día, idealmente a la misma hora.','Inyección: mensual o cada 3 meses.','Implante: varilla pequeña bajo la piel del brazo; dura de 3 a 5 años.','Ninguno de ellos protege de ITS.']},
+    sint:{kicker:'Pabellón ITS',title:'No siempre hay síntomas',color:'#8a2f5b',bullets:['Muchas ITS no dan ninguna señal, especialmente al comienzo.','La única forma segura de saber es hacerse un examen.','Los exámenes son gratuitos y confidenciales.']},
+    condon:{kicker:'Pabellón ITS',title:'El condón te protege',color:'#5c2347',art:artCondoms,bullets:['Es el único método que previene las ITS y el embarazo.','Se usa desde el comienzo hasta el final de la relación.']},
+    lazo:{kicker:'Pabellón ITS',title:'VIH: infórmate',color:'#b3262e',bullets:['El VIH no se transmite por abrazos, besos ni por compartir vasos.','El tratamiento es gratuito y permite una vida larga y sana.','Discriminar a una persona con VIH es injusto: el respeto también es salud.']},
+    amig:{kicker:'Espacio Amigable',title:'Pregunta sin miedo',color:'#d07a1f',bullets:['Atención para adolescentes de 10 a 19 años.','Gratuita y confidencial.','Puedes ir con o sin un adulto.']}
+  };
+  const pp=(k,x,z,ry)=>poster(P,posterTex(PO[k]),.9,1.2,x,1.75,z,ry);
+  pp('doble',-2.86,-10,Math.PI/2);pp('mitos',-2.86,-18,Math.PI/2);pp('donde',-2.86,-26,Math.PI/2);pp('manos',-2.86,-34,Math.PI/2);
+  poster(P,tablePosterTex(),2.2,1.55,2.86,1.7,-10,-Math.PI/2);pp('emerg',2.86,-26,-Math.PI/2);pp('otros',2.86,-42.4,-Math.PI/2);
+  pp('sint',-2.86,-60,Math.PI/2);pp('condon',2.86,-60,-Math.PI/2);pp('lazo',-2.86,-70.4,Math.PI/2);pp('amig',1.9,-75.86,0);
+  clock(P,0,2.95,-.14,Math.PI);
+  extinguisher(P,-2.85,-44.6,Math.PI/2);extinguisher(P,2.85,-2.8,-Math.PI/2);extinguisher(P,-2.85,-74.6,Math.PI/2);
+  plant(P,-2.45,-45.4,.9);plant(P,2.45,-45.4,.9);plant(P,-2.45,-75.4,.9);plant(P,2.45,-75.4,.9);
+  for(const z of[-45.4,-75.4]){solid(-2.75,-2.15,z-.3,z+.3);solid(2.15,2.75,z-.3,z+.3);}
+  // camilla estacionada
+  const gy=grp(P,2.45,0,-41.2);B(.66,.1,1.95,MAT.vinylTeal,0,.82,0,gy,.5);B(.6,.04,1.9,MAT.steel,0,.72,0,gy);for(const[a,b]of[[-.26,-.85],[.26,-.85],[-.26,.85],[.26,.85]]){Cy(.02,.02,.66,MAT.steel,a,.38,b,gy,6);Sp(.05,MAT.black,a,.05,b,gy);}
+  B(.64,.25,.04,MAT.steel,0,1.0,.95,gy);solid(2.1,2.8,-42.2,-40.2);
+  // lazo rojo 3D junto a la puerta del Espacio Amigable
+  const lz=grp(P,-1.7,1.75,-75.8);Tube([[0,-.45,0],[.12,-.1,.04],[.18,.2,.05],[.1,.42,.05],[0,.48,.05],[-.1,.42,.05],[-.18,.2,.05],[-.12,-.1,.04],[.0,-.15,.07],[.2,-.45,.07]],.04,mat('#c4232b',.35),lz,80,10);
+}
+function roomTr(r){if(r.side==='L')return{x:-3,z:r.zc,ry:-Math.PI/2};if(r.side==='R')return{x:3,z:r.zc,ry:Math.PI/2};return{x:0,z:r.zc,ry:Math.PI};}
+function roomSize(r){return{W:r.block==='its'?12:8,D:r.side==='E'?10:8};}
+function makeDoor(r){
+  const tr=r.tr,G=grp(STATIC,tr.x,0,tr.z,tr.ry),W=1.2,Hd=2.2;
+  B(.08,Hd+.08,.28,MAT.frame,-W/2-.04,(Hd+.08)/2,0,G);B(.08,Hd+.08,.28,MAT.frame,W/2+.04,(Hd+.08)/2,0,G);B(W+.16,.08,.28,MAT.frame,0,Hd+.04,0,G);
+  const piv=dyn(grp(G,-W/2,0,.03));const idx=ROOMS.indexOf(r);
+  if(!SIGN_AT){SIGN_AT=makeAtlas(512,148,ROOMS.length,(g,w,h,i)=>drawSign(g,w,h,ROOMS[i]));FLAG_AT=makeAtlas(384,192,ROOMS.length,(g,w,h,i)=>{g.scale(384/512,192/256);drawFlag(g,512,256,ROOMS[i]);});}
+  atlasPlane(SIGN_AT,idx,1.25,.36,0,2.62,-.115,G,Math.PI);
+  B(.03,.32,.62,MAT.frame,W/2+.5,2.75,-.42,G);atlasPlane(FLAG_AT,idx,.6,.3,W/2+.517,2.75,-.42,G,Math.PI/2);atlasPlane(FLAG_AT,idx,.6,.3,W/2+.483,2.75,-.42,G,-Math.PI/2);
+  Cy(.008,.008,.12,MAT.steel,W/2+.5,2.95,-.25,G,6);Cy(.008,.008,.12,MAT.steel,W/2+.5,2.95,-.6,G,6);
+  sanitizer(G,W/2+.42,1.25,-.17,Math.PI);
+  B(.56,.06,.03,MAT.black,0,2.34,-.15,G);
+  const ledM=new T.Matrix4().makeRotationY(Math.PI).setPosition(0,2.34,-.17);
+  const d={r,G,piv,t:0,tgt:0,ledM,col:new T.Color('#3aa0ff'),cx:tr.x,cz:tr.z,open:()=>r.block!=='its'||S.itsOpen};
+  solidL(tr,-.68,.68,-.1,.1,()=>d.t<.55);
+  DOORS.push(d);r.door=d;
+}
+let DOOR_IM=[],LED_IM=null;
+function buildDoorInstances(){
+  const tmp=new T.Group(),W=1.2,Hd=2.2,leafM=new T.MeshStandardMaterial({map:TX.wood,color:'#ffffff',roughness:.55,envMapIntensity:.7});
+  B(W-.02,Hd-.02,.05,leafM,W/2,Hd/2,0,tmp,1.2);B(.24,.72,.056,MAT.glassDark,W*.68,1.5,0,tmp);B(W-.1,.24,.058,MAT.steel,W/2,.15,0,tmp);
+  for(const s of[-1,1]){B(.16,.025,.03,MAT.steel,W-.2,1.02,s*.05,tmp);B(.03,.06,.02,MAT.steel,W-.12,1.02,s*.035,tmp);}B(.3,.05,.059,MAT.steel,W-.25,1.02,0,tmp);
+  mergeInto(tmp,tmp);const n=DOORS.length;
+  for(const m of tmp.children){const im=new T.InstancedMesh(m.geometry,m.material,n);im.frustumCulled=false;
+    if(m.material===leafM)DOORS.forEach((d,i)=>im.setColorAt(i,new T.Color(d.r.block==='its'?'#d9b8d4':'#b2cfdb')));scene.add(im);DOOR_IM.push(im);}
+  LED_IM=new T.InstancedMesh(new T.PlaneGeometry(.9,.2),new T.MeshBasicMaterial({map:TX.led,blending:T.AdditiveBlending,depthWrite:false,transparent:true,toneMapped:false}),n);LED_IM.frustumCulled=false;
+  const m4=new T.Matrix4();DOORS.forEach((d,i)=>{m4.multiplyMatrices(d.G.matrixWorld,d.ledM);LED_IM.setMatrixAt(i,m4);LED_IM.setColorAt(i,d.col);});scene.add(LED_IM);
+}
+const _dm=new T.Matrix4(),_dim=new T.Color();
+function updateDoorInstances(t){
+  let dirty=false;
+  DOORS.forEach((d,i)=>{if(d.t===d.lastT)return;d.lastT=d.t;d.piv.updateMatrix();_dm.multiplyMatrices(d.G.matrixWorld,d.piv.matrix);for(const im of DOOR_IM)im.setMatrixAt(i,_dm);dirty=true;});
+  if(dirty)for(const im of DOOR_IM)im.instanceMatrix.needsUpdate=true;
+  if(LED_IM){const on=(t*2.5|0)%2===0;DOORS.forEach((d,i)=>{LED_IM.setColorAt(i,d.blink&&!on?_dim.copy(d.col).multiplyScalar(.12):d.col);});LED_IM.instanceColor.needsUpdate=true;}
+}
+function buildItsDoor(){
+  const tr={x:0,z:-46,ry:Math.PI},G=grp(STATIC,0,0,-46,Math.PI);
+  B(.12,2.85,.32,MAT.frame,-1.56,1.42,0,G);B(.12,2.85,.32,MAT.frame,1.56,1.42,0,G);B(3.24,.12,.32,MAT.frame,0,2.81,0,G);
+  const big=cvs(1024,150),bx=big.getContext('2d'),bt=ctex(big);
+  const leaves=[];for(const s of[-1,1]){const lf=dyn(grp(G,s*.75,0,-.2));
+    const lm=new T.MeshStandardMaterial({color:'#e9e4ec',roughness:.4,envMapIntensity:.8});B(1.5,2.72,.06,lm,0,1.36,0,lf);
+    B(1.0,1.2,.065,mat('#9fb9c6',.15,.3),0,1.65,0,lf);B(1.5,.16,.066,mat('#cf5a86',.45),0,.95,0,lf);
+    const t=paint(256,256,(g,w,h)=>{g.fillStyle='#5c2347';g.beginPath();g.arc(128,128,120,0,7);g.fill();g.fillStyle='#fff';g.font=font(700,120);g.textAlign='center';g.textBaseline='middle';g.fillText('ITS',128,136);});
+    Pl(.5,.5,basic(t),0,1.65,-.035,lf,Math.PI);B(.04,.5,.08,MAT.chrome,-s*.6,1.1,-.06,lf);mergeInto(lf,lf);leaves.push(lf);}
+  const ledM=new T.MeshBasicMaterial({color:'#ff3b3b',toneMapped:false});const lb=B(3.0,.05,.04,ledM,0,2.78,-.18,G);lb.userData.dyn=true;
+  const pnl=cvs(256,320),px=pnl.getContext('2d'),pt=ctex(pnl);B(.42,.52,.06,MAT.black,2.1,1.35,-.14,G);Pl(.36,.45,basic(pt),2.1,1.35,-.175,G,Math.PI);
+  const sign=Pl(2.76,.4,basic(bt),0,2.98,-.13,G,Math.PI);
+  itsDoor={leaves,t:0,ledM,bx,bt,px,pt,
+    draw(){const s=stats('met'),open=S.itsOpen;
+      bx.fillStyle=open?'#5c2347':'#2d2a30';bx.fillRect(0,0,1024,150);bx.fillStyle='#fff';bx.textBaseline='middle';bx.font=font(700,74);bx.fillText('PABELLÓN ITS',30,58);
+      bx.font=font(500,36);bx.fillStyle=open?'#f7c9db':'#b9b3bd';bx.fillText('Infecciones de Transmisión Sexual · Boxes 301–305',30,118);
+      bx.fillStyle=open?'#3ddc84':'#ff4d4d';bx.beginPath();bx.arc(960,75,34,0,7);bx.fill();bt.needsUpdate=true;
+      px.fillStyle='#0d1c22';px.fillRect(0,0,256,320);px.textAlign='center';px.fillStyle=open?'#3ddc84':'#ff6b6b';px.font=font(700,40);px.fillText(open?'ABIERTO':'BLOQUEADO',128,58);
+      px.fillStyle='#fff';px.font=font(700,96);px.fillText(`${Math.min(s.ok,UNLOCK)}/${UNLOCK}`,128,170);px.font=font(500,26);px.fillStyle='#a9c4c8';px.fillText('respuestas correctas',128,214);px.fillText('de Métodos',128,246);
+      px.fillStyle=open?'#3ddc84':'#ff6b6b';px.fillRect(28,276,200*Math.min(1,s.ok/UNLOCK),14);px.strokeStyle='#4b5d63';px.strokeRect(28,276,200,14);pt.needsUpdate=true;
+      ledM.color.set(open?'#3ddc84':'#ff3b3b');itsLine.color.set(open?'#cf5a86':'#5b4b58');}};
+  itsDoor.draw();
+  solidL(tr,-1.5,1.5,-.12,.12,()=>itsDoor.t<.7);
+  INTER.push({x:0,z:-45.2,r:2.7,zone:'corrA',label:()=>'Pabellón ITS: bloqueado',cond:()=>!S.itsOpen,use:()=>{SFX.denied();const s=stats('met');openBook([{t:'locked',s}]);}});
+}
+
+/* ---------- salas ---------- */
+function buildRoom(r){
+  r.tr=roomTr(r);const{W,D}=roomSize(r);r.W=W;r.D=D;
+  r.group=new T.Group();scene.add(r.group);r.group.visible=false;
+  const P=grp(r.group,r.tr.x,0,r.tr.z,r.tr.ry);P.userData.tr={x:0,z:0,ry:0};r.local=P;
+  const a=L2W(r.tr,-W/2,0),b=L2W(r.tr,W/2,D);r.rect=[Math.min(a[0],b[0]),Math.max(a[0],b[0]),Math.min(a[1],b[1]),Math.max(a[1],b[1])];
+  const k=r.kind;
+  const fm=k==='quirofano'?MAT.floorOR:k==='expo'?MAT.floorDark:MAT.floorRoom;floorRect(-W/2,W/2,0,D,fm,2,P,.002);
+  const style=k==='quirofano'?'or':k==='expo'?'expo':k==='lab'?'lab':k==='amigable'?'amigable':r.block==='its'?'roomIts':'room';
+  clad('z',-W/2,1,0,D,[],style,P);clad('z',W/2,-1,0,D,[],style,P);clad('x',D,-1,-W/2,W/2,[],style,P);clad('x',0,1,-W/2,W/2,[{at:0,w:1.5}],style,P);
+  const lt=(lx,lz)=>{const w=L2W(r.tr,lx,lz);lightAt(w[0],w[1]);};lt(0,2.4);lt(0,5.8);if(W>8){lt(-3.5,4);lt(3.5,4);}
+  makeDoor(r);
+  // interactuable principal
+  const sol=(x1,x2,z1,z2)=>solidL(r.tr,x1,x2,z1,z2);P.userData.tr=r.tr;
+  let ix=0,iz=4.2,rad=2.4;
+  if(k==='consulta'||k==='its'){
+    const ox=k==='its'?-2.2:0;
+    const n=npc(r.person.key,'sit',P,ox+.3,4.1,Math.PI,r);chairV(P,ox+.3,4.05,Math.PI,'#55606a');sol(ox,ox+.6,3.8,4.4);
+    desk(P,ox-2.4,4.6,-Math.PI/2,screenTex('Ficha clínica',[`Paciente: ${r.person.name}, ${r.person.age} años`,'Motivo: consulta','Estado: en espera']));sol(ox-2.8,ox-2,3.85,5.35);officeChair(P,ox-3.2,4.6,Math.PI/2);
+    examBed(P,ox+3.1,5.1,0);sol(ox+2.75,ox+3.45,4.15,6.1);curtain(P,ox+2.3,5.1,2.6,Math.PI/2);
+    cabinet(P,ox-1.2,D-.32,0,1.6,true);sol(ox-2.05,ox-.35,D-.65,D);ivStand(P,ox+2.0,6.6);
+    if(k==='its'){
+      const m=MICRO[r.microbe];displayCase(P,4.4,6.4,r.microbe,m.title,m.sub);
+      poster(P,posterTex({kicker:m.kicker,title:m.title,color:'#8a2f5b',art:microbeArt(r.microbe),bullets:r.facts}),1.1,1.47,W/2-.13,1.75,2.4,-Math.PI/2);
+      windowOut(P,1.5,1.75,D-.12,Math.PI);
+    }else{
+      const fem=['r101','r103','r105'].includes(r.id);
+      poster(P,posterTex(fem?{kicker:'Anatomía',title:'Aparato reproductor femenino',color:'#1f6f8b',art:artUterus(),bullets:['Los ovarios liberan óvulos.','En la trompa de Falopio el óvulo puede encontrarse con un espermatozoide.','El útero es donde se desarrolla un embarazo.']}
+        :{kicker:'Anatomía',title:'Aparato reproductor masculino',color:'#1f6f8b',art:artMale(),bullets:['Los testículos producen espermatozoides.','Los conductos deferentes los llevan hacia la uretra.','La próstata produce parte del líquido del semen.']}),.9,1.2,-W/2+.13,1.75,2.3,Math.PI/2);
+      windowOut(P,1.6,1.75,D-.12,Math.PI);
+    }
+    clock(P,W/2-.13,2.45,1.2,-Math.PI/2);
+    ix=ox+.3;iz=4.1;rad=2.3;r.npc=n;
+  }
+  if(k==='expo'){
+    if(r.model==='condones'){pedestal(P,-1.3,4.4);const m1=condomMale(P);m1.position.set(-1.3,.9,4.4);pedestal(P,1.3,4.4);const m2=condomFemale(P);m2.position.set(1.3,.9,4.4);
+      const l1=labelSprite('Condón masculino','Látex · protege de ITS');l1.position.set(-1.3,2.62,4.4);P.add(l1);const l2=labelSprite('Condón femenino','Dos anillos · protege de ITS');l2.position.set(1.3,2.62,4.4);P.add(l2);
+      const wr=paint(256,256,(g,w,h)=>{g.fillStyle='#c9cfd4';g.fillRect(0,0,w,h);g.strokeStyle='#9aa3a8';g.lineWidth=3;g.beginPath();g.arc(128,118,70,0,7);g.stroke();g.fillStyle='#1d282c';g.font=font(700,30);g.textAlign='center';g.fillText('CONDÓN',128,224);g.font=font(600,22);g.fillText('VENCE: 12/2028',128,248);});
+      const tb=grp(P,0,0,6.2);B(.9,.75,.5,MAT.ped,0,.375,0,tb);const pk=B(.5,.02,.5,new T.MeshStandardMaterial({map:wr,roughness:.3,metalness:.6,envMapIntensity:1.2}),0,.77,0,tb);pk.rotation.y=.3;
+      Tor(.12,.025,MAT.latexF,.0,.8,0,tb).renderOrder=2;const ls=labelSprite('Revisa la fecha','Envase sin daños',undefined,.9);ls.position.set(0,1.25,0);tb.add(ls);sol(-.45,.45,5.95,6.45);
+      sol(-1.95,-.65,3.75,5.05);sol(.65,1.95,3.75,5.05);
+    }
+    if(r.model==='diu'){pedestal(P,-1.3,4.4);const m1=iud(P,'cobre');m1.position.set(-1.3,1.15,4.4);pedestal(P,1.3,4.4);const m2=iud(P,'hormonal');m2.position.set(1.3,1.15,4.4);
+      const l1=labelSprite('DIU de cobre','No hormonal · hasta 10 años');l1.position.set(-1.3,2.85,4.4);P.add(l1);const l2=labelSprite('DIU hormonal','Libera hormona · ~5 años');l2.position.set(1.3,2.85,4.4);P.add(l2);
+      ANIMS.push({room:r,fn:t=>{m1.rotation.y=t*.4;m2.rotation.y=-t*.4;}});m1.userData.dyn=m2.userData.dyn=true;sol(-1.95,-.65,3.75,5.05);sol(.65,1.95,3.75,5.05);}
+    const art=r.model==='condones'?artCondoms:artIUDs;
+    poster(P,posterTex({kicker:'Sala de métodos '+r.num,title:r.sign,color:'#1f6f8b',art,bullets:r.facts}),1.5,2.0,0,1.65,D-.14,Math.PI);
+    if(r.model==='diu')poster(P,posterTex({kicker:'Dónde va el DIU',title:'Dentro del útero',color:'#1f6f8b',art:artUterus({iud:'cobre'}),bullets:['Lo coloca un profesional de salud en una consulta breve.','Se puede retirar cuando la persona lo decida.']}),1.0,1.33,-W/2+.14,1.7,4.4,Math.PI/2);
+    else poster(P,tablePosterTex(),1.9,1.34,-W/2+.14,1.7,4.4,Math.PI/2);
+    poster(P,posterTex({kicker:'Recuerda',title:'Doble protección',color:'#1f6f8b',art:artDouble,bullets:['Solo el condón protege de las ITS.']}),1.0,1.33,W/2-.14,1.7,4.4,-Math.PI/2);
+    ix=0;iz=4.4;rad=2.9;
+  }
+  if(k==='quirofano'){
+    const tb=grp(P,0,0,4.6);Cy(.18,.25,.75,MAT.steel,0,.375,0,tb,18);B(.62,.1,2.0,MAT.vinylTeal,0,.82,0,tb,.5);B(.66,.04,2.04,MAT.steel,0,.75,0,tb);B(.7,.04,.7,MAT.base,0,.02,0,tb);
+    B(.6,.02,1.6,mat('#7fb5a4',.9),0,.88,.1,tb);sol(-.4,.4,3.55,5.65);
+    for(const[x,z,s]of[[-.1,4.3,1],[.7,5.2,.8]]){const l=grp(P,x,0,z);Cy(.02,.02,.5,MAT.steel,0,H-.25,0,l,8);const hd=Cy(.38*s,.3*s,.14,MAT.white,0,H-.6,0,l,28);hd.rotation.x=.25;
+      const em=Cy(.26*s,.26*s,.02,new T.MeshBasicMaterial({color:'#fffef6',toneMapped:false}),0,H-.68,.02,l,28);em.rotation.x=.25;
+      const gl=new T.Sprite(new T.SpriteMaterial({map:TX.glow,color:'#fffbe8',blending:T.AdditiveBlending,depthWrite:false,transparent:true,opacity:.65}));gl.scale.set(1.3*s,1.3*s,1);gl.position.set(0,H-.72,.04);l.add(gl);
+      add(new T.Mesh(new T.CylinderGeometry(.25*s,.75*s,H-.75,24,1,true),MAT.cone),l,0,(H-.75)/2,0);}
+    const ec=cvs(256,160),ex=ec.getContext('2d'),et=ctex(ec);let ph=0;const ecg=[];
+    const drawECG=()=>{ph+=1;ex.fillStyle='rgba(6,16,14,.32)';ex.fillRect(0,0,256,160);const x=(ph*4)%256;ex.fillStyle='#071512';ex.fillRect(x,0,10,160);const c=ph%22;let y=60;if(c===3)y=20;else if(c===4)y=96;else if(c===5)y=50;else if(c>=10&&c<=12)y=52;
+      ex.strokeStyle='#3dff8b';ex.lineWidth=3;ex.beginPath();ex.moveTo(x-4,ecg[0]||60);ex.lineTo(x,y);ex.stroke();ecg[0]=y;ex.fillStyle='#071512';ex.fillRect(150,100,106,60);ex.fillStyle='#3dff8b';ex.font=font(700,40);ex.fillText('72',160,145);ex.fillStyle='#7fd0ff';ex.font=font(700,26);ex.fillText('98%',212,145);et.needsUpdate=true;
+      if(c===3&&r.group.visible&&player.zone===r.id)SFX.beep(1);};
+    const mon=grp(P,1.9,0,6.3,-Math.PI/2-.4);Cy(.03,.03,1.3,MAT.steel,0,.65,0,mon,8);B(.62,.42,.08,MAT.black,0,1.45,0,mon);Pl(.56,.36,basic(et),0,1.45,.042,mon);ANIMS.push({room:r,every:1/14,fn:drawECG});
+    const an=grp(P,-1.7,0,6.6,.4);B(.7,1.2,.6,mat('#d9dee0',.5),0,.6,0,an);B(.5,.32,.05,MAT.black,0,1.45,.2,an);Pl(.46,.28,basic(screenTex('Anestesia',['O2: 2 L/min','Paciente estable'],'#2f7a4f')),0,1.45,.226,an);sol(-2.15,-1.25,6.2,7.0);
+    const tr_=grp(P,1.5,0,3.5);B(.8,.04,.5,MAT.steel,0,.9,0,tr_);B(.8,.04,.5,MAT.steel,0,.4,0,tr_);for(const[a,b]of[[-.38,-.23],[.38,-.23],[-.38,.23],[.38,.23]])Cy(.012,.012,.9,MAT.steel,a,.45,b,tr_,6);
+    for(let i=0;i<6;i++)B(.18,.01,.025,MAT.chrome,-.28+i*.1,.93,rr(-.12,.12),tr_).rotation.y=rr(-.3,.3);B(.3,.01,.2,mat('#7fb5a4',.9),.2,.925,0,tr_);sol(1.1,1.9,3.25,3.75);
+    // modelo anatómico gigante
+    const mz=r.model==='ligadura'?-2.3:-2.4;const st=grp(P,mz,0,3.6);Cy(.3,.34,.08,MAT.ped,0,.04,0,st,24);Cy(.03,.03,1.1,MAT.steel,0,.6,0,st,8);
+    const md=r.model==='ligadura'?uterusModel(st):vasModel(st);md.position.y=r.model==='ligadura'?1.55:1.0;md.scale.setScalar(r.model==='ligadura'?.75:.85);
+    const lb1=labelSprite(r.model==='ligadura'?'Trompas bloqueadas':'Conductos cortados',r.model==='ligadura'?'El óvulo no pasa':'Los espermatozoides no salen','#e0302b',1.15);lb1.position.set(0,2.5,0);st.add(lb1);sol(mz-.4,mz+.4,3.2,4.0);
+    poster(P,posterTex({kicker:'Pabellón '+r.num,title:r.sign,color:'#2f7a6a',art:r.model==='ligadura'?artUterus({cut:true}):artMale({cut:true}),bullets:r.facts}),1.2,1.6,-W/2+.13,1.7,5.8,Math.PI/2);
+    const n=npc(r.person.key,'stand',P,-.9,3.3,Math.PI*.82,r);r.npc=n;
+    ix=0;iz=4.0;rad=3.0;
+  }
+  if(k==='lab'){
+    const bn=grp(P,-W/2+.45,0,4.2,Math.PI/2);B(3.6,.9,.7,mat('#e3e6e6',.5),0,.45,0,bn);B(3.7,.05,.75,mat('#2b3236',.3),0,.92,0,bn);
+    const mic=grp(bn,-.8,.95,0);B(.22,.05,.3,MAT.black,0,.025,0,mic);B(.06,.4,.06,MAT.black,0,.25,-.1,mic);Cy(.035,.035,.22,MAT.black,0,.45,.02,mic,12).rotation.x=.5;B(.14,.02,.14,MAT.steel,0,.18,.03,mic);
+    for(let i=0;i<5;i++){const fx=.1+i*.28;Cy(.05,.07,.18,MAT.glass,fx,1.04,.1,bn,14);Cy(.06,.06,.08,mat(['#7fc8f8','#f6b26b','#9fe0a0','#c9a0dc','#f4cccc'][i],.2),fx,.99,.1,bn,14);}
+    B(.4,.35,.4,MAT.white,1.4,1.12,0,bn);sol(-W/2,-W/2+.85,2.35,6.05);
+    const sc=cvs(512,288),sx=sc.getContext('2d'),stx=ctex(sc);const sp=[];for(let i=0;i<14;i++)sp.push({x:rr(-60,200),y:rr(30,260),a:rr(-.4,.4),v:rr(40,70),st:false,ph:rr(0,6)});
+    const drawLab=(t,dt)=>{sx.fillStyle='#0b1f2a';sx.fillRect(0,0,512,288);sx.fillStyle='rgba(120,190,230,.28)';sx.beginPath();sx.ellipse(400,150,140,150,0,0,7);sx.fill();
+      sx.fillStyle='#7fd0ff';sx.font=font(700,22);sx.fillText('MICROSCOPIO · 400x',14,26);sx.fillStyle='#bfe9ff';sx.fillText('GEL ESPERMICIDA',320,26);
+      for(const s of sp){if(!s.st){s.x+=s.v*dt;s.y+=Math.sin(t*2+s.ph)*.4;if(s.x>300&&Math.hypot((s.x-400)/140,(s.y-150)/150)<1)s.st=true;if(s.x>560){s.x=-40;s.st=false;}}else{s.x+=6*dt;if(s.x>560){s.x=-40;s.st=false;}}
+        sx.save();sx.translate(s.x,s.y);sx.rotate(s.a);sx.fillStyle=s.st?'#8a959a':'#f2f2ee';sx.beginPath();sx.ellipse(0,0,9,6,0,0,7);sx.fill();sx.strokeStyle=s.st?'#8a959a':'#e6efe9';sx.lineWidth=2;sx.beginPath();sx.moveTo(-9,0);
+        for(let i=1;i<=16;i++)sx.lineTo(-9-i*3,Math.sin(i*.8-(s.st?0:t*14))*(s.st?1:4));sx.stroke();sx.restore();}stx.needsUpdate=true;};
+    const scr=grp(P,0,0,D-.12,Math.PI);B(2.5,1.45,.06,MAT.black,0,1.85,0,scr);Pl(2.4,1.35,basic(stx),0,1.85,.035,scr);ANIMS.push({room:r,every:1/30,fn:drawLab});
+    pedestal(P,1.3,4.4,.55,.75);const gt=gelTube(P);gt.position.set(1.3,.75,4.4);sol(.7,1.9,3.8,5.0);
+    const lg=labelSprite('Espermicida','Gel · uso con condón');lg.position.set(1.3,2.55,4.4);P.add(lg);
+    const sps=[];for(let i=0;i<4;i++){const s=spermModel(P,i>1);s.position.set(rr(-.4,2.6),rr(1.6,2.3),rr(2.4,6.2));s.rotation.y=rr(0,6);sps.push(s);}
+    ANIMS.push({room:r,fn:(t)=>{sps.forEach((s,i)=>{const st=s.userData.stopped;if(!st){s.rotation.y+=.004;s.position.y+=Math.sin(t*1.5+i)*.0015;}s.userData.segs.forEach((g,j)=>g.position.x=st?0:Math.sin(t*9-j*.8)*.012*j);});}});
+    poster(P,posterTex({kicker:'Laboratorio '+r.num,title:'Espermicida',color:'#1d6f73',art:artSperm,bullets:r.facts}),1.1,1.47,W/2-.13,1.75,3.6,-Math.PI/2);
+    const n=npc(r.person.key,'stand',P,-1.0,5.6,Math.PI*.85,r);r.npc=n;
+    ix=.6;iz=4.3;rad=3.0;
+  }
+  if(k==='amigable'){
+    const rug=paint(256,256,(g,w,h)=>{g.fillStyle='#f3d9a8';g.fillRect(0,0,w,h);g.strokeStyle='#e08c3a';g.lineWidth=10;g.strokeRect(14,14,w-28,h-28);g.fillStyle='#3fb8a9';for(let i=0;i<5;i++){g.beginPath();g.arc(50+i*40,128,12,0,7);g.fill();}});
+    floorRect(-2.5,2.5,3.2,7.8,new T.MeshStandardMaterial({map:rug,roughness:.95}),5,P,.006);
+    const so=grp(P,-1.2,0,5.6,0);B(2.2,.42,.85,mat('#3fb8a9',.85),0,.21,0,so);B(2.2,.6,.22,mat('#3fb8a9',.85),0,.6,.32,so);for(const s of[-1,1])B(.2,.58,.85,mat('#329b8e',.85),s*1.1,.29,0,so);
+    for(let i=0;i<3;i++)B(.6,.14,.62,mat('#4cc6b6',.9),-.68+i*.68,.49,-.04,so);sol(-2.4,0,5.05,6.1);
+    const n=npc(r.person.key,'sit',P,-.7,5.55,Math.PI,r);r.npc=n;
+    const tb=grp(P,-.9,0,3.9);Cy(.45,.45,.04,MAT.wood,0,.45,0,tb,32);Cy(.04,.06,.45,MAT.steel,0,.22,0,tb,10);
+    for(let i=0;i<4;i++)B(.16,.01,.22,mat(['#cf5a86','#3fb8a9','#f2c14e','#5b84b8'][i],.6),Math.cos(i)*.2,.475,Math.sin(i)*.2,tb).rotation.y=i;sol(-1.35,-.45,3.45,4.35);
+    Sp(.42,mat('#f2c14e',.9),2.2,.25,6.6,P,1.1,.6,1.1);Sp(.42,mat('#cf5a86',.9),3.2,.25,6.2,P,1.1,.6,1.1);sol(1.8,3.6,5.8,7.0);
+    const bk=grp(P,-W/2+.25,0,7.6,Math.PI/2);B(.4,1.9,1.4,MAT.wood,0,.95,0,bk,1);for(let s=0;s<4;s++)for(let i=0;i<9;i++)B(.26,.3,.1,mat(['#cf5a86','#3fb8a9','#f2c14e','#5b84b8','#7a5fa8'][(s+i)%5],.7),.04,.25+s*.45,-.55+i*.135,bk);sol(-W/2,-W/2+.5,6.9,8.3);
+    displayCase(P,3.6,3.6,'vph','VPH','Virus · existe vacuna');
+    poster(P,posterTex({kicker:'Espacio Amigable',title:'Prevención de ITS',color:'#d07a1f',art:microbeArt('vph'),bullets:r.facts}),1.1,1.47,W/2-.13,1.75,6.6,-Math.PI/2);
+    poster(P,posterTex({kicker:'Tus derechos',title:'Atención confidencial',color:'#2f7a4f',bullets:['Puedes consultar en tu CESFAM sin pagar.','El equipo de salud cuida tu privacidad.','Pregunta todo: no hay preguntas tontas.']}),1.0,1.33,-W/2+.13,1.75,3.4,Math.PI/2);
+    windowOut(P,1.5,1.75,D-.12,Math.PI,2.4,1.2);windowOut(P,-2.5,1.75,D-.12,Math.PI,1.6,1.2);plant(P,4.9,9.3);plant(P,-5.2,1.0,.8);
+    ix=-.7;iz=5.4;rad=2.6;
+  }
+  const w=L2W(r.tr,ix,iz);
+  INTER.push({x:w[0],z:w[1],r:rad,zone:r.id,room:r,label:()=>interLabel(r),use:()=>useRoom(r)});
+  mergeInto(P,r.group);
+}
+const SHORT={r101:'Valentina',r102:'Andrea',r103:'Javiera',r104:'Patricia',r105:'Matías',r201:'Condones',r202:'DIU',r203:'Ligadura',r204:'Vasectomía',r205:'Espermicida',r301:'VIH',r302:'Clamidia',r303:'Sífilis',r304:'Gonorrea',r305:'Prevención'};
+const MICRO={
+  vih:{title:'VIH',sub:'Virus · ataca las defensas',kicker:'Box 301 · Virus'},
+  clamidia:{title:'Clamidia',sub:'Bacteria · infección silenciosa',kicker:'Box 302 · Bacteria'},
+  sifilis:{title:'Sífilis',sub:'Bacteria · llaga sin dolor',kicker:'Box 303 · Bacteria'},
+  gonorrea:{title:'Gonorrea',sub:'Bacteria · ardor al orinar',kicker:'Box 304 · Bacteria'},
+  vph:{title:'VPH',sub:'Virus · existe vacuna',kicker:'Box 305 · Virus'}
+};
+function interLabel(r){
+  const st=roomStatus(r),who=r.person?r.person.name:'';
+  if(st==='review')return `Repasar: ${r.sign}`;
+  if(st==='ok'||st==='err')return `Revisar caso ${r.num}`;
+  if(r.kind==='consulta'||r.kind==='its'||r.kind==='amigable')return `Atender a ${who}`;
+  if(r.kind==='expo')return 'Estudiar los modelos';
+  return `Hablar con ${who}`;
+}
+
+/* ---------- libreta en la mano (vista en primera persona) ---------- */
+function buildHand(){
+  HAND=new T.Group();camera.add(HAND);
+  const c=cvs(512,700);clipCtx=c.getContext('2d');clipTex=ctex(c);
+  const ov=m=>{m.depthTest=false;m.fog=false;return m;};
+  const sleeve=Cy(.06,.075,.42,ov(new T.MeshStandardMaterial({color:'#f4f5f3',roughness:.85})),.15,-.2,.05,HAND,16);sleeve.rotation.set(.9,0,-.55);sleeve.renderOrder=20;
+  const board=B(.26,.36,.012,ov(new T.MeshStandardMaterial({color:'#7a5536',roughness:.6})),0,0,0,HAND);board.renderOrder=21;
+  const paper=Pl(.235,.32,ov(new T.MeshStandardMaterial({map:clipTex,roughness:.85,emissiveMap:clipTex,emissive:new T.Color(.25,.25,.25)})),0,-.012,.007,HAND);paper.renderOrder=22;
+  const clipM=ov(new T.MeshStandardMaterial({color:'#cfd4d6',metalness:1,roughness:.25}));const cl=B(.11,.035,.02,clipM,0,.17,.012,HAND);cl.renderOrder=23;
+  const pen=Cy(.006,.006,.16,ov(new T.MeshStandardMaterial({color:'#1d3f8c',roughness:.3})),.115,-.02,.014,HAND,8);pen.rotation.z=.15;pen.renderOrder=23;
+  const hm=ov(new T.MeshStandardMaterial({color:'#c99272',roughness:.55}));const hand=B(.06,.1,.035,hm,.13,-.12,.0,HAND);hand.renderOrder=24;const th=Ca(.014,.04,hm,.105,-.08,.02,HAND);th.rotation.z=.9;th.renderOrder=24;
+  HAND.rotation.set(-.62,-.38,-.06);HAND.scale.setScalar(.82);HAND.position.set(.32,-.27,-.55);HAND.visible=false;
+  drawClip();
+}
+function drawClip(){
+  if(!clipCtx)return;const g=clipCtx,W=512,Hh=700;
+  g.fillStyle='#fbf8ef';g.fillRect(0,0,W,Hh);g.strokeStyle='#cfe0ea';g.lineWidth=2;for(let y=150;y<Hh;y+=38){g.beginPath();g.moveTo(0,y);g.lineTo(W,y);g.stroke();}
+  g.strokeStyle='#e9a6a6';g.beginPath();g.moveTo(52,0);g.lineTo(52,Hh);g.stroke();
+  g.fillStyle='#4c5b7e';g.font=font(700,22);g.fillText('HOSPITAL ESCUELA ESPERANZA',64,52);
+  g.fillStyle='#1d2f5c';fitFont(g,docTitle(),700,46,W-80,'hand');g.fillText(docTitle(),64,102);
+  const sm=stats('met'),si=stats('its');g.font=font(700,30,'hand');
+  g.fillText(`Métodos: ${sm.ok}/15 correctas`,64,182);g.fillStyle=sm.ok>=UNLOCK?'#17703f':'#a42c2c';g.font=font(400,24,'hand');g.fillText(sm.ok>=UNLOCK?'Pabellón ITS abierto':`meta: ${UNLOCK} para abrir ITS`,64,214);
+  g.fillStyle='#1d2f5c';g.font=font(700,30,'hand');g.fillText(S.itsOpen?`ITS: ${si.done}/15 respondidas`:'ITS: bloqueado',64,262);
+  let y=318;g.font=font(400,24,'hand');
+  for(const r of ROOMS){if(y>Hh-20)break;const st=roomStatus(r);const mk={new:'○',part:'◐',ok:'✓',err:'✗',review:'!',locked:'·'}[st];
+    g.fillStyle=ST_COL[st]==='#3aa0ff'?'#4c5b7e':st==='ok'?'#17703f':st==='locked'?'#9aa3b5':'#a42c2c';g.fillText(`${mk} ${r.num} ${r.sign.split('·').pop().replace('Paciente: ','').trim()}`,64+(r.block==='its'?0:0),y);y+=24.5;}
+  clipTex.needsUpdate=true;
+}
+
+/* =====================================================================
+   JUGADOR: movimiento, colisión, cámara
+   ===================================================================== */
+const player={x:0,z:11,yaw:0,pitch:-.03,vx:0,vz:0,bob:0,stepAcc:0,zone:'lobby',moving:0};
+const R_=.3;
+function collide(p){
+  for(let it=0;it<2;it++)for(const b of COLL){if(b.cond&&!b.cond())continue;
+    const cx=clamp(p.x,b.x1,b.x2),cz=clamp(p.z,b.z1,b.z2);let dx=p.x-cx,dz=p.z-cz;const d2=dx*dx+dz*dz;
+    if(d2<R_*R_){if(d2>1e-9){const d=Math.sqrt(d2);p.x+=dx/d*(R_-d);p.z+=dz/d*(R_-d);}
+      else{const l=p.x-b.x1,r=b.x2-p.x,t=p.z-b.z1,bt=b.z2-p.z,m=Math.min(l,r,t,bt);if(m===l)p.x=b.x1-R_;else if(m===r)p.x=b.x2+R_;else if(m===t)p.z=b.z1-R_;else p.z=b.z2+R_;}}}
+}
+const ZONES=[{id:'lobby',r:[-8,8,0,14],name:'Hall central'},{id:'corrA',r:[-3,3,-46,0],name:'Pasillo de métodos'},{id:'corrB',r:[-3,3,-76,-46],name:'Pabellón ITS'}];
+function zoneAt(x,z){for(const r of ROOMS){const q=r.rect;if(x>q[0]&&x<q[1]&&z>q[2]&&z<q[3])return r.id;}for(const zz of ZONES){const q=zz.r;if(x>=q[0]&&x<=q[1]&&z>=q[2]&&z<=q[3])return zz.id;}return player.zone;}
+const zoneName=id=>ROOM[id]?ROOM[id].name:(ZONES.find(z=>z.id===id)||{}).name||'';
+
+const keys={};
+const joy={id:null,cx:0,cy:0,dx:0,dy:0};
+const looks=new Map();
+let playing=false;
+function updatePlayer(dt){
+  let f=0,s=0;
+  if(keys.KeyW||keys.ArrowUp)f+=1;if(keys.KeyS||keys.ArrowDown)f-=1;if(keys.KeyA)s-=1;if(keys.KeyD)s+=1;
+  if(keys.ArrowLeft)player.yaw+=1.9*dt;if(keys.ArrowRight)player.yaw-=1.9*dt;
+  if(joy.id!==null){f+=-joy.dy;s+=joy.dx;}
+  const m=Math.hypot(f,s);if(m>1){f/=m;s/=m;}
+  const sp=(keys.ShiftLeft||keys.ShiftRight)?4.6:3.3;
+  const sy=Math.sin(player.yaw),cy=Math.cos(player.yaw);
+  const tx=(-sy*f+cy*s)*sp,tz=(-cy*f-sy*s)*sp;
+  const a=1-Math.exp(-dt*10);player.vx=lerp(player.vx,tx,a);player.vz=lerp(player.vz,tz,a);
+  const p={x:player.x+player.vx*dt,z:player.z+player.vz*dt};collide(p);player.x=p.x;player.z=p.z;
+  const v=Math.hypot(player.vx,player.vz);player.moving=v;
+  if(v>.3){player.bob+=dt*v*2.6;player.stepAcc+=v*dt;if(player.stepAcc>.78){player.stepAcc=0;SFX.step();}}
+  else player.bob=lerp(player.bob,Math.round(player.bob/Math.PI)*Math.PI,.1);
+  const z=zoneAt(player.x,player.z);if(z!==player.zone){player.zone=z;$('#zone').textContent=zoneName(z);if(ROOM[z]&&!S.seen[z]){S.seen[z]=true;save();}}
+}
+function updateCamera(){
+  const b=Math.sin(player.bob)*.035*Math.min(1,player.moving/3);
+  camera.position.set(player.x,1.62+Math.abs(b)*.9,player.z);
+  camera.rotation.set(player.pitch,player.yaw,Math.sin(player.bob*.5)*.004);
+  if(HAND){const t=performance.now()/1000;HAND.position.y=(camera.aspect<1?-.36:-.27)+Math.sin(player.bob)*.008+Math.sin(t*1.3)*.002;HAND.position.x=(camera.aspect<1?.15:.32)+Math.cos(player.bob*.5)*.006;}
+}
+
+/* ---------- entrada: táctil, mouse y teclado ---------- */
+const touch=$('#touch'),joyEl=$('#joy'),knob=$('#knob');
+const JR=56;
+function joyHome(){joyEl.style.left='';joyEl.style.top='';joyEl.style.bottom='';joyEl.classList.add('idle');knob.style.transform='';}
+touch.addEventListener('pointerdown',e=>{
+  audioInit();if(!playing)return;
+  try{touch.setPointerCapture(e.pointerId);}catch(_){}
+  if(e.pointerType!=='mouse'&&e.clientX<innerWidth*.45&&joy.id===null){
+    joy.id=e.pointerId;joy.cx=e.clientX;joy.cy=e.clientY;joy.dx=joy.dy=0;
+    joyEl.classList.remove('idle');joyEl.style.left=(e.clientX-joyEl.offsetWidth/2)+'px';joyEl.style.top=(e.clientY-joyEl.offsetHeight/2)+'px';joyEl.style.bottom='auto';
+    $('#joyHint').style.opacity=0;
+  }else looks.set(e.pointerId,{x:e.clientX,y:e.clientY,mouse:e.pointerType==='mouse'});
+});
+touch.addEventListener('pointermove',e=>{
+  if(e.pointerId===joy.id){let dx=(e.clientX-joy.cx)/JR,dy=(e.clientY-joy.cy)/JR;const m=Math.hypot(dx,dy);if(m>1){dx/=m;dy/=m;}joy.dx=dx;joy.dy=dy;knob.style.transform=`translate(${dx*JR}px,${dy*JR}px)`;return;}
+  const l=looks.get(e.pointerId);if(!l)return;const k=l.mouse?.0032:.0052;
+  player.yaw-=(e.clientX-l.x)*k;player.pitch=clamp(player.pitch-(e.clientY-l.y)*k,-1.2,1.1);l.x=e.clientX;l.y=e.clientY;$('#lookHint').style.opacity=0;
+});
+const endPtr=e=>{if(e.pointerId===joy.id){joy.id=null;joy.dx=joy.dy=0;joyHome();}looks.delete(e.pointerId);};
+touch.addEventListener('pointerup',endPtr);touch.addEventListener('pointercancel',endPtr);touch.addEventListener('lostpointercapture',endPtr);
+touch.addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('keydown',e=>{
+  if(e.target&&e.target.tagName==='INPUT')return;
+  keys[e.code]=true;
+  if(!playing){if(e.code==='Escape'){if(!$('#book').hidden)closeBook();else if(!$('#map').hidden)closeMap();}return;}
+  if(e.code==='KeyE'||e.code==='Enter'||e.code==='Space'){e.preventDefault();doInteract();}
+  if(e.code==='KeyM')openMap();if(e.code==='KeyN'||e.code==='Tab'){e.preventDefault();openNotebook();}
+  if(e.code.startsWith('Arrow'))e.preventDefault();
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;joy.id=null;joyHome();looks.clear();});
+
+/* ---------- interacción ---------- */
+let curInter=null;
+const actBtn=$('#act'),actText=$('#actText');
+function updateInteract(){
+  let best=null,bd=1e9;const fx=-Math.sin(player.yaw),fz=-Math.cos(player.yaw);
+  for(const it of INTER){if(it.cond&&!it.cond())continue;if(it.zone!==player.zone&&!(it.zone==='corrA'&&player.zone==='corrA'))continue;
+    const dx=it.x-player.x,dz=it.z-player.z,d=Math.hypot(dx,dz);if(d>it.r)continue;const dot=(dx*fx+dz*fz)/(d||1);if(d>1&&dot<.1)continue;const sc=d-dot*.6;if(sc<bd){bd=sc;best=it;}}
+  if(best!==curInter){curInter=best;actBtn.hidden=!best||!playing;if(best){actText.textContent=best.label();}}
+  else if(best&&playing){const l=best.label();if(actText.textContent!==l)actText.textContent=l;actBtn.hidden=false;}
+  if(!playing)actBtn.hidden=true;
+}
+function doInteract(){if(!curInter||!playing)return;audioInit();SFX.click();curInter.use();}
+actBtn.addEventListener('click',e=>{e.stopPropagation();doInteract();});
+actBtn.addEventListener('pointerdown',e=>e.stopPropagation());
+$('#act .k').textContent=isTouch?'▶':'E';
+
+/* =====================================================================
+   LIBRETA: casos, preguntas y retroalimentación
+   ===================================================================== */
+const bookEl=$('#book'),nb=$('#nb');
+let BK=null,typer=null,pendingUnlock=false,pendingReview=false,pendingEnd=false;
+function setPlaying(v){playing=v;$('#hud').hidden=!v&&!S.started;if(HAND)HAND.visible=v;if(!v){for(const k in keys)keys[k]=false;joy.id=null;joyHome();looks.clear();}}
+function openBook(steps,ctx={}){BK={steps,i:0,ctx};bookEl.hidden=false;setPlaying(false);renderStep();SFX.page();bookEl.scrollTop=0;}
+function closeBook(){bookEl.hidden=true;BK=null;clearInterval(typer);setPlaying(true);drawClip();refreshWorld();afterClose();}
+function head(kick,title){return `<div class="nb-top"><div><div class="nb-kick">${esc(kick)}</div><h2 class="nb-title" id="nbTitle">${esc(title)}</h2></div><button class="nb-x" data-act="close" aria-label="Cerrar libreta">×</button></div>`;}
+function avatar(p){const L=LOOK[p.key];const ini=p.name.replace(/^(Dra?\.)\s*/,'').split(' ').map(w=>w[0]).join('').slice(0,2);
+  return `<div class="who"><div class="avatar" style="background:${L.top==='#f4f6f6'?'#1d6f73':L.top}">${esc(ini)}</div><div><b>${esc(p.name)}</b><small>${esc(p.role)}${p.age?` · ${p.age} años`:''}</small></div></div>`;}
+function qSteps(){return BK.steps.filter(s=>s.t==='q');}
+function renderStep(){
+  clearInterval(typer);const s=BK.steps[BK.i];let h='';
+  if(s.t==='intro'){const r=s.r;
+    h+=head(`${r.name} · ${r.block==='its'?'Pabellón ITS':'Turno de métodos'}`,r.sign.replace('Paciente: ',''));
+    if(r.person){h+=avatar(r.person);h+=`<div class="speech" id="say" role="status"></div>`;}
+    if(r.intro)h+=`<p>${esc(r.intro)}</p>`;
+    if(r.kind==='expo'||r.kind==='quirofano'||r.kind==='lab'){h+=`<div class="sec">Ficha de estudio</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;}
+    const n=qSteps().length;h+=`<div class="goal">${n===1?'Este caso tiene <b>1 pregunta</b>.':`Este caso tiene <b>${n} preguntas</b>.`} Elige una sola respuesta en cada una.</div>`;
+    h+=`<div class="row"><button class="btn primary" data-act="next">${r.person&&r.kind!=='quirofano'&&r.kind!=='lab'?'Comenzar diagnóstico':'Ir a las preguntas'}</button></div>`;
+    nb.innerHTML=h;if(r.person){const txt=fmt(r.say),el=$('#say');let i=0;el.textContent='';typer=setInterval(()=>{i+=2;el.textContent=txt.slice(0,i);if(i>=txt.length)clearInterval(typer);},22);el.onclick=()=>{clearInterval(typer);el.textContent=txt;};}
+  }
+  else if(s.t==='retryIntro'){const r=s.r,st=stats('met');
+    h+=head(`${r.name} · Repaso`,'Segunda oportunidad');
+    h+=`<p>Para abrir el Pabellón ITS necesitas <b>${UNLOCK}</b> respuestas correctas de Métodos. Llevas <b>${st.ok}</b>. Vuelve a responder las preguntas que fallaste en esta sala. Las opciones cambiaron de orden.</p>`;
+    h+=`<div class="sec">Repasa antes de responder</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;
+    h+=`<div class="row"><button class="btn primary" data-act="next">Responder de nuevo</button></div>`;nb.innerHTML=h;}
+  else if(s.t==='q'){const r=s.r,q=Q[s.id],qs=qSteps(),n=qs.indexOf(s)+1;if(!s.order)s.order=shuffle([0,1,2,3]);const opts=[q.ok,...q.no];
+    h+=head(`${r.name} · ${s.retry?'Repaso':'Diagnóstico'}`,r.person&&r.kind!=='quirofano'&&r.kind!=='lab'?r.person.name:r.sign);
+    h+=`<div class="qhead"><span class="qtag">Pregunta ${n} de ${qs.length}</span><span class="dots">${qs.map(x=>`<i class="${x===s?'on':''} ${x.done?(x.correct?'okd':'badd'):''}"></i>`).join('')}</span></div>`;
+    h+=`<p class="qtext">${esc(q.q)}</p><div class="opts" role="group" aria-label="Opciones de respuesta">`;
+    s.order.forEach((oi,i)=>{h+=`<button class="opt" data-act="ans" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${esc(opts[oi])}</span></button>`;});
+    h+=`</div><div id="fb"></div>`;nb.innerHTML=h;if(s.done)showAnswer(s);}
+  else if(s.t==='done'){const r=s.r,res=r.qs.map(id=>S.ans[id]),ok=res.filter(a=>a&&a.ok).length;
+    h+=head(`${r.name} · Caso cerrado`,ok===r.qs.length?'¡Caso resuelto!':'Caso cerrado con observaciones');
+    if(pendingUnlock)h+=`<div class="banner">¡Pabellón ITS desbloqueado! Ya tienes ${UNLOCK} respuestas correctas de Métodos. Ve al fondo del pasillo.</div>`;
+    h+=`<p>Respuestas correctas en esta sala: <b>${ok} de ${r.qs.length}</b>.</p>`;
+    h+=`<div class="sec">Apuntes para tu libreta</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;
+    const sm=stats('met');
+    if(r.block==='met'&&!S.itsOpen)h+=`<div class="goal">Métodos: <b>${sm.ok}</b> correctas de 15 · necesitas <b>${UNLOCK}</b> para abrir el Pabellón ITS. Respondidas: <b>${sm.done}/15</b>.</div>`;
+    if(r.block==='its'){const si=stats('its');h+=`<div class="goal">Pabellón ITS: <b>${si.done}/15</b> respondidas · <b>${si.ok}</b> correctas.</div>`;}
+    h+=`<div class="row"><button class="btn primary" data-act="close">Volver al pasillo</button></div>`;nb.innerHTML=h;}
+  else if(s.t==='review'){const r=s.r;
+    h+=head(`${r.name} · Historial`,r.sign);h+=`<p>Ya atendiste esta sala. Aquí está el registro de tus respuestas.</p>`;
+    for(const id of r.qs){const q=Q[id],a=S.ans[id];h+=`<div class="review"><p class="qtext">${esc(q.q)}</p><p><span class="chip" style="color:${a.ok?'#17703f':'#a42c2c'}">${a.ok?'Correcta':'Incorrecta'}${a.first?' al primer intento':''}</span></p><p><b>Respuesta correcta:</b> ${esc(q.ok)}</p><p>${esc(q.exp)}</p></div>`;}
+    h+=`<div class="sec">Apuntes</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-act="close">Cerrar libreta</button></div>`;nb.innerHTML=h;}
+  else if(s.t==='brief'){
+    h+=head('Admisión · Enfermera jefa Rosa','Instrucciones del turno');
+    h+=avatar({key:'rosa',name:'Enfermera Rosa',role:'Jefa de turno'});
+    h+=`<div class="speech" id="say"></div>`;
+    h+=`<div class="tbl-wrap"><table class="rooms"><thead><tr><th>Etapa</th><th>Dónde</th><th>Qué haces</th></tr></thead><tbody>
+      <tr><td><b>1</b></td><td>Consultas 101–105 (puertas izquierdas)</td><td>Atiendes a 5 pacientes: 1 pregunta cada uno.</td></tr>
+      <tr><td><b>2</b></td><td>Salas 201–205 (puertas derechas)</td><td>Estudias métodos en modelos gigantes y pabellones: 2 preguntas por sala.</td></tr>
+      <tr><td><b>3</b></td><td>Pabellón ITS (fondo del pasillo)</td><td>Se abre con ${UNLOCK} correctas de 15. Ahí atiendes 5 boxes: 3 preguntas cada uno.</td></tr></tbody></table></div>
+      <div class="goal">Las luces sobre cada puerta indican su estado: <b style="color:#1d6fd6">azul</b> por atender, <b style="color:#b8860b">amarilla</b> en curso, <b style="color:#17703f">verde</b> todo correcto, <b style="color:#c0661a">naranja</b> con errores y <b style="color:#c22">roja</b> para repasar.</div>
+      <div class="row"><button class="btn primary" data-act="close">Empezar a atender</button></div>`;
+    nb.innerHTML=h;const txt=fmt(`Bienvenid{a}, ${docTitle()}. Hoy tienes turno en la Unidad de Salud Sexual y Reproductiva. Lleva tu libreta, entra a cada sala y responde con calma: cada respuesta trae una explicación para que aprendas.`);
+    const el=$('#say');let i=0;typer=setInterval(()=>{i+=2;el.textContent=txt.slice(0,i);if(i>=txt.length)clearInterval(typer);},20);el.onclick=()=>{clearInterval(typer);el.textContent=txt;};
+    if(!S.met){S.met=true;save();}}
+  else if(s.t==='locked'){const st=stats('met');
+    h+=head('Fondo del pasillo','Pabellón ITS bloqueado');
+    h+=`<p>La puerta tiene un lector de credencial. En la pantalla dice:</p><div class="goal">Respuestas correctas de Métodos: <b>${st.ok} de ${UNLOCK}</b> necesarias.<br>Preguntas respondidas: <b>${st.done} de 15</b>.</div>`;
+    h+=st.done<15?`<p>Sigue atendiendo las consultas (101–105) y las salas de métodos (201–205). ${UNLOCK-st.ok===1?'Te falta <b>1</b> respuesta correcta.':`Te faltan <b>${UNLOCK-st.ok}</b> respuestas correctas.`}</p>`:`<p>Ya respondiste las 15. Vuelve a las salas con luz <b style="color:#c22">roja</b> para repasar las preguntas que fallaste.</p>`;
+    h+=`<div class="row"><button class="btn primary" data-act="close">Entendido</button><button class="btn ghost" data-act="map">Ver mapa</button></div>`;nb.innerHTML=h;}
+  else if(s.t==='main'){renderMain(s);}
+  nb.scrollTop=0;bookEl.scrollTop=0;
+  const f=nb.querySelector('.opt,.btn.primary');if(f&&!isTouch)f.focus({preventScroll:true});
+}
+function showAnswer(s){
+  const q=Q[s.id],btns=nb.querySelectorAll('.opt');
+  btns.forEach((b,i)=>{b.disabled=true;const isOk=s.order[i]===0;if(isOk)b.classList.add('ok');else if(i===s.choice)b.classList.add('bad');else b.classList.add('dim');});
+  const last=BK.i===BK.steps.length-2;
+  $('#fb').innerHTML=`<div class="fb" role="status"><h4 class="${s.correct?'y':'n'}">${s.correct?'¡Correcto!':'No es correcto'}</h4>${s.correct?'':`<p><b>Respuesta correcta:</b> ${esc(q.ok)}</p>`}<p>${esc(q.exp)}</p></div>
+    <div class="row"><button class="btn primary" data-act="next">${last?'Cerrar el caso':'Siguiente pregunta'}</button></div>`;
+  const dots=nb.querySelectorAll('.dots i');qSteps().forEach((x,i)=>{if(x.done)dots[i].classList.add(x.correct?'okd':'badd');});
+}
+function answer(s,i){
+  if(s.done)return;s.done=true;s.choice=i;s.correct=s.order[i]===0;
+  const prev=S.ans[s.id];if(!prev)S.ans[s.id]={first:s.correct,ok:s.correct,tries:1};else{prev.ok=prev.ok||s.correct;prev.tries++;}
+  const beforeOpen=S.itsOpen;
+  if(!S.itsOpen&&stats('met').ok>=UNLOCK){S.itsOpen=true;pendingUnlock=true;}
+  if(!S.itsOpen&&needsReview())pendingReview=true;
+  if(S.itsOpen&&stats('its').done===15&&!S.ended){S.ended=true;pendingEnd=true;}
+  save();if(s.correct){SFX.ok();buzz(25);}else{SFX.bad();buzz([50,40,50]);}
+  showAnswer(s);const nx=nb.querySelector('.fb');if(nx)nx.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(!beforeOpen&&S.itsOpen&&itsDoor)itsDoor.draw();
+}
+nb.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||!BK)return;const act=b.dataset.act;
+  if(act==='close'){SFX.click();closeBook();}
+  else if(act==='next'){SFX.page();BK.i=Math.min(BK.i+1,BK.steps.length-1);renderStep();}
+  else if(act==='ans'){answer(BK.steps[BK.i],+b.dataset.i);}
+  else if(act==='map'){closeBook();openMap();}
+  else if(act==='tab'){BK.steps[0].tab=b.dataset.tab;renderStep();}
+  else if(act==='cert'){closeBook();showEnd();}
+  else if(act==='reset'){if(b.dataset.sure){wipe();location.reload();}else{b.dataset.sure='1';b.textContent='Toca otra vez para borrar todo';}}
+});
+bookEl.addEventListener('click',e=>{if(e.target===bookEl&&BK&&BK.steps[BK.i].t!=='q')closeBook();});
+function useRoom(r){
+  S.seen[r.id]=true;save();
+  const st=roomStatus(r),pending=r.qs.filter(id=>!S.ans[id]),steps=[];
+  if(pending.length){steps.push({t:'intro',r});pending.forEach(id=>steps.push({t:'q',r,id}));steps.push({t:'done',r});}
+  else if(st==='review'){steps.push({t:'retryIntro',r});r.qs.filter(id=>!S.ans[id].ok).forEach(id=>steps.push({t:'q',r,id,retry:true}));steps.push({t:'done',r});}
+  else steps.push({t:'review',r});
+  openBook(steps,{room:r});
+}
+function briefing(){openBook([{t:'brief'}]);}
+function openNotebook(){if(!S.started)return;openBook([{t:'main',tab:'prog'}]);}
+function renderMain(s){
+  const sm=stats('met'),si=stats('its');let h=head(`Libreta de ${docTitle()}`,'Mi turno');
+  h+=`<div class="tabs" role="tablist">${[['prog','Pacientes y salas'],['notes','Apuntes'],['table','Tabla de métodos'],['help','Cómo jugar']].map(([k,l])=>`<button role="tab" aria-selected="${s.tab===k}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
+  if(s.tab==='prog'){
+    h+=`<div class="goal">Métodos: <b>${sm.ok}/15</b> correctas (meta ${UNLOCK}) · ITS: <b>${si.done}/15</b> respondidas, <b>${si.ok}</b> correctas.</div>`;
+    for(const[blk,tt]of[['met','Métodos anticonceptivos'],['its','Pabellón ITS']]){
+      h+=`<div class="sec">${tt}</div><div class="tbl-wrap"><table class="rooms"><thead><tr><th>Sala</th><th>Caso</th><th>Estado</th><th>Correctas</th></tr></thead><tbody>`;
+      for(const r of ROOMS.filter(x=>x.block===blk)){const st=roomStatus(r),ok=r.qs.filter(id=>S.ans[id]&&S.ans[id].ok).length;
+        h+=`<tr><td><b>${r.num}</b></td><td>${esc(r.sign)}</td><td><span class="chip" style="color:${st==='new'?'#1d6fd6':st==='part'?'#9a6b00':st==='ok'?'#17703f':st==='locked'?'#6c7a80':'#b23a3a'}">${ST_TXT[st]}</span></td><td>${ok}/${r.qs.length}</td></tr>`;}
+      h+=`</tbody></table></div>`;}
+    if(S.ended)h+=`<div class="row"><button class="btn primary" data-act="cert">Ver mi certificado</button></div>`;
+  }
+  if(s.tab==='notes'){
+    const seen=ROOMS.filter(r=>S.seen[r.id]||r.qs.some(id=>S.ans[id]));
+    if(!seen.length)h+=`<p>Todavía no tienes apuntes. Entra a una sala y atiende el caso: lo que aprendas quedará anotado aquí.</p>`;
+    for(const r of seen)h+=`<div class="sec">${esc(r.num)} · ${esc(r.sign)}</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;
+  }
+  if(s.tab==='table'){
+    h+=`<div class="tbl-wrap"><table class="rooms"><thead><tr><th>Método</th><th>Tipo</th><th>¿Hormonas?</th><th>¿Protege de ITS?</th><th>Duración o uso</th></tr></thead><tbody>${TABLE.map(r=>`<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td style="color:${r[3]==='Sí'?'#17703f':'#a42c2c'};font-weight:700">${r[3]}</td><td>${esc(r[4])}</td></tr>`).join('')}</tbody></table></div>
+      <div class="goal">Solo el condón (masculino o femenino) protege de las ITS. La doble protección es condón más otro método.</div>`;
+  }
+  if(s.tab==='help'){
+    h+=`<ul class="facts"><li>Teléfono: el círculo de la izquierda sirve para caminar; desliza el dedo por la derecha para mirar.</li><li>Computador: W A S D o flechas para caminar, arrastra con el mouse para mirar, E para atender, M para el mapa, N para la libreta.</li><li>Cuando estés cerca de un paciente o modelo aparecerá un botón amarillo. Tócalo para abrir el caso.</li><li>Con ${UNLOCK} correctas de las 15 preguntas de métodos se abre el Pabellón ITS.</li><li>Si respondes las 15 y no alcanzas ${UNLOCK}, las salas en rojo te dejan repasar lo que fallaste.</li></ul>
+      <div class="row"><button class="btn ghost" data-act="map">Ver mapa</button><button class="btn ghost" data-act="reset">Borrar mi progreso</button></div>`;
+  }
+  h+=`<div class="row"><button class="btn primary" data-act="close">Volver al hospital</button></div>`;nb.innerHTML=h;
+}
+function afterClose(){
+  if(pendingUnlock){pendingUnlock=false;pendingReview=false;itsDoor.draw();SFX.unlock();buzz([40,60,40,60,120]);const fl=$('#flash');fl.style.transition='none';fl.style.opacity=.55;requestAnimationFrame(()=>{fl.style.transition='opacity 1s';fl.style.opacity=0;});
+    toast(`<b>¡Pabellón ITS desbloqueado!</b> Sigue la línea fucsia del piso hasta el fondo del pasillo.`,6000);}
+  else if(pendingReview){pendingReview=false;const st=stats('met');const f=UNLOCK-st.ok;toast(`Te ${f===1?'falta':'faltan'} <b>${f}</b> ${f===1?'respuesta correcta':'respuestas correctas'}. Las puertas con luz <b>roja</b> te dejan repasar.`,6500);}
+  if(pendingEnd){pendingEnd=false;setTimeout(showEnd,600);}
+  updateHUD();
+}
+
+/* =====================================================================
+   HUD, mapa, certificado
+   ===================================================================== */
+let toastT=null;
+function toast(html,ms=4000){const t=$('#toast');t.innerHTML=html;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+function updateHUD(){
+  const sm=stats('met'),si=stats('its');
+  if(!S.itsOpen){
+    const rev=needsReview();
+    $('#objText').textContent=rev?'Repasa las salas con luz roja':'Atiende las consultas y salas de métodos';
+    $('#objBar').style.width=(sm.ok/15*100)+'%';$('#objMark').style.left=(UNLOCK/15*100)+'%';$('#objMark').hidden=false;
+    $('#objSub').textContent=`Correctas: ${sm.ok}/15 · necesitas ${UNLOCK} para abrir el Pabellón ITS`;
+  }else if(!S.ended){
+    $('#objText').textContent=si.done?'Atiende los 5 boxes del Pabellón ITS':'Entra al Pabellón ITS (fondo del pasillo)';
+    $('#objBar').style.width=(si.done/15*100)+'%';$('#objMark').hidden=true;
+    $('#objSub').textContent=`ITS: ${si.done}/15 respondidas · ${si.ok} correctas`;
+  }else{
+    $('#objText').textContent='¡Turno completado!';$('#objBar').style.width='100%';$('#objMark').hidden=true;
+    $('#objSub').textContent=`Métodos ${sm.ok}/15 · ITS ${si.ok}/15 · certificado en tu libreta`;
+  }
+}
+function refreshWorld(){
+  for(const d of DOORS){const st=roomStatus(d.r);d.col.set(ST_COL[st]);d.blink=st==='review';}
+  for(const n of NPCS){if(!n.room){n.mark.material.map=S.met?MARK.none:MARK.new;n.mark.visible=!S.met;continue;}
+    const st=roomStatus(n.room);n.mark.visible=st!=='locked';n.mark.material.map=st==='ok'?MARK.ok:st==='err'?MARK.err:st==='review'?MARK.rev:MARK.new;n.mark.material.needsUpdate=true;}
+  if(itsDoor)itsDoor.draw();drawClip();updateHUD();
+}
+const mini=$('#mini'),mctx=mini.getContext('2d');
+function roomRectsForMap(){return ROOMS.map(r=>({r,q:r.rect}));}
+function drawMini(){
+  const g=mctx,W=mini.width,s=7.2;g.clearRect(0,0,W,W);g.save();g.beginPath();g.arc(W/2,W/2,W/2-2,0,7);g.clip();g.fillStyle='rgba(6,16,20,.9)';g.fillRect(0,0,W,W);
+  g.translate(W/2,W/2);g.rotate(player.yaw);g.scale(s,s);g.translate(-player.x,-player.z);
+  g.fillStyle='#2a4048';for(const z of ZONES){if(z.id==='corrB'&&!S.itsOpen)g.fillStyle='#2a2d30';const q=z.r;g.fillRect(q[0],q[2],q[1]-q[0],q[3]-q[2]);g.fillStyle='#2a4048';}
+  for(const r of ROOMS){const st=roomStatus(r),q=r.rect;g.fillStyle=st==='locked'?'#24282b':'#1d3138';g.fillRect(q[0]+.15,q[2]+.15,q[1]-q[0]-.3,q[3]-q[2]-.3);
+    g.fillStyle=ST_COL[st];const d=r.door;g.beginPath();g.arc(d.cx,d.cz,.65,0,7);g.fill();}
+  g.fillStyle=S.itsOpen?'#3ddc84':'#ff4d4d';g.fillRect(-1.5,-46.25,3,.5);
+  g.restore();
+  g.save();g.translate(W/2,W/2);g.fillStyle='#f2c14e';g.beginPath();g.moveTo(0,-11);g.lineTo(8,8);g.lineTo(0,4);g.lineTo(-8,8);g.closePath();g.fill();g.restore();
+  g.strokeStyle='rgba(160,215,220,.35)';g.lineWidth=3;g.beginPath();g.arc(W/2,W/2,W/2-2,0,7);g.stroke();
+}
+mini.addEventListener('click',e=>{e.stopPropagation();openMap();});
+mini.addEventListener('pointerdown',e=>e.stopPropagation());
+function openMap(){if(!S.started)return;$('#map').hidden=false;setPlaying(false);drawBigMap();}
+function closeMap(){$('#map').hidden=true;setPlaying(true);}
+$('#mapClose').addEventListener('click',closeMap);
+function drawBigMap(){
+  const c=$('#mapC'),g=c.getContext('2d'),W=c.width,Hh=c.height;
+  g.fillStyle='#0a161b';g.fillRect(0,0,W,Hh);
+  // z horizontal (hall a la izquierda), x vertical
+  const s=Math.min((W-40)/104,(Hh-60)/24),ox=20,oy=(Hh-24*s)/2+10;
+  const P=(x,z)=>[ox+(15-z)*s,oy+(x+12)*s];
+  const rect=(q,fill,stroke)=>{const a=P(q[0],q[3]),b=P(q[1],q[2]);g.fillStyle=fill;g.fillRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.strokeRect(a[0],a[1],b[0]-a[0],b[1]-a[1]);}};
+  for(const z of ZONES)rect(z.r,z.id==='corrB'&&!S.itsOpen?'#262a2d':'#2a4048');
+  for(const r of ROOMS){const st=roomStatus(r);rect(r.rect,st==='locked'?'#1f2326':'#183039',ST_COL[st]);const c_=P((r.rect[0]+r.rect[1])/2,(r.rect[2]+r.rect[3])/2);
+    g.fillStyle='#fff';g.font=font(700,Math.max(12,s*1.6));g.textAlign='center';g.textBaseline='middle';g.fillText(r.num,c_[0],c_[1]-s*.9);g.fillStyle='#9cb6b9';g.font=font(600,Math.max(10,s*1.05));
+    g.fillText(SHORT[r.id],c_[0],c_[1]+s*.8);}
+  const it=P(0,-46);g.fillStyle=S.itsOpen?'#3ddc84':'#ff4d4d';g.fillRect(it[0]-3,it[1]-1.5*s,6,3*s);
+  g.fillStyle='#cfe0e0';g.font=font(700,Math.max(12,s*1.5));g.textAlign='center';const hl=P(0,7);g.fillText('HALL',hl[0],hl[1]);const ad=P(-5,5);g.font=font(600,Math.max(10,s*1.1));g.fillText('Admisión',ad[0],ad[1]);
+  const pp=P(player.x,player.z);g.save();g.translate(pp[0],pp[1]);g.rotate(-player.yaw-Math.PI/2);g.fillStyle='#f2c14e';g.beginPath();g.moveTo(0,-10);g.lineTo(7,8);g.lineTo(0,4);g.lineTo(-7,8);g.closePath();g.fill();g.restore();
+  g.fillStyle='#f2c14e';g.font=font(700,14);g.textAlign='left';g.fillText('▲ Tú',pp[0]+10,pp[1]-10);
+}
+function showEnd(){
+  const sm=stats('met'),si=stats('its'),tot=sm.first+si.first;const stars=tot>=27?3:tot>=21?2:1;
+  const d=new Date();const fecha=d.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+  $('#cert').innerHTML=`<div class="k">Hospital Escuela Esperanza · Unidad de Salud Sexual y Reproductiva</div><h2>Certificado de Residencia</h2>
+    <p>Se certifica que</p><div class="nm">${esc(docTitle())}</div><p>completó el turno de residencia atendiendo 10 salas de métodos anticonceptivos y 5 boxes del Pabellón de Infecciones de Transmisión Sexual.</p>
+    <div class="stars" aria-label="${stars} de 3 estrellas">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
+    <div class="scores"><div><b>${sm.first}/15</b><span>Métodos correctas al primer intento</span></div><div><b>${si.first}/15</b><span>ITS correctas al primer intento</span></div><div><b>${tot}/30</b><span>Puntaje total del turno</span></div></div>
+    <ul class="keys"><li>El condón es el único método que protege del embarazo y de las ITS.</li><li>Ligadura de trompas y vasectomía son permanentes; el DIU y el implante duran años.</li><li>La píldora de emergencia se toma lo antes posible y no es para usar siempre.</li><li>Muchas ITS no dan síntomas: la forma segura de saber es un examen.</li><li>VIH, sífilis, clamidia y gonorrea tienen tratamiento: consulta en tu CESFAM o Espacio Amigable.</li></ul>
+    <p style="margin-top:14px;font-size:14px;color:#5b6870">Emitido el ${esc(fecha)}. Toma una captura de pantalla y envíasela a tu profesor o profesora.</p>
+    <div class="row"><button class="btn primary" id="cKeep">Seguir explorando</button><button class="btn ghost" id="cNew">Nueva partida</button></div>`;
+  $('#end').hidden=false;setPlaying(false);SFX.unlock();
+  $('#cKeep').onclick=()=>{$('#end').hidden=true;setPlaying(true);};
+  $('#cNew').onclick=e=>{if(e.target.dataset.sure){wipe();location.reload();}else{e.target.dataset.sure='1';e.target.textContent='Toca otra vez para reiniciar';}};
+}
+
+/* ---------- botones del HUD ---------- */
+$('#bBook').addEventListener('click',()=>{audioInit();SFX.click();openNotebook();});
+$('#bMap').addEventListener('click',()=>{audioInit();SFX.click();openMap();});
+$('#bSnd').addEventListener('click',()=>{audioInit();AU.on=!AU.on;if(AU.master)AU.master.gain.value=AU.on?.75:0;$('#bSnd').classList.toggle('off',!AU.on);});
+const fsOk=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen;
+if(!fsOk)$('#bFs').hidden=true;
+$('#bFs').addEventListener('click',async()=>{try{if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}else{await(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen).call(document.documentElement);try{await screen.orientation.lock('landscape');}catch(_){}}}catch(_){toast('Este navegador no permite pantalla completa.');}});
+for(const id of['#tools','#obj']){$(id).addEventListener('pointerdown',e=>e.stopPropagation());}
+
+/* =====================================================================
+   BUCLE PRINCIPAL con resolución dinámica (apunta a 60 FPS estables)
+   ===================================================================== */
+let last=performance.now(),acc=0,frames=0,fpsT=0,good=0,miniT=0,saveT=0,attract=true;
+const animT=new Map();
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(.05,(now-last)/1000);last=now;const t=now/1000;
+  if(attract){const a=t*.08;player.x=Math.sin(a)*2.5;player.z=8.5+Math.cos(a*1.3);player.yaw=Math.sin(a*.7)*.5;player.pitch=-.04;}
+  else if(playing)updatePlayer(dt);
+  // puertas
+  for(const d of DOORS){const dist=Math.hypot(player.x-d.cx,player.z-d.cz);d.tgt=(dist<2.5&&d.open()&&!attract)?1:0;const pt=d.t;d.t=clamp(d.t+(d.tgt?1:-1)*dt*2.4,0,1);
+    if(pt===0&&d.t>0)SFX.door();const e=d.t*d.t*(3-2*d.t);d.piv.rotation.y=-e*1.62;
+    d.r.group.visible=d.t>.01||player.zone===d.r.id;}
+  updateDoorInstances(t);
+  if(itsDoor){const dist=Math.hypot(player.x,player.z+46);const tgt=S.itsOpen&&dist<5&&!attract?1:0;const pt=itsDoor.t;itsDoor.t=clamp(itsDoor.t+(tgt?1:-1)*dt*1.2,0,1);if(pt===0&&itsDoor.t>0)SFX.slide();
+    const e=itsDoor.t*itsDoor.t*(3-2*itsDoor.t);itsDoor.leaves[0].position.x=-.75-e*1.42;itsDoor.leaves[1].position.x=.75+e*1.42;}
+  // personajes
+  const tv=new T.Vector3();
+  for(const n of NPCS){if(n.room&&!n.room.group.visible)continue;const tt=t+n.ph;n.tg.scale.y=1+Math.sin(tt*1.7)*.012;
+    tv.set(player.x,1.6,player.z);n.P.worldToLocal(tv);let yaw=Math.atan2(tv.x,tv.z);const dd=Math.hypot(tv.x,tv.z);let pit=0;
+    if(dd>7||Math.abs(yaw)>1.6){yaw=Math.sin(tt*.4)*.35;}else{pit=-Math.atan2(tv.y-n.headY,dd)*.5;}
+    yaw=clamp(yaw,-1,1);n.hy=lerp(n.hy,yaw,.07);n.hp=lerp(n.hp,clamp(pit,-.3,.3),.07);n.hg.rotation.y=n.hy;n.hg.rotation.x=n.hp;
+    if(tt>n.nb){n.bt=.13;n.nb=tt+rr(2.5,5.5);}if(n.bt>0){n.bt-=dt;n.eyes.forEach(e=>e.scale.y=.12);}else n.eyes.forEach(e=>e.scale.y=1);
+    n.mark.position.y=n.headY+.42+Math.sin(t*2.4+n.ph)*.05;}
+  // animaciones
+  for(const a of ANIMS){if(a.room&&!a.room.group.visible)continue;if(a.every){const k=animT.get(a)||0;if(t-k<a.every)continue;const d_=t-k;animT.set(a,t);a.fn(t,Math.min(d_,.2));}else a.fn(t,dt);}
+  updateCamera();
+  if(!attract)updateInteract();
+  renderer.render(scene,camera);
+  if(playing&&now-miniT>66){miniT=now;drawMini();}
+  if(playing&&now-saveT>4000){saveT=now;S.pos=[+player.x.toFixed(2),+player.z.toFixed(2),+player.yaw.toFixed(2)];save();}
+  // resolución dinámica
+  frames++;fpsT+=dt;if(fpsT>=1){const fps=frames/fpsT;frames=0;fpsT=0;
+    if(fps<47&&curPR>.7){curPR=Math.max(.7,curPR-.15);renderer.setPixelRatio(curPR);onResize();good=0;}
+    else if(fps>58){if(++good>=3&&curPR<maxPR){curPR=Math.min(maxPR,curPR+.1);renderer.setPixelRatio(curPR);onResize();good=0;}}else good=0;}
+}
+
+/* =====================================================================
+   ARRANQUE
+   ===================================================================== */
+async function boot(){
+  const msg=$('#loadMsg');
+  try{if(document.fonts&&document.fonts.load)await Promise.race([Promise.all(['700 40px "Barlow Condensed"','600 40px "Barlow Condensed"','400 30px "Atkinson Hyperlegible"','700 30px Kalam','400 30px Kalam'].map(f=>document.fonts.load(f))),new Promise(r=>setTimeout(r,2500))]);}catch(e){}
+  try{initRenderer();}catch(e){fatal('Tu navegador no pudo iniciar los gráficos 3D (WebGL). Prueba con Chrome o Safari actualizados.');return;}
+  msg.textContent='Pintando texturas';await nextFrame();
+  buildTextures();buildMaterials();
+  MARK.new=markTex('!','#e0a412');MARK.ok=markTex('✓','#22a55a');MARK.err=markTex('✓','#e07b1a');MARK.rev=markTex('!','#e03b3b');MARK.none=MARK.ok;
+  msg.textContent='Levantando muros';await nextFrame();
+  STATIC=new T.Group();scene.add(STATIC);
+  buildShell();buildLobby();buildCorridors();
+  msg.textContent='Equipando las salas';await nextFrame();
+  for(const r of ROOMS)buildRoom(r);
+  buildItsDoor();buildLights();
+  msg.textContent='Optimizando';await nextFrame();
+  mergeInto(STATIC,scene);
+  buildDoorInstances();
+  buildHand();refreshWorld();
+  renderer.compile(scene,camera);
+  $('#loading').hidden=true;
+  requestAnimationFrame(frame);
+  showStart();
+}
+function showStart(){
+  attract=true;$('#start').hidden=false;$('#hud').hidden=true;
+  if(hadSave){$('#bStart').textContent='Continuar turno';$('#bNew').hidden=false;$('#docName').value=S.name||'';}
+  const setT=f=>{S.fem=f;$('#tDra').setAttribute('aria-pressed',f);$('#tDr').setAttribute('aria-pressed',!f);};setT(S.fem);
+  $('#tDra').onclick=()=>setT(true);$('#tDr').onclick=()=>setT(false);
+  $('#bNew').onclick=e=>{if(e.target.dataset.sure){wipe();location.reload();}else{e.target.dataset.sure='1';e.target.textContent='Toca otra vez para borrar el progreso';}};
+  $('#startForm').onsubmit=e=>{e.preventDefault();audioInit();
+    S.name=$('#docName').value.trim().replace(/\s+/g,' ').slice(0,24);S.started=true;save();
+    $('#start').hidden=true;attract=false;$('#hud').hidden=false;
+    if(S.pos){player.x=S.pos[0];player.z=S.pos[1];player.yaw=S.pos[2];}else{player.x=0;player.z=11;player.yaw=0;}
+    player.pitch=-.03;player.zone=zoneAt(player.x,player.z);$('#zone').textContent=zoneName(player.zone);
+    setPlaying(true);refreshWorld();drawMini();
+    if(!isTouch){$('#joy').hidden=true;$('#joyHint').hidden=true;$('#lookHint').textContent='Arrastra para mirar';}
+    if(!S.met)toast(`Bienvenid${S.fem?'a':'o'}, <b>${esc(docTitle())}</b>. Habla con la enfermera Rosa en <b>Admisión</b>, a tu izquierda.`,6500);
+    else if(S.ended)toast('Turno completado. Tu certificado está en la libreta.',4000);
+    else toast('Turno retomado. Revisa tu objetivo arriba a la izquierda.',3500);
+    setTimeout(()=>{$('#joyHint').style.opacity=0;$('#lookHint').style.opacity=0;},9000);
+  };
+}
+document.addEventListener('visibilitychange',()=>{if(!AU.ctx)return;if(document.hidden)AU.ctx.suspend();else if(AU.on)AU.ctx.resume();});
+boot().catch(e=>{console.error(e);fatal('Ocurrió un error al construir el hospital: '+(e&&e.message||e));});
+})();
+</script>
+</body>
+</html>
