@@ -125,7 +125,8 @@ Requisitos: navegador actualizado con gráficos 3D (WebGL) y conexión a interne
 
 ## 7. Notas técnicas
 
-- **Rendimiento:** el juego ajusta solo la resolución para mantenerse cerca de 60 cuadros por segundo; en teléfonos sencillos se verá un poco menos nítido, pero fluido.
+- **Gráficos:** render a 720p nativo en teléfonos y 1080p en computador, sombras en tiempo real, mapas de relieve en pisos, azulejos, madera, tela, piel y pelo, muebles con aristas redondeadas y personajes esculpidos (ojos con iris y párpados que parpadean, labios que se mueven al hablar, manos con cinco dedos, pelo con inercia).
+- **Rendimiento:** el juego ajusta solo la resolución para mantenerse cerca de 60 cuadros por segundo y, si el teléfono no da abasto, desactiva las sombras; en equipos sencillos se verá un poco menos nítido, pero fluido.
 - **Progreso:** se guarda automáticamente en el navegador del estudiante. Para empezar de cero: botón **Empezar de cero** en la portada, o **Libreta → Cómo jugar → Borrar mi progreso**.
 - **Sonido:** se activa al tocar *Comenzar turno*; se puede silenciar con el botón del parlante.
 - **Contenido:** lenguaje adaptado a 7° básico; los datos de salud corresponden a la oferta pública chilena (píldora de emergencia y exámenes gratuitos, vacuna VPH en 4° y 5° básico, Espacio Amigable para 10 a 19 años, Salud Responde 600 360 7777).
