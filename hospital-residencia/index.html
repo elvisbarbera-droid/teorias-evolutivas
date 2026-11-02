@@ -5,7 +5,7 @@
 <title>Turno de Residencia</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="description" content="Juego 3D en primera persona: recorre un hospital, atiende pacientes y resuelve casos sobre métodos anticonceptivos e ITS. Para 7° básico.">
+<meta name="description" content="Juego 3D en primera persona: recorre un hospital, atiende pacientes y resuelve casos sobre pubertad, sistema reproductor, hormonas, investigación científica, métodos anticonceptivos, VIH y SIDA.">
 <meta name="theme-color" content="#0b171c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -156,6 +156,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--signal);outline
 .dots i.badd{background:var(--bad);border-color:#a23131}
 .qtag{font:700 12px/1 var(--f-sign);letter-spacing:.14em;text-transform:uppercase;color:var(--pen-soft)}
 .qtext{font:700 21px/1.35 var(--f-body);margin:0 0 14px;text-wrap:pretty}
+.qctx{font-size:16.5px;line-height:1.5;margin:0 0 10px;padding:10px 12px;background:rgba(255,255,255,.75);border-left:4px solid var(--scrub-deep);border-radius:6px;max-width:none}
+.fig{display:block;width:100%;max-width:560px;height:auto;margin:4px auto 14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.15);background:#eef3f3}
 .opts{display:grid;gap:10px}
 .opt{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:10px 14px 10px 10px;text-align:left;border-radius:12px;border:2px solid #c3d0d8;background:#fff;color:var(--pen);cursor:pointer;font:400 17px/1.35 var(--f-body);transition:transform .08s,border-color .15s}
 .opt:active{transform:scale(.985)}
@@ -271,11 +273,11 @@ table.rooms td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:mi
     <div>
       <div class="brand-k">Hospital Escuela Esperanza · Unidad de Salud Sexual y Reproductiva</div>
       <h1 class="brand-t">Turno de <span>Residencia</span></h1>
-      <p class="brand-d">Eres el médico residente de turno. Con tu libreta en la mano recorres el hospital, entras a cada sala, atiendes pacientes y resuelves casos sobre métodos anticonceptivos. Si aciertas lo suficiente, se abre el Pabellón de Infecciones de Transmisión Sexual (ITS).</p>
+      <p class="brand-d">Eres el médico residente de turno. Con tu libreta en la mano recorres el hospital, entras a cada sala, atiendes pacientes y resuelves casos sobre pubertad, sistema reproductor, hormonas, investigación científica y métodos anticonceptivos. Si aciertas lo suficiente, se abre el Pabellón ITS, dedicado al VIH y al SIDA.</p>
       <div class="steps">
-        <div class="step"><b>10 salas</b><span>5 consultas con pacientes y 5 salas de métodos: 15 preguntas.</span></div>
+        <div class="step"><b>10 salas</b><span>5 consultas con pacientes y 5 salas de estudio con gráficos: 15 preguntas.</span></div>
         <div class="step"><b>10 de 15</b><span>Con 10 respuestas correctas se desbloquea el Pabellón ITS.</span></div>
-        <div class="step"><b>5 boxes ITS</b><span>VIH, clamidia, sífilis, gonorrea y prevención: 15 preguntas más.</span></div>
+        <div class="step"><b>5 boxes</b><span>VIH y SIDA: qué son, origen, infecciones y transmisión. 5 preguntas más.</span></div>
       </div>
     </div>
     <form class="card" id="startForm" autocomplete="off">
@@ -317,222 +319,220 @@ table.rooms td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:mi
 'use strict';
 /* =====================================================================
    DATOS DEL JUEGO: preguntas, salas y pacientes
-   En cada pregunta, "ok" es la respuesta correcta y "no" las incorrectas.
-   El orden se mezcla al mostrarlas.
+   Bloque 1 (15 preguntas): cuestionario de Biología (pubertad, sistema
+   reproductor, hormonas, investigación científica y métodos).
+   Bloque 2 (5 preguntas): VIH y SIDA.
+   En cada pregunta: ctx = caso, q = pregunta, ok = respuesta correcta,
+   no = respuestas incorrectas, exp = explicación, fig = gráfico.
    ===================================================================== */
 const UNLOCK = 10;
 
 const Q = {
-  /* ---------- CONSULTAS (pacientes) ---------- */
-  c1:{q:'¿Qué método le recomiendas a Valentina para prevenir el embarazo y también las ITS?',
-      ok:'El condón, en cada relación sexual',
-      no:['La pastilla anticonceptiva diaria','El DIU de cobre colocado en el útero','La inyección anticonceptiva mensual'],
-      exp:'El condón (masculino o femenino) es el único método que protege del embarazo y de las ITS al mismo tiempo. Los demás métodos solo previenen el embarazo. Lo ideal es la "doble protección": condón más otro método.'},
-  c2:{q:'Andrea olvida la pastilla muy seguido. ¿Qué opción es mejor para ella?',
-      ok:'Un implante en el brazo o un DIU, que duran años',
-      no:['Tomar todas las pastillas olvidadas juntas','Tomar la pastilla solo los días que tenga pareja','Cambiar a contar los días fértiles del calendario'],
-      exp:'El implante (una varilla pequeña bajo la piel del brazo) y el DIU son métodos de larga duración: funcionan por años sin tener que acordarse todos los días. Ojo: no protegen de ITS.'},
-  c3:{q:'A Javiera se le rompió el condón anoche. ¿Qué le indicas?',
-      ok:'Tomar la píldora de emergencia lo antes posible',
-      no:['Esperar un mes para ver si llega la regla','Hacerse un lavado vaginal con agua y mucho jabón','Esperar y hacerse un test de embarazo mañana'],
-      exp:'La píldora anticonceptiva de emergencia funciona mejor mientras antes se tome (idealmente dentro de los 3 primeros días). En Chile se entrega gratis en los centros de salud. No es para usar siempre y no protege de ITS, así que también conviene hacerse exámenes.'},
-  c4:{q:'Patricia busca un método definitivo. ¿Cuál le corresponde a ella?',
-      ok:'La ligadura de trompas',
-      no:['El condón femenino','El espermicida en gel','La píldora de emergencia'],
-      exp:'La ligadura de trompas es una cirugía que bloquea las trompas de Falopio. Es permanente, por eso se elige solo cuando la persona está segura de no querer más hijos. En los hombres, el método definitivo es la vasectomía.'},
-  c5:{q:'Matías escuchó que en la primera relación sexual no hay embarazo. ¿Qué le respondes?',
-      ok:'Es falso: sí puede haber embarazo la primera vez',
-      no:['Es verdad: el cuerpo no está listo la primera vez','Es verdad, pero solo si la mujer es muy joven','Es falso, pero solo si no usan ningún gel'],
-      exp:'Basta una relación sexual sin protección para que pueda haber embarazo, aunque sea la primera vez. Por eso es importante informarse y usar un método desde el comienzo.'},
+  /* ---------- Bloque 1 · Cuestionario de Biología ---------- */
+  b1:{n:1,fig:'camila',
+      ctx:'Durante 8 meses, a Camila (13 años) se le registran en su control de salud: +6 cm de estatura, +4 kg de masa corporal, aparición de vello axilar y púbico, y desarrollo de las mamas.',
+      q:'¿Cuáles de estos cambios son exclusivamente caracteres sexuales secundarios?',
+      ok:'El vello axilar y púbico, y el desarrollo de mamas',
+      no:['El aumento de estatura y el aumento de masa corporal','Todos los cambios, porque ocurren durante la pubertad','Solo el aumento de estatura, porque es el más notorio'],
+      exp:'Los caracteres sexuales secundarios aparecen en la pubertad por acción de las hormonas sexuales (en Camila, los estrógenos) y diferencian a mujeres y hombres: vello axilar y púbico, mamas, voz más grave, barba. Crecer en estatura y subir de peso ocurre durante toda la niñez y en ambos sexos, así que no son exclusivos de la pubertad.'},
+  b2:{n:2,fig:'hormonas',
+      ctx:'En un liceo se analiza este gráfico de testosterona y estrógenos entre los 7 y los 17 años. Hasta los 9 años ambas curvas son bajas y parecidas; después, la testosterona sube en los hombres y los estrógenos en las mujeres.',
+      q:'¿Qué conclusión se desprende directamente del gráfico?',
+      ok:'Desde los 9 años, en cada sexo sube más una hormona distinta',
+      no:['Los hombres no producen nada de estrógenos en ningún momento','Las hormonas son iguales en ambos sexos durante toda la vida','La testosterona causa la tristeza que se siente en la adolescencia'],
+      exp:'Una conclusión "directa" solo dice lo que muestran los datos: antes de los 9 años los niveles son bajos y similares, y después la testosterona aumenta en los hombres y los estrógenos en las mujeres. El gráfico no dice que un sexo tenga cero de la otra hormona ni habla de emociones: afirmar eso sería ir más allá de los datos.'},
+  b3:{n:3,fig:'esferas',
+      ctx:'Matías afirma: "La pubertad es solo cosa del cuerpo; las emociones y las amistades no cambian por su causa, así que no tiene sentido verla en la clase de ciencias".',
+      q:'¿Cómo evalúas la afirmación de Matías?',
+      ok:'Es incorrecta: la pubertad también cambia emociones y relaciones',
+      no:['Es correcta: las hormonas solo afectan la estatura, el peso y el vello','Es correcta: las emociones no tienen relación con el cuerpo','Es incorrecta: la pubertad solo cambia emociones, no el cuerpo'],
+      exp:'La pubertad tiene una dimensión biológica (cambios del cuerpo), afectiva (las hormonas influyen en el estado de ánimo y aparecen nuevas emociones) y social (nuevas amistades, intereses e identidad). Por eso se estudia en Ciencias: entender lo biológico ayuda a comprender lo que sentimos y vivimos.'},
+  b4:{n:4,fig:'maqueta',
+      ctx:'En una maqueta anatómica, la profesora señala el epidídimo, la uretra, el ovario y el endometrio.',
+      q:'¿Qué opción describe correctamente la función de cada estructura?',
+      ok:'Epidídimo: madura espermatozoides · Uretra: saca el semen · Ovario: produce ovocitos · Endometrio: recibe al embrión',
+      no:['Epidídimo: produce ovocitos · Uretra: recibe al embrión · Ovario: saca la orina · Endometrio: madura espermatozoides','Epidídimo: recibe al embrión · Uretra: madura espermatozoides · Ovario: saca el semen · Endometrio: produce ovocitos','Epidídimo: saca la orina · Uretra: produce ovocitos · Ovario: madura espermatozoides · Endometrio: recibe al semen'],
+      exp:'Epidídimo: tubo enrollado sobre el testículo donde los espermatozoides maduran y se guardan. Uretra: conducto que lleva al exterior el semen (y la orina) en el hombre. Ovario: produce los ovocitos y hormonas (estrógenos y progesterona). Endometrio: capa interna del útero que se engrosa cada ciclo para recibir al embrión; si no hay embarazo, se desprende en la menstruación.'},
+  b5:{n:5,fig:'gametos',
+      ctx:'En una práctica de laboratorio se observan al microscopio, a la misma escala, un ovocito y un espermatozoide humano.',
+      q:'¿Qué comparación es correcta y se relaciona con su función?',
+      ok:'El ovocito es más grande, con mucho citoplasma, y no se mueve',
+      no:['El espermatozoide es más grande y tiene más citoplasma','Ambos tienen el mismo tamaño y los dos nadan moviendo su cola','El ovocito es pequeño, sin citoplasma, y nada muy rápido'],
+      exp:'El ovocito es una de las células más grandes del cuerpo (unos 0,1 mm): su abundante citoplasma guarda nutrientes para las primeras etapas del embrión, y no se mueve (lo desplazan las trompas). El espermatozoide es mucho más pequeño, casi sin citoplasma, y tiene un flagelo para nadar hasta el ovocito: está "aligerado" para moverse.'},
+  b6:{n:6,fig:'mitocondrias',
+      ctx:'Al observar una micrografía, Javiera nota que la pieza media del espermatozoide está llena de mitocondrias dispuestas en espiral.',
+      q:'¿Cuál es una pregunta de investigación científica adecuada?',
+      ok:'¿Más mitocondrias hacen nadar más rápido al espermatozoide?',
+      no:['¿Es más bonita la espiral de mitocondrias que el resto de la célula?','¿Deberían las personas sentir admiración por los espermatozoides?','¿Son las mitocondrias el organelo más valioso de todos los que existen?'],
+      exp:'Una pregunta es investigable cuando se puede responder con datos que se miden u observan: se puede contar las mitocondrias y medir la velocidad de nado. Las otras opciones dependen de gustos, opiniones o valores ("bonita", "admiración", "más valioso"), y eso no se mide en un laboratorio. Pista biológica: las mitocondrias producen la energía que mueve el flagelo.'},
+  b7:{n:7,fig:'ratas',
+      ctx:'Un estudio da tres dosis distintas de estrógenos a grupos de ratas hembra y mide el grosor del endometrio a los 15 días, manteniendo iguales el peso, la alimentación y las horas de luz.',
+      q:'¿Cuáles son las variables del experimento?',
+      ok:'Independiente: dosis de estrógenos · Dependiente: grosor del endometrio · Controladas: peso, alimento y luz',
+      no:['Independiente: grosor del endometrio · Dependiente: dosis de estrógenos · Controladas: peso, alimento y luz','Independiente: peso de las ratas · Dependiente: horas de luz · Controladas: dosis y grosor del endometrio','Independiente: dosis de estrógenos · Dependiente: alimentación · Controladas: grosor del endometrio y luz'],
+      exp:'La variable independiente es la que el investigador cambia a propósito (la dosis). La dependiente es la que se mide como resultado (el grosor del endometrio). Las controladas se mantienen iguales (peso, alimento, luz) para que, si el endometrio cambia, sepamos que fue por la dosis y no por otra causa.'},
+  b8:{n:8,fig:'lhfsh',
+      ctx:'En un laboratorio clínico se grafican la LH y la FSH durante un ciclo de 28 días. Hacia el día 14 se observa un aumento brusco y breve de LH.',
+      q:'¿Qué indica ese aumento y qué ocurre después?',
+      ok:'Provoca la ovulación; luego se forma el cuerpo lúteo y el endometrio sigue grueso',
+      no:['Inicia la menstruación; el ovario se detiene y el endometrio se desprende de inmediato','Indica un embarazo seguro; el ovario deja de funcionar y el útero se achica de golpe','Provoca la menstruación; luego el ovario produce espermatozoides y el útero se cierra'],
+      exp:'El "peak" de LH provoca la ovulación: el folículo maduro libera el ovocito. Lo que queda del folículo se transforma en el cuerpo lúteo, que produce progesterona y mantiene el endometrio grueso por si hay embarazo. Si no hay fecundación, el cuerpo lúteo se degenera, bajan las hormonas y el endometrio se desprende: comienza la menstruación y un nuevo ciclo.'},
+  b9:{n:9,fig:'investigable',
+      ctx:'Estudiantes de enfermería quieren comparar la eficacia del preservativo femenino (método de barrera) con la del parche anticonceptivo (método hormonal).',
+      q:'¿Cuál es una pregunta investigable para este propósito?',
+      ok:'¿Con cuál de los dos hay menos embarazos por cada 100 usuarias en un año?',
+      no:['¿Cuál es el método más justo para todos los adolescentes de una comuna?','¿Cuál de los dos métodos es más bonito y elegante para llevar en la mochila?','¿Qué método debería escoger una persona para sentirse mejor que los demás?'],
+      exp:'Es investigable porque se responde con datos medibles: contar embarazos en grupos de usuarias durante un año. En cambio, "¿cuál es el más justo?" depende de valores y opiniones (qué entiende cada persona por justicia), por lo que no puede responderse solo con datos.'},
+  b10:{n:10,fig:'clasificar',
+      ctx:'Hay que clasificar el diafragma, la inyección hormonal, la vasectomía y el método de Billings (moco cervical) según su mecanismo de acción.',
+      q:'¿Qué clasificación es correcta?',
+      ok:'Diafragma: barrera · Inyección: hormonal · Vasectomía: quirúrgico · Billings: natural',
+      no:['Diafragma: hormonal · Inyección: barrera · Vasectomía: natural · Billings: quirúrgico','Diafragma: quirúrgico · Inyección: natural · Vasectomía: hormonal · Billings: barrera','Diafragma: natural · Inyección: quirúrgico · Vasectomía: barrera · Billings: hormonal'],
+      exp:'Diafragma: cúpula que se coloca en el cuello del útero e impide el paso de los espermatozoides (barrera). Inyección: libera hormonas que impiden la ovulación (químico-hormonal). Vasectomía: cirugía que corta los conductos deferentes (quirúrgico). Billings: la persona observa su moco cervical para reconocer los días fértiles (natural, poco eficaz).'},
+  b11:{n:11,fig:'mural',
+      ctx:'En el diario mural de un colegio aparece este mensaje: "Si tomo anticonceptivos orales no necesito preservativo, porque me cuidan de todo".',
+      q:'¿Cómo evalúas este mensaje?',
+      ok:'Es falso: la pastilla no protege de las ITS y el preservativo sí',
+      no:['Es verdadero: la pastilla protege del embarazo y de todas las ITS','Es verdadero: la pastilla elimina los virus y bacterias del cuerpo','Es falso: la pastilla no sirve para nada y nunca evita un embarazo'],
+      exp:'La pastilla anticonceptiva actúa sobre las hormonas para evitar la ovulación: previene el embarazo, pero no forma ninguna barrera contra virus, bacterias ni parásitos. Solo el preservativo (masculino o femenino) protege de las ITS. Por eso se recomienda la doble protección: pastilla u otro método + preservativo.'},
+  b12:{n:12,fig:'vasectomia',
+      ctx:'Un hombre de 38 años duda en hacerse una vasectomía porque cree que "dejará de producir testosterona y perderá la voz grave y la barba".',
+      q:'¿Qué argumento biológico refuta esta idea?',
+      ok:'Los testículos siguen produciendo testosterona, que pasa a la sangre',
+      no:['Es cierto: sin espermatozoides el cuerpo deja de fabricar hormonas','Es cierto: la testosterona sale del cuerpo por los conductos cortados','No pasa nada, porque la testosterona se fabrica solo en el cerebro'],
+      exp:'En la vasectomía solo se cortan los conductos deferentes, por donde viajan los espermatozoides. La testosterona la producen células de los testículos y pasa directamente a la sangre, no por esos conductos. Por eso la voz, la barba, la erección y la eyaculación se mantienen igual.'},
+  b13:{n:13,fig:'fallas',
+      ctx:'En fichas de salud sexual se lee que, en el uso habitual, el preservativo masculino falla cerca del 13 % de las veces, mientras que el implante hormonal falla en menos del 1 %.',
+      q:'¿A qué se debe principalmente esta diferencia?',
+      ok:'El condón depende de usarlo bien cada vez; el implante no',
+      no:['El implante protege mejor de las ITS que cualquier preservativo','El condón es un método que en realidad casi nunca funciona bien','El implante destruye a los espermatozoides antes de que se formen'],
+      exp:'"Uso habitual" incluye los errores de las personas: no usarlo todas las veces, ponerlo tarde, usarlo vencido o que se rompa. El implante, una vez colocado, funciona por años sin depender de lo que haga la persona. Con uso perfecto el condón falla cerca del 2 %. Y ojo: el implante no protege de ITS; el condón sí.'},
+  b14:{n:14,fig:'ligadura',
+      ctx:'Una mujer comenta que, después de ligarse las trompas, "ya no tendrá ciclo menstrual ni cambios hormonales".',
+      q:'¿Qué es lo correcto?',
+      ok:'Los ovarios siguen funcionando: el ciclo y la regla continúan',
+      no:['Es cierto: al ligar las trompas se sacan los ovarios del cuerpo','Es cierto: la menstruación pasa por las trompas y ya no puede salir','Solo cambian las hormonas, pero la regla se detiene para siempre'],
+      exp:'La ligadura solo bloquea las trompas de Falopio para que el ovocito y el espermatozoide no se encuentren. Los ovarios quedan intactos: siguen madurando ovocitos y produciendo estrógenos y progesterona, el endometrio sigue engrosándose y desprendiéndose, y la menstruación continúa. El ovocito liberado simplemente se reabsorbe.'},
+  b15:{n:15,fig:'its3',
+      ctx:'En un centro de salud se comparan tres ITS: gonorrea, virus del papiloma humano (VPH) y tricomoniasis.',
+      q:'¿Cuál es el agente causal de cada una?',
+      ok:'Gonorrea: bacteria · VPH: virus · Tricomoniasis: parásito',
+      no:['Gonorrea: virus · VPH: parásito · Tricomoniasis: bacteria','Gonorrea: parásito · VPH: bacteria · Tricomoniasis: virus','Gonorrea: bacteria · VPH: parásito · Tricomoniasis: virus'],
+      exp:'Gonorrea: bacteria, se trata con antibióticos. VPH: virus, los antibióticos no sirven; se previene con la vacuna y el condón. Tricomoniasis: parásito (protozoo), se trata con antiparasitarios. Conocer el agente permite elegir el tratamiento correcto, evitar remedios inútiles y escoger la mejor prevención.'},
 
-  /* ---------- SALAS DE MÉTODOS ---------- */
-  m1a:{q:'¿Qué tienen en común el condón masculino y el femenino?',
-      ok:'Ambos protegen de embarazo y de ITS',
-      no:['Ambos se usan solo una vez por semana','Ambos se colocan dentro del útero','Ambos se pueden lavar y volver a usar'],
-      exp:'Los dos condones forman una barrera que impide el paso de los espermatozoides y de los microbios. Por eso protegen del embarazo y también de las ITS.'},
-  m1b:{q:'¿Cuál es una forma correcta de usar el condón?',
-      ok:'Revisar la fecha de vencimiento antes de usarlo',
-      no:['Usar dos condones juntos para tener más seguridad','Guardarlo en la billetera durante muchos meses','Ponerse uno masculino y uno femenino a la vez'],
-      exp:'Un condón vencido o dañado se puede romper. Hay que revisar la fecha y que el envase no esté roto, y usar uno nuevo en cada relación. Usar dos al mismo tiempo es un error: el roce hace que se rompan.'},
-  m2a:{q:'¿En qué se diferencian el DIU de cobre y el DIU hormonal?',
-      ok:'El de cobre no usa hormonas y el hormonal sí',
-      no:['El de cobre se traga y el hormonal se inyecta','El de cobre protege de ITS y el hormonal no','El de cobre dura un mes y el hormonal un año'],
-      exp:'Los dos tienen forma de T y van dentro del útero. El DIU de cobre NO tiene hormonas: el cobre afecta a los espermatozoides (dura hasta 10 años). El DIU hormonal libera una pequeña cantidad de hormona (dura alrededor de 5 años). Ninguno protege de ITS.'},
-  m2b:{q:'¿Quién coloca el DIU y en qué parte del cuerpo?',
-      ok:'Un profesional de salud, dentro del útero',
-      no:['La misma persona, debajo de la piel del brazo','Un farmacéutico, dentro de las trompas','La misma persona, dentro de la vagina'],
-      exp:'El DIU lo coloca y lo retira un profesional de salud (matrona o médico) dentro del útero, en una consulta breve. Se puede sacar cuando la persona lo decida.'},
-  m3a:{q:'¿Qué se hace en una ligadura de trompas?',
-      ok:'Se bloquean las trompas de Falopio',
-      no:['Se retira el útero para que no haya regla','Se coloca una T de cobre en los ovarios','Se corta el conducto que lleva la orina'],
-      exp:'Al cortar o bloquear las trompas de Falopio, el óvulo y el espermatozoide no se pueden encontrar. El útero y los ovarios siguen en su lugar y la menstruación continúa.'},
-  m3b:{q:'¿Qué característica tiene la ligadura de trompas?',
-      ok:'Es permanente y no protege de ITS',
-      no:['Es temporal y se revierte con pastillas','Es permanente y además protege de ITS','Es temporal y dura solo cinco años'],
-      exp:'Es un método definitivo: no se piensa como algo que se pueda deshacer fácilmente. Además, como todos los métodos excepto el condón, no protege de ITS.'},
-  m4a:{q:'¿Qué se corta en una vasectomía?',
-      ok:'Los conductos que llevan los espermatozoides',
-      no:['Los conductos que llevan la sangre al corazón','Las trompas de Falopio de la pareja','Los conductos que llevan la orina al exterior'],
-      exp:'En la vasectomía se cortan los conductos deferentes. Los testículos siguen funcionando y no cambian la erección ni la eyaculación; solo que los espermatozoides ya no salen.'},
-  m4b:{q:'Después de una vasectomía, ¿desde cuándo es efectiva?',
-      ok:'Después de unos 3 meses y un examen',
-      no:['Desde el mismo día de la operación','Solo durante el primer año completo','Desde que se sacan los puntos, a la semana'],
-      exp:'Quedan espermatozoides "guardados" en los conductos. Por eso hay que usar otro método (como el condón) durante unos 3 meses, hasta que un examen confirme que ya no hay espermatozoides.'},
-  m5a:{q:'¿Qué hace el espermicida?',
-      ok:'Inmoviliza o destruye a los espermatozoides',
-      no:['Elimina los virus y bacterias de las ITS','Impide que los ovarios produzcan óvulos','Cambia la hormona que produce la menstruación'],
-      exp:'El espermicida es una sustancia (gel, espuma u óvulo) que se coloca en la vagina antes de la relación y actúa sobre los espermatozoides. NO elimina virus ni bacterias, así que no protege de ITS.'},
-  m5b:{q:'¿Cuál es la mejor forma de usar el espermicida?',
-      ok:'Junto con el condón, porque solo es poco eficaz',
-      no:['Solo, porque es el método más eficaz que existe hoy','Después de la relación, para limpiar la vagina','Tomado por boca, como una pastilla diaria'],
-      exp:'Usado solo, el espermicida falla bastante. Por eso se recomienda como apoyo, junto con el condón, que además protege de ITS.'},
-
-  /* ---------- PABELLÓN ITS ---------- */
-  v1:{q:'¿Cuál de estas situaciones NO transmite el VIH?',
-      ok:'Dar un abrazo o compartir un vaso',
-      no:['Compartir jeringas o agujas usadas','Tener relaciones sexuales sin condón','De la madre al bebé si no hay tratamiento'],
-      exp:'El VIH NO se transmite por abrazos, besos, compartir vasos o cubiertos, usar el mismo baño ni por picaduras de mosquito. Se transmite por relaciones sexuales sin condón, por sangre (jeringas compartidas) y de la madre al bebé si no hay tratamiento.'},
-  v2:{q:'¿Qué parte del cuerpo ataca el VIH?',
-      ok:'Las defensas del cuerpo (sistema inmune)',
-      no:['Los huesos y los músculos de las piernas','La piel de la cara y del cuero cabelludo','Los pulmones, igual que un resfrío común'],
-      exp:'El VIH (Virus de Inmunodeficiencia Humana) ataca las defensas del cuerpo. Sin tratamiento, con los años las defensas se debilitan mucho y aparece el SIDA, que es la etapa avanzada de la infección.'},
-  v3:{q:'Si el examen de Tomás sale positivo, ¿qué es lo correcto?',
-      ok:'Iniciar su tratamiento, que controla el virus',
-      no:['No hacer nada: el VIH se cura solo con el tiempo','Tomar antibióticos por una semana y queda curado','Aislarse de su familia para no contagiar a nadie'],
-      exp:'El VIH tiene tratamiento. No lo cura, pero lo controla: la persona puede tener una vida larga y sana. Con el tratamiento tomado todos los días, el virus baja tanto que no se transmite por vía sexual. En Chile el examen y el tratamiento son gratuitos y confidenciales.'},
-  l1:{q:'¿Por qué Fernanda podría tener clamidia aunque se sienta bien?',
-      ok:'Porque muchas veces no da ningún síntoma',
-      no:['Porque la clamidia solo afecta a los hombres','Porque los síntomas aparecen a los diez años','Porque solo se nota con fiebre muy alta'],
-      exp:'A la clamidia la llaman "infección silenciosa": muchas personas no sienten nada. Por eso es importante hacerse exámenes si hubo una relación sin condón.'},
-  l2:{q:'¿Qué puede pasar si la clamidia NO se trata?',
-      ok:'Puede dañar las trompas y causar infertilidad',
-      no:['Se transforma en VIH después de algunos meses','Desaparece siempre sola, sin dejar ningún problema','Solo provoca un poco de picazón en la piel'],
-      exp:'Sin tratamiento, la clamidia puede subir al útero y a las trompas de Falopio, causar dolor y dificultar tener hijos en el futuro (infertilidad).'},
-  l3:{q:'Fernanda recibe antibióticos. ¿Qué más es importante?',
-      ok:'Que su pareja también se trate y usen condón',
-      no:['Que deje el antibiótico apenas se sienta bien','Que comparta sus pastillas con su pareja','Que no vuelva nunca más a un control médico'],
-      exp:'La clamidia la causa una bacteria y se cura con antibióticos indicados por un profesional. La pareja también debe tratarse; si no, se vuelven a contagiar entre ellos. Y hay que terminar el tratamiento completo.'},
-  s1:{q:'¿Cuál suele ser la primera señal de la sífilis?',
-      ok:'Una llaga que no duele, en la zona de contagio',
-      no:['Un resfrío muy fuerte con tos durante un mes','Manchas azules en las uñas de ambas manos y pies','Un dolor muy fuerte de cabeza todos los días'],
-      exp:'La sífilis la causa una bacteria. Su primera señal suele ser una llaga que no duele (se llama chancro) en la zona por donde entró la bacteria.'},
-  s2:{q:'La llaga de Ricardo desapareció sola. ¿Qué significa?',
-      ok:'Que la infección sigue y necesita tratamiento',
-      no:['Que se curó y ya no necesita ir al médico','Que la llaga era solo una alergia sin importancia','Que ahora es inmune y no se contagia otra vez'],
-      exp:'Aunque la llaga desaparezca, la bacteria sigue en el cuerpo y avanza a otras etapas que pueden dañar la piel, el corazón y el cerebro. Se cura con penicilina indicada por un profesional.'},
-  s3:{q:'¿Por qué a las embarazadas se les hace el examen de sífilis?',
-      ok:'Porque la sífilis puede pasar al bebé',
-      no:['Porque la sífilis hace que el parto sea antes','Porque así se sabe el grupo de sangre del bebé','Porque la sífilis solo afecta a embarazadas'],
-      exp:'La sífilis puede pasar de la madre al bebé durante el embarazo y causarle problemas graves. Si se detecta a tiempo, se trata y se protege al bebé. Por eso en Chile este examen es parte de los controles del embarazo.'},
-  g1:{q:'¿Qué síntomas de Sebastián son típicos de la gonorrea?',
-      ok:'Ardor al orinar y una secreción amarilla',
-      no:['Manchas rojas en todo el cuerpo y fiebre','Pérdida de pelo y uñas muy quebradizas','Visión borrosa y dolor fuerte de oídos'],
-      exp:'La gonorrea la causa una bacteria. Los síntomas más comunes son ardor al orinar y una secreción (como pus) por el pene o la vagina. Ojo: muchas personas, sobre todo mujeres, no tienen síntomas.'},
-  g2:{q:'¿Qué debe hacer Sebastián?',
-      ok:'Ir al centro de salud a examinarse y tratarse',
-      no:['Tomar las pastillas que le sobraron a su amigo','Esperar a que el ardor se le pase con agua','Ponerse una crema cualquiera de la farmacia'],
-      exp:'Nunca hay que automedicarse: un antibiótico equivocado o incompleto no cura y hace que las bacterias se vuelvan resistentes. El profesional indica el tratamiento correcto, también para la pareja.'},
-  g3:{q:'Si Sebastián se cura, ¿puede volver a tener gonorrea?',
-      ok:'Sí, si vuelve a tener relaciones sin condón',
-      no:['No, porque el cuerpo queda protegido para siempre','No, porque la gonorrea solo da una vez','Sí, pero solo si come comida contaminada'],
-      exp:'Curarse no deja protección. Si vuelve a tener relaciones sin condón con alguien que tiene la infección, puede contagiarse otra vez.'},
-  p1:{q:'¿Contra qué ITS existe una vacuna que en Chile se pone gratis en el colegio?',
-      ok:'Contra el VPH',
-      no:['Contra el VIH','Contra la sífilis','Contra la gonorrea'],
-      exp:'La vacuna contra el VPH (Virus Papiloma Humano) se pone gratis en 4° y 5° básico, a niñas y niños. El VPH puede causar verrugas genitales y algunos tipos de cáncer, como el de cuello del útero.'},
-  p2:{q:'¿Qué es verdad sobre el herpes genital?',
-      ok:'No tiene cura, pero se pueden controlar los brotes',
-      no:['Se cura para siempre con una inyección en el brazo','Solo se contagia al compartir la ropa y las toallas','Aparece solamente en personas mayores de 60 años'],
-      exp:'El herpes genital lo causa un virus. Produce ampollas dolorosas que aparecen y desaparecen (brotes). No tiene cura, pero hay tratamiento que controla los brotes. El condón disminuye el riesgo de contagio.'},
-  p3:{q:'¿Cómo puede saber Ignacia si tiene una ITS?',
-      ok:'Haciéndose un examen en un centro de salud',
-      no:['Mirándose al espejo para ver si hay manchas','Esperando a sentir dolor fuerte o fiebre','Preguntándole a sus amigos en redes sociales'],
-      exp:'Muchas ITS no dan síntomas, así que la única forma segura de saberlo es con un examen. En Chile, los adolescentes pueden consultar en el CESFAM o en un Espacio Amigable, con atención confidencial y gratuita.'}
+  /* ---------- Bloque 2 · VIH y SIDA ---------- */
+  v1:{n:16,fig:'vih',
+      ctx:'Tomás se hará el test rápido, pero antes quiere entender qué es el VIH.',
+      q:'¿Qué es el VIH?',
+      ok:'Un virus que ataca las defensas del cuerpo',
+      no:['Una bacteria que se cura con antibióticos','Una enfermedad que se hereda de los abuelos','Un parásito que vive en el agua sucia'],
+      exp:'VIH significa Virus de Inmunodeficiencia Humana. Infecta a los linfocitos CD4, células de las defensas (sistema inmune), y los va destruyendo. Como es un virus y no una bacteria, los antibióticos no sirven contra él.'},
+  v2:{n:17,fig:'cd4',
+      ctx:'Héctor vive con VIH desde hace años y escuchó la palabra SIDA en la televisión.',
+      q:'¿Qué es el SIDA?',
+      ok:'La etapa avanzada de la infección por VIH',
+      no:['Un virus distinto, sin relación con el VIH','El nombre del examen que detecta el VIH','Una vacuna que protege contra el VIH y otros virus'],
+      exp:'SIDA significa Síndrome de Inmunodeficiencia Adquirida. Es la etapa avanzada de la infección: los linfocitos CD4 bajan tanto que aparecen enfermedades graves. Con tratamiento a tiempo, una persona con VIH puede no llegar nunca a la etapa SIDA.'},
+  v3:{n:18,fig:'origen',
+      ctx:'Ricardo leyó en redes sociales que el VIH "fue fabricado en un laboratorio".',
+      q:'Según la ciencia, ¿cuál es el origen del VIH?',
+      ok:'Un virus de chimpancés de África que pasó a las personas',
+      no:['Un virus creado a propósito en un laboratorio de otro país','Un microbio que llegó a la Tierra en un meteorito del espacio','Una enfermedad que apareció sola en los hospitales modernos'],
+      exp:'Los estudios genéticos muestran que el VIH proviene de un virus de chimpancés de África central (llamado VIS). Pasó a las personas probablemente al cazar y manipular su carne, a comienzos del siglo XX. Los primeros casos de SIDA se describieron en 1981 y el virus se identificó en 1983. La idea de que fue fabricado es falsa.'},
+  v4:{n:19,fig:'oportunistas',
+      ctx:'En su práctica, Fernanda atendió a un paciente con SIDA que tenía tuberculosis y hongos en la boca.',
+      q:'¿Por qué una persona con SIDA se enferma con tanta facilidad?',
+      ok:'Porque sus defensas están muy debilitadas',
+      no:['Porque el VIH se transforma en otras bacterias','Porque los remedios no funcionan en su cuerpo','Porque esas infecciones solo atacan a adultos'],
+      exp:'Se llaman infecciones oportunistas: aprovechan que el sistema inmune está muy débil. Microbios que en una persona sana casi no causan problemas, como el hongo Candida o la bacteria de la tuberculosis, provocan enfermedades graves en una persona con SIDA.'},
+  v5:{n:20,fig:'transmision',
+      ctx:'En el curso de Ignacia dicen que el VIH "se pega" por un abrazo o por compartir un vaso.',
+      q:'¿Cuál de estas situaciones SÍ puede transmitir el VIH?',
+      ok:'Usar jeringas que otra persona ya usó',
+      no:['Dar un abrazo o saludar con un beso','Compartir el vaso o los cubiertos en la mesa','La picadura de un zancudo o de un mosquito'],
+      exp:'El VIH se transmite por relaciones sexuales sin condón, por sangre (jeringas compartidas) y de la madre al bebé durante el embarazo, el parto o la lactancia si no hay tratamiento. No se transmite por abrazos, besos, vasos, baños ni zancudos.'}
 };
 
-/* Apariencia de las personas: piel, pelo, ropa */
+/* Apariencia: piel, pelo, ropa y rasgos de la cara (w ancho, jaw mandíbula, nose nariz, lips labios) */
 const LOOK = {
-  valentina:{skin:'#c99272',hair:'long',hairColor:'#2b1a12',top:'#d8664f',bottom:'#3a5578',female:true},
-  andrea:{skin:'#a8714f',hair:'bun',hairColor:'#120d0b',top:'#d9a22e',bottom:'#2a2a2e',female:true},
-  javiera:{skin:'#e2b598',hair:'ponytail',hairColor:'#7a3a1c',top:'#5b84b8',bottom:'#5a5f66',female:true},
-  patricia:{skin:'#8a5a3e',hair:'curly',hairColor:'#18110d',top:'#3f8f6a',bottom:'#25324a',female:true},
-  matias:{skin:'#b98361',hair:'short',hairColor:'#15100c',top:'#b8323a',bottom:'#34507a',female:false},
-  tomas:{skin:'#e0b393',hair:'short',hairColor:'#5a3b22',top:'#7d858c',bottom:'#2f4a6e',female:false},
-  fernanda:{skin:'#b47a58',hair:'long',hairColor:'#0f0b09',top:'#a389c9',bottom:'#2a3242',female:true},
-  ricardo:{skin:'#6e4430',hair:'buzz',hairColor:'#0d0a08',top:'#4e7a46',bottom:'#2c2c30',female:false,beard:true},
-  sebastian:{skin:'#d9a982',hair:'short',hairColor:'#b48a4c',top:'#24272c',bottom:'#4a5a70',female:false},
-  ignacia:{skin:'#c08a66',hair:'curlylong',hairColor:'#3a2214',top:'#2f9c95',bottom:'#3b3f4a',female:true},
-  rosa:{skin:'#b07a58',hair:'bun',hairColor:'#2a1c14',top:'#3c78b4',bottom:'#3c78b4',female:true,shoes:'#f2f2f2',sleeve:'short'},
-  soto:{skin:'#d6a688',hair:'cap',hairColor:'#2f6f5e',top:'#3e8a78',bottom:'#3e8a78',female:true,mask:true,shoes:'#e8e8e8',sleeve:'short'},
-  fuentes:{skin:'#9a6648',hair:'cap',hairColor:'#2f6f5e',top:'#3e8a78',bottom:'#3e8a78',female:false,mask:true,shoes:'#e8e8e8',sleeve:'short'},
-  paula:{skin:'#e3b89a',hair:'ponytail',hairColor:'#1d130d',top:'#f4f6f6',bottom:'#3d4a5c',female:true,coat:true}
+  camila:{skin:'#d8a483',hair:'ponytail',hairColor:'#3a2416',top:'#e07a9a',bottom:'#3a5578',female:true,denim:true,face:{w:.97,jaw:1.1,nose:.88,lips:.95}},
+  matias:{skin:'#b98361',hair:'short',hairColor:'#15100c',top:'#2f6fb8',bottom:'#34507a',female:false,denim:true,hood:true,face:{w:.98,jaw:1.05,nose:.92,lips:.95}},
+  valentina:{skin:'#c99272',hair:'long',hairColor:'#2b1a12',top:'#d8664f',bottom:'#3a5578',female:true,denim:true,face:{w:1.02,jaw:1,nose:1,lips:1.1}},
+  roberto:{skin:'#9a6648',hair:'buzz',hairColor:'#1a1410',top:'#5a6b7a',bottom:'#2c2c30',female:false,beard:true,face:{w:1.06,jaw:.85,nose:1.15,lips:1}},
+  patricia:{skin:'#8a5a3e',hair:'curly',hairColor:'#18110d',top:'#3f8f6a',bottom:'#25324a',female:true,face:{w:1.03,jaw:.95,nose:1.05,lips:1.12}},
+  tomas:{skin:'#e0b393',hair:'short',hairColor:'#5a3b22',top:'#7d858c',bottom:'#2f4a6e',female:false,denim:true,face:{w:.96,jaw:.92,nose:1.1,lips:.9}},
+  hector:{skin:'#c7956f',hair:'short',hairColor:'#9b9a95',top:'#7a4e3a',bottom:'#2f3a4a',female:false,glasses:true,face:{w:1.05,jaw:.9,nose:1.12,lips:.92}},
+  ricardo:{skin:'#6e4430',hair:'buzz',hairColor:'#0d0a08',top:'#4e7a46',bottom:'#2c2c30',female:false,beard:true,face:{w:1.02,jaw:.9,nose:1.08,lips:1.15}},
+  fernanda:{skin:'#b47a58',hair:'bun',hairColor:'#1a120d',top:'#a389c9',bottom:'#2a3242',female:true,face:{w:.99,jaw:1.02,nose:.95,lips:1.05}},
+  ignacia:{skin:'#c08a66',hair:'curlylong',hairColor:'#3a2214',top:'#2f9c95',bottom:'#3b3f4a',female:true,face:{w:.98,jaw:1.08,nose:.9,lips:1}},
+  rosa:{skin:'#b07a58',hair:'bun',hairColor:'#2a1c14',top:'#3c78b4',bottom:'#3c78b4',female:true,shoes:'#f2f2f2',sleeve:'short',face:{w:1.04,jaw:.95,nose:1,lips:1}},
+  paula:{skin:'#e3b89a',hair:'ponytail',hairColor:'#1d130d',top:'#f4f6f6',bottom:'#3d4a5c',female:true,coat:true,glasses:true,face:{w:.97,jaw:1.05,nose:.95,lips:.95}},
+  mella:{skin:'#d9aa86',hair:'short',hairColor:'#3a2a1d',top:'#7d858c',bottom:'#2f3640',female:false,coat:true,glasses:true,face:{w:1,jaw:.95,nose:1.05,lips:.95}}
 };
 
 /* Salas. side: L (pasillo izq.), R (pasillo der.), E (fondo). zc: posición de la puerta en el pasillo. */
 const ROOMS = [
-  {id:'r101',block:'met',kind:'consulta',num:'101',name:'Consulta 101',sign:'Paciente: Valentina',side:'L',zc:-6,qs:['c1'],
-   person:{key:'valentina',name:'Valentina',age:21,role:'Paciente'},
-   say:'Hola, {doc}. Con mi pololo queremos cuidarnos. Por ahora no queremos un embarazo y tampoco queremos contagiarnos de ninguna infección. ¿Existe un método que sirva para las dos cosas?',
-   facts:['El condón es el único método que protege del embarazo y de las ITS al mismo tiempo.','Doble protección: condón más otro método anticonceptivo.']},
-  {id:'r102',block:'met',kind:'consulta',num:'102',name:'Consulta 102',sign:'Paciente: Andrea',side:'L',zc:-14,qs:['c2'],
-   person:{key:'andrea',name:'Andrea',age:26,role:'Paciente'},
-   say:'{Doc}, tomo pastillas anticonceptivas, pero trabajo de noche y se me olvidan muy seguido. Nunca las tomo a la misma hora. ¿Hay algo que no tenga que recordar todos los días?',
-   facts:['La pastilla se toma todos los días, idealmente a la misma hora.','El implante (en el brazo) y el DIU (en el útero) duran años y no hay que recordarlos a diario.']},
-  {id:'r103',block:'met',kind:'consulta',num:'103',name:'Consulta 103',sign:'Paciente: Javiera',side:'L',zc:-22,qs:['c3'],
-   person:{key:'javiera',name:'Javiera',age:23,role:'Paciente'},
-   say:'{Doc}, estoy muy asustada. Anoche, con mi pareja, el condón se rompió. No sé qué hacer ahora.',
-   facts:['La píldora de emergencia funciona mejor mientras antes se tome (idealmente en los 3 primeros días).','Es para emergencias, no para usar siempre. En Chile se entrega gratis en los centros de salud.']},
-  {id:'r104',block:'met',kind:'consulta',num:'104',name:'Consulta 104',sign:'Paciente: Patricia',side:'L',zc:-30,qs:['c4'],
+  {id:'r101',block:'met',kind:'consulta',num:'101',name:'Consulta 101',sign:'Paciente: Camila',side:'L',zc:-6,qs:['b1'],short:'Camila',
+   person:{key:'camila',name:'Camila',age:13,role:'Control de salud'},
+   say:'Hola, {doc}. En estos 8 meses he cambiado harto: crecí 6 centímetros, subí 4 kilos, me salió vello en las axilas y en el pubis, y me están creciendo las mamas. ¿Todo eso es por la pubertad?',
+   facts:['Caracteres sexuales secundarios: rasgos que aparecen en la pubertad por las hormonas sexuales y que diferencian a mujeres y hombres.','Ejemplos: vello púbico y axilar, desarrollo de las mamas, voz más grave, barba.','Crecer y subir de peso pasa en toda la niñez y en ambos sexos: no es exclusivo de la pubertad.']},
+  {id:'r102',block:'met',kind:'consulta',num:'102',name:'Consulta 102',sign:'Paciente: Matías',side:'L',zc:-14,qs:['b3'],short:'Matías',
+   person:{key:'matias',name:'Matías',age:13,role:'Control de salud'},
+   say:'{Doc}, yo creo que la pubertad es solo cosa del cuerpo. Las emociones y las amistades no cambian por su causa. ¿Para qué la vemos en la clase de ciencias?',
+   facts:['La pubertad tiene tres dimensiones: biológica, afectiva y social.','Las hormonas influyen en el cuerpo y también en el estado de ánimo.','Cambian las amistades, los intereses y la forma de verse a uno mismo.']},
+  {id:'r103',block:'met',kind:'consulta',num:'103',name:'Consulta 103',sign:'Paciente: Valentina',side:'L',zc:-22,qs:['b11'],short:'Valentina',
+   person:{key:'valentina',name:'Valentina',age:17,role:'Consulta adolescente'},
+   say:'Mire lo que encontré en el diario mural del liceo: "Si tomo anticonceptivos orales no necesito preservativo, porque me cuidan de todo". ¿Es verdad, {doc}?',
+   facts:['La pastilla anticonceptiva previene el embarazo, pero no protege de las ITS.','Solo el preservativo (masculino o femenino) protege de las ITS.','Doble protección: otro método + preservativo.']},
+  {id:'r104',block:'met',kind:'consulta',num:'104',name:'Consulta 104',sign:'Paciente: Roberto',side:'L',zc:-30,qs:['b12'],short:'Roberto',
+   person:{key:'roberto',name:'Roberto',age:38,role:'Paciente'},
+   say:'{Doc}, con mi señora no queremos más hijos y pensé en la vasectomía. Pero me da miedo: dicen que voy a dejar de producir testosterona y que voy a perder la voz grave y la barba.',
+   facts:['La vasectomía corta los conductos deferentes: los espermatozoides ya no salen.','La testosterona la producen los testículos y pasa directo a la sangre.','No cambian la voz, la barba, la erección ni la eyaculación.']},
+  {id:'r105',block:'met',kind:'consulta',num:'105',name:'Consulta 105',sign:'Paciente: Patricia',side:'L',zc:-38,qs:['b14'],short:'Patricia',
    person:{key:'patricia',name:'Patricia',age:39,role:'Paciente'},
-   say:'Tengo tres hijos y ya lo pensé con calma: no quiero tener más. Busco un método definitivo, para no preocuparme nunca más de un embarazo.',
-   facts:['Los métodos definitivos son cirugías: ligadura de trompas (mujeres) y vasectomía (hombres).','Se eligen solo cuando la persona está segura, porque son permanentes.']},
-  {id:'r105',block:'met',kind:'consulta',num:'105',name:'Consulta 105',sign:'Paciente: Matías',side:'L',zc:-38,qs:['c5'],
-   person:{key:'matias',name:'Matías',age:19,role:'Paciente'},
-   say:'{Doc}, tengo una duda. Mis amigos dicen que en la primera relación sexual una mujer no puede quedar embarazada. ¿Es verdad eso?',
-   facts:['Puede haber embarazo desde la primera relación sexual sin protección.','Informarse antes y usar un método desde el inicio es parte de cuidarse.']},
+   say:'Me voy a ligar las trompas. Una amiga me dijo que después ya no voy a tener ciclo menstrual ni cambios hormonales. ¿Es así, {doc}?',
+   facts:['La ligadura bloquea las trompas de Falopio; los ovarios quedan intactos.','Los ovarios siguen produciendo ovocitos, estrógenos y progesterona.','El ciclo y la menstruación continúan.']},
 
-  {id:'r201',block:'met',kind:'expo',num:'201',name:'Sala de Métodos 201',sign:'Condón masculino y femenino',side:'R',zc:-6,qs:['m1a','m1b'],model:'condones',
-   intro:'Frente a ti hay dos modelos gigantes: el condón masculino y el condón femenino. Lee la ficha de la pared y anota en tu libreta.',
-   facts:['Condón masculino: funda delgada de látex que cubre el pene erecto.','Condón femenino: funda más ancha, con dos anillos, que se coloca dentro de la vagina.','Son los únicos métodos que protegen del embarazo y de las ITS.','Uno nuevo en cada relación. Revisar la fecha de vencimiento. Nunca usar dos a la vez.']},
-  {id:'r202',block:'met',kind:'expo',num:'202',name:'Sala de Métodos 202',sign:'DIU de cobre y DIU hormonal',side:'R',zc:-14,qs:['m2a','m2b'],model:'diu',
-   intro:'Dos dispositivos intrauterinos (DIU) en tamaño gigante: uno de cobre y uno hormonal. En la realidad miden unos 3 centímetros.',
-   facts:['El DIU es un dispositivo pequeño en forma de T que se coloca dentro del útero.','DIU de cobre (no hormonal): el cobre afecta a los espermatozoides. Dura hasta 10 años.','DIU hormonal: libera una pequeña cantidad de hormona. Dura alrededor de 5 años.','Lo coloca y lo retira un profesional de salud. No protege de ITS.']},
-  {id:'r203',block:'met',kind:'quirofano',num:'203',name:'Pabellón 203',sign:'Ligadura de trompas',side:'R',zc:-22,qs:['m3a','m3b'],model:'ligadura',
-   person:{key:'soto',name:'Dra. Soto',age:0,role:'Cirujana'},
-   intro:'Estás en un pabellón quirúrgico. La Dra. Soto te muestra un modelo del útero y de las trompas de Falopio.',
-   say:'Bienvenid{a} al pabellón. En la ligadura de trompas cortamos o bloqueamos las trompas de Falopio. Así el óvulo y el espermatozoide no se encuentran.',
-   facts:['Cirugía para personas que no quieren tener más hijos.','Se cortan, amarran o bloquean las trompas de Falopio.','Es permanente. La menstruación continúa igual.','No protege de ITS.']},
-  {id:'r204',block:'met',kind:'quirofano',num:'204',name:'Pabellón 204',sign:'Vasectomía',side:'R',zc:-30,qs:['m4a','m4b'],model:'vasectomia',
-   person:{key:'fuentes',name:'Dr. Fuentes',age:0,role:'Urólogo'},
-   intro:'Otro pabellón. El Dr. Fuentes, urólogo, te explica la vasectomía con un modelo del aparato reproductor masculino.',
-   say:'La vasectomía es una cirugía pequeña, con anestesia local, que dura unos 20 minutos. Cortamos los conductos deferentes, que llevan los espermatozoides.',
-   facts:['Cirugía pequeña para hombres, con anestesia local.','Se cortan los conductos deferentes, que llevan los espermatozoides desde los testículos.','No es inmediata: hay que esperar unos 3 meses y confirmar con un examen.','Es permanente y no protege de ITS.']},
-  {id:'r205',block:'met',kind:'lab',num:'205',name:'Laboratorio 205',sign:'Espermicida',side:'R',zc:-38,qs:['m5a','m5b'],model:'espermicida',
+  {id:'r201',block:'met',kind:'lab',model:'hormonas',num:'201',name:'Laboratorio 201',sign:'Hormonas y ciclo',side:'R',zc:-6,qs:['b2','b8'],short:'Hormonas',
    person:{key:'paula',name:'Paula Ríos',age:0,role:'Tecnóloga médica'},
-   intro:'Laboratorio. En la pantalla grande se ve cómo actúa el espermicida sobre los espermatozoides, aumentado muchas veces.',
-   say:'Mira la pantalla: cuando los espermatozoides llegan al gel espermicida, quedan inmóviles. Pero ojo, usado solo falla bastante.',
-   facts:['Gel, espuma u óvulo que se coloca en la vagina antes de la relación.','Inmoviliza o destruye a los espermatozoides.','Usado solo es poco eficaz: se recomienda junto con el condón.','No protege de ITS.']},
+   intro:'Laboratorio clínico. En la pantalla grande y sobre el pedestal se ven los gráficos de hormonas que analiza el equipo.',
+   say:'Bienvenid{a}. Hoy analizamos dos gráficos: las hormonas sexuales entre los 7 y los 17 años, y la LH y FSH durante un ciclo de 28 días. Léelos con calma.',
+   facts:['Testosterona: hormona sexual que predomina en los hombres desde la pubertad.','Estrógenos: hormonas sexuales que predominan en las mujeres desde la pubertad.','LH y FSH: hormonas de la hipófisis que controlan el ovario.','El aumento brusco de LH (cerca del día 14) provoca la ovulación; luego se forma el cuerpo lúteo.']},
+  {id:'r202',block:'met',kind:'expo',model:'anatomia',num:'202',name:'Sala de anatomía 202',sign:'Maquetas y gametos',side:'R',zc:-14,qs:['b4','b5'],short:'Anatomía',
+   intro:'Dos maquetas gigantes del sistema reproductor femenino y masculino. Al fondo, un ovocito y un espermatozoide a la misma escala.',
+   facts:['Epidídimo: tubo sobre el testículo donde maduran y se guardan los espermatozoides.','Uretra: conducto que lleva al exterior el semen y la orina.','Ovario: produce ovocitos y hormonas.','Endometrio: capa interna del útero que recibe al embrión.','Ovocito: grande, con mucho citoplasma, inmóvil. Espermatozoide: pequeño, nada con su flagelo.']},
+  {id:'r203',block:'met',kind:'lab',model:'investigacion',num:'203',name:'Laboratorio 203',sign:'Investigación científica',side:'R',zc:-22,qs:['b6','b7','b9'],short:'Investigación',
+   person:{key:'mella',name:'Dr. Andrés Mella',age:0,role:'Investigador'},
+   intro:'Laboratorio de investigación: microscopio, una micrografía de espermatozoide en pantalla y las jaulas de un experimento con ratas.',
+   say:'Aquí hacemos ciencia: observamos, hacemos preguntas que se pueden responder con datos y diseñamos experimentos con variables bien controladas.',
+   facts:['Pregunta investigable: se responde midiendo u observando, con datos.','Las preguntas sobre gustos, opiniones o valores no son investigables.','Variable independiente: la que se cambia. Dependiente: la que se mide.','Variables controladas: se mantienen iguales para que el resultado dependa solo de la independiente.']},
+  {id:'r204',block:'met',kind:'expo',model:'metodos',num:'204',name:'Sala de métodos 204',sign:'Clasificación y eficacia',side:'R',zc:-30,qs:['b10','b13'],short:'Métodos',
+   intro:'Un diafragma y una inyección anticonceptiva en tamaño gigante, y un gráfico de barras en 3D con la falla de cada método en el uso habitual.',
+   facts:['Barrera: impiden el paso de los espermatozoides (condón, diafragma).','Químico-hormonales: cambian las hormonas (pastilla, inyección, implante, parche).','Quirúrgicos: vasectomía y ligadura de trompas.','Naturales: observan señales del cuerpo (Billings, moco cervical).','El condón falla más en el uso habitual porque depende de usarlo bien cada vez.']},
+  {id:'r205',block:'met',kind:'expo',model:'its3',num:'205',name:'Sala de microbiología 205',sign:'Agentes de las ITS',side:'R',zc:-38,qs:['b15'],short:'Agentes ITS',
+   intro:'Tres vitrinas con los agentes de tres ITS, aumentados miles de veces: una bacteria, un virus y un parásito.',
+   facts:['Gonorrea: bacteria. Se trata con antibióticos.','VPH: virus. Los antibióticos no sirven; existe vacuna.','Tricomoniasis: parásito (protozoo). Se trata con antiparasitarios.','Conocer el agente permite elegir el tratamiento y la prevención.']},
 
-  {id:'r301',block:'its',kind:'its',num:'301',name:'Box 301',sign:'VIH · Paciente: Tomás',side:'L',zc:-54,qs:['v1','v2','v3'],microbe:'vih',
+  {id:'r301',block:'its',kind:'its',num:'301',name:'Box 301',sign:'¿Qué es el VIH? · Tomás',side:'L',zc:-54,qs:['v1'],microbe:'vih',short:'VIH',
    person:{key:'tomas',name:'Tomás',age:28,role:'Paciente'},
-   say:'{Doc}, me hice el test rápido de VIH porque nunca me lo había hecho. Estoy nervioso. Un compañero de trabajo dice que si salgo positivo no me va a abrazar nunca más.',
-   facts:['VIH: virus que ataca las defensas del cuerpo. El SIDA es su etapa avanzada.','Se transmite por relaciones sexuales sin condón, por sangre y de madre a bebé sin tratamiento.','NO se transmite por abrazos, besos, vasos ni mosquitos.','Tiene tratamiento gratuito: no lo cura, pero lo controla.']},
-  {id:'r302',block:'its',kind:'its',num:'302',name:'Box 302',sign:'Clamidia · Paciente: Fernanda',side:'R',zc:-54,qs:['l1','l2','l3'],microbe:'clamidia',
-   person:{key:'fernanda',name:'Fernanda',age:19,role:'Paciente'},
-   say:'A mi pareja le salió clamidia en un examen y le dijeron que yo también tenía que venir. Pero yo me siento perfecta, {doc}. No tengo ningún síntoma.',
-   facts:['Clamidia: bacteria. Muchas veces no da síntomas ("infección silenciosa").','Sin tratamiento puede dañar las trompas y causar infertilidad.','Se cura con antibióticos. La pareja también debe tratarse.']},
-  {id:'r303',block:'its',kind:'its',num:'303',name:'Box 303',sign:'Sífilis · Paciente: Ricardo',side:'L',zc:-66,qs:['s1','s2','s3'],microbe:'sifilis',
+   say:'{Doc}, me voy a hacer el test rápido, pero la verdad no sé bien qué es el VIH. ¿Me lo puede explicar antes?',
+   facts:['VIH: Virus de Inmunodeficiencia Humana.','Infecta a los linfocitos CD4, células de las defensas.','Es un virus: los antibióticos no sirven contra él.','El examen es gratuito y confidencial.']},
+  {id:'r302',block:'its',kind:'its',num:'302',name:'Box 302',sign:'¿Qué es el SIDA? · Héctor',side:'R',zc:-54,qs:['v2'],microbe:'linfocito',short:'SIDA',
+   person:{key:'hector',name:'Héctor',age:47,role:'Paciente en control'},
+   say:'Hace años me dijeron que tengo VIH y tomo mi tratamiento. Ayer escuché la palabra SIDA en la tele y me asusté. ¿Es lo mismo, {doc}?',
+   facts:['SIDA: Síndrome de Inmunodeficiencia Adquirida.','Es la etapa avanzada de la infección por VIH, con muy pocos linfocitos CD4.','Con tratamiento a tiempo, la persona puede no llegar nunca a esa etapa.']},
+  {id:'r303',block:'its',kind:'its',num:'303',name:'Box 303',sign:'Origen del VIH · Ricardo',side:'L',zc:-66,qs:['v3'],microbe:'globo',short:'Origen',
    person:{key:'ricardo',name:'Ricardo',age:30,role:'Paciente'},
-   say:'Hace unas semanas me salió una llaga en la zona genital. No me dolía y después desapareció sola. Entonces ya estoy sano, ¿cierto?',
-   facts:['Sífilis: bacteria. Primera señal: una llaga que no duele.','Aunque la llaga desaparezca, la infección sigue y avanza.','Se cura con penicilina. Puede pasar al bebé durante el embarazo.']},
-  {id:'r304',block:'its',kind:'its',num:'304',name:'Box 304',sign:'Gonorrea · Paciente: Sebastián',side:'R',zc:-66,qs:['g1','g2','g3'],microbe:'gonorrea',
-   person:{key:'sebastian',name:'Sebastián',age:22,role:'Paciente'},
-   say:'{Doc}, hace tres días me arde mucho al orinar y me sale una secreción amarilla. Un amigo me dijo que me tomara unas pastillas que le sobraron.',
-   facts:['Gonorrea: bacteria. Síntomas comunes: ardor al orinar y secreción.','Nunca automedicarse: el tratamiento lo indica un profesional.','Curarse no deja protección: se puede volver a contagiar.']},
-  {id:'r305',block:'its',kind:'amigable',num:'305',name:'Espacio Amigable 305',sign:'Prevención · Paciente: Ignacia',side:'E',zc:-76,qs:['p1','p2','p3'],microbe:'vph',
+   say:'{Doc}, leí en redes sociales que el VIH lo fabricaron en un laboratorio. ¿De dónde viene de verdad?',
+   facts:['El VIH proviene de un virus de chimpancés de África central (VIS).','Pasó a las personas a comienzos del siglo XX.','Primeros casos de SIDA descritos: 1981. Virus identificado: 1983.']},
+  {id:'r304',block:'its',kind:'its',num:'304',name:'Box 304',sign:'Infecciones oportunistas · Fernanda',side:'R',zc:-66,qs:['v4'],microbe:'oportunistas',short:'Oportunistas',
+   person:{key:'fernanda',name:'Fernanda',age:22,role:'Estudiante de enfermería'},
+   say:'En mi práctica atendí a un paciente con SIDA que tenía tuberculosis y hongos en la boca. ¿Por qué se enferma tanto, {doc}?',
+   facts:['Infecciones oportunistas: aprovechan un sistema inmune muy débil.','Ejemplos: tuberculosis, neumonías y hongos como Candida.','El tratamiento del VIH ayuda a recuperar las defensas.']},
+  {id:'r305',block:'its',kind:'amigable',num:'305',name:'Espacio Amigable 305',sign:'Transmisión del VIH · Ignacia',side:'E',zc:-76,qs:['v5'],microbe:'vih',short:'Transmisión',
    person:{key:'ignacia',name:'Ignacia',age:17,role:'Consulta adolescente'},
-   say:'Hola. Vine al Espacio Amigable porque tengo dudas. Leí sobre el VPH y el herpes, y no sé cómo puedo saber si una persona tiene una ITS.',
-   facts:['VPH: virus. Existe una vacuna gratuita en 4° y 5° básico.','Herpes genital: virus sin cura, pero con tratamiento que controla los brotes.','Muchas ITS no dan síntomas: la forma segura de saber es un examen.','Adolescentes pueden consultar gratis y en forma confidencial en el CESFAM o Espacio Amigable.']}
+   say:'Hola. En mi curso dicen que el VIH se pega por un abrazo o por compartir un vaso. ¿Cómo se transmite realmente?',
+   facts:['El VIH se transmite por relaciones sexuales sin condón, por sangre y de madre a bebé sin tratamiento.','No se transmite por abrazos, besos, vasos, baños ni zancudos.','Adolescentes pueden consultar gratis y en forma confidencial en el CESFAM o Espacio Amigable.']}
 ];
 const ROOM = Object.fromEntries(ROOMS.map(r => [r.id, r]));
 const BLOCK_QS = {met:[], its:[]};
@@ -891,7 +891,7 @@ function posterTex(o,W=600,Hh=800){
     g.fillStyle='#7b8a8f';g.font=font(600,W*.03);g.fillText('HOSPITAL ESCUELA ESPERANZA · UNIDAD DE SALUD SEXUAL Y REPRODUCTIVA',W*.06,Hh-W*.04);
   });
 }
-function lbl(g,t,x,y,lx,ly,size=19){g.strokeStyle='#33444b';g.lineWidth=2;g.beginPath();g.moveTo(x,y);g.lineTo(lx,ly);g.stroke();g.fillStyle='#33444b';g.beginPath();g.arc(lx,ly,4,0,7);g.fill();g.font=font(700,size);g.fillStyle='#1d282c';g.fillText(t,x+(x>lx?4:-g.measureText(t).width-4),y);}
+function lbl(g,t,x,y,lx,ly,size=19){g.strokeStyle='#33444b';g.lineWidth=2;g.beginPath();g.moveTo(x,y);g.lineTo(lx,ly);g.stroke();g.fillStyle='#33444b';g.beginPath();g.arc(lx,ly,4,0,7);g.fill();g.font=font(700,size);g.fillStyle='#1d282c';const tw=g.measureText(t).width;g.fillText(t,clamp(x+(x>lx?4:-tw-4),6,594-tw),y);}
 function artBox(fn){return (g,x,y,w,h)=>{g.translate(x,y);const k=Math.min(w/600,h/400);g.translate((w-600*k)/2,(h-400*k)/2);g.scale(k,k);g.fillStyle='#eef3f3';rrect(g,0,0,600,400,18);g.fill();fn(g);};}
 const artUterus=(opt={})=>artBox(g=>{
   g.lineCap='round';
@@ -979,7 +979,7 @@ function tablePosterTex(){
     g.fillStyle='rgba(255,255,255,.8)';g.font=font(600,24);g.fillText('TABLA COMPARATIVA',36,36);g.fillStyle='#fff';g.font=font(700,52);g.fillText('Métodos anticonceptivos',36,88);
     const cols=[36,300,470,620,780],heads=['Método','Tipo','¿Hormonas?','¿Protege de ITS?','Duración o uso'];
     g.fillStyle='#2b3b41';g.font=font(700,24);heads.forEach((t,i)=>g.fillText(t.toUpperCase(),cols[i],144));
-    TABLE.forEach((r,j)=>{const y=186+j*52;if(j%2===0){g.fillStyle='#eef2f2';g.fillRect(24,y-34,w-48,52);}
+    const RH=Math.min(52,(h-220)/TABLE.length);TABLE.forEach((r,j)=>{const y=180+j*RH;if(j%2===0){g.fillStyle='#eef2f2';g.fillRect(24,y-RH*.68,w-48,RH);}
       g.fillStyle='#14232a';g.font=font(700,28);g.fillText(r[0],cols[0],y);g.font=font(400,24,'body');g.fillStyle='#33444b';g.fillText(r[1],cols[1],y);g.fillText(r[2],cols[2],y);
       if(r[3]==='Sí'){g.fillStyle='#1e8a52';g.font=font(700,26,'body');}else{g.fillStyle='#b23a3a';}g.fillText(r[3],cols[3],y);g.fillStyle='#33444b';g.font=font(400,24,'body');g.fillText(r[4],cols[4],y);});
     g.fillStyle='#7b8a8f';g.font=font(600,20);g.fillText('Solo el condón (masculino o femenino) protege de las ITS. Doble protección: condón + otro método.',36,h-18);
@@ -987,7 +987,171 @@ function tablePosterTex(){
 }
 const TABLE=[['Condón masculino','Barrera','No','Sí','Uno nuevo por relación'],['Condón femenino','Barrera','No','Sí','Uno nuevo por relación'],['Espermicida','Químico','No','No','Antes de cada relación'],
   ['Pastilla','Hormonal','Sí','No','Una al día'],['Inyección','Hormonal','Sí','No','Mensual o trimestral'],['Implante','Hormonal','Sí','No','3 a 5 años'],
-  ['DIU de cobre','Dispositivo','No','No','Hasta 10 años'],['DIU hormonal','Dispositivo','Sí','No','Alrededor de 5 años'],['Ligadura de trompas','Quirúrgico','No','No','Permanente'],['Vasectomía','Quirúrgico','No','No','Permanente']];
+  ['DIU de cobre','Dispositivo','No','No','Hasta 10 años'],['DIU hormonal','Dispositivo','Sí','No','Alrededor de 5 años'],['Diafragma','Barrera','No','No','Antes de cada relación'],['Parche','Hormonal','Sí','No','Uno por semana'],['Ligadura de trompas','Quirúrgico','No','No','Permanente'],['Vasectomía','Quirúrgico','No','No','Permanente'],['Método de Billings','Natural','No','No','Observación diaria']];
+
+/* =====================================================================
+   GRÁFICOS DE LAS PREGUNTAS (se dibujan en canvas: en la libreta y en las láminas de pared)
+   Espacio de diseño: 600 x 400
+   ===================================================================== */
+const INK='#1d282c',SOFT='#4d5d63',BLUE='#2f7fd6',PINK='#d6457e',GREEN='#2e9a5c',ORANGE='#e0802a';
+function txt(g,t,x,y,size=20,col=INK,w=700,al='left',k='sign'){g.font=font(w,size,k);g.fillStyle=col;g.textAlign=al;g.fillText(t,x,y);g.textAlign='left';}
+function axes(g,x0,y0,x1,y1,xl,yl){g.strokeStyle=INK;g.lineWidth=2.5;g.beginPath();g.moveTo(x0,y1);g.lineTo(x0,y0);g.lineTo(x1,y0);g.stroke();
+  txt(g,xl,(x0+x1)/2,y0+40,17,SOFT,600,'center');g.save();g.translate(x0-44,(y0+y1)/2);g.rotate(-Math.PI/2);txt(g,yl,0,0,17,SOFT,600,'center');g.restore();}
+function curve(g,pts,col,w=5,dash){g.strokeStyle=col;g.lineWidth=w;g.lineJoin='round';g.lineCap='round';if(dash)g.setLineDash(dash);g.beginPath();pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();g.setLineDash([]);}
+function legend(g,items,x,y){items.forEach(([c,t,d],i)=>{curve(g,[[x,y+i*24],[x+30,y+i*24]],c,5,d);txt(g,t,x+38,y+i*24+6,16,INK,600);});}
+function sperm(g,x,y,s,a=0,col='#f4f4ef'){g.save();g.translate(x,y);g.rotate(a);g.scale(s,s);g.fillStyle=col;g.strokeStyle='#55646b';g.lineWidth=1.5/s;g.beginPath();g.ellipse(0,0,7,4.5,0,0,7);g.fill();g.stroke();
+  g.beginPath();g.moveTo(-7,0);for(let i=1;i<=26;i++)g.lineTo(-7-i*2.2,Math.sin(i*.6)*2.5);g.stroke();g.restore();}
+function rat(g,x,y,s=1){g.save();g.translate(x,y);g.scale(s,s);g.fillStyle='#d9d4cc';g.strokeStyle='#8b857d';g.lineWidth=2;g.beginPath();g.ellipse(0,0,26,15,0,0,7);g.fill();g.stroke();
+  g.beginPath();g.ellipse(26,-4,13,9,-.2,0,7);g.fill();g.stroke();g.fillStyle='#e9b4b4';g.beginPath();g.arc(24,-14,5,0,7);g.fill();g.fillStyle='#222';g.beginPath();g.arc(32,-6,1.8,0,7);g.fill();
+  g.strokeStyle='#c9a6a0';g.lineWidth=2.5;g.beginPath();g.moveTo(-25,4);g.quadraticCurveTo(-45,16,-58,2);g.stroke();g.restore();}
+function syringe(g,x,y,s,fill=.5,col=PINK){g.save();g.translate(x,y);g.scale(s,s);g.strokeStyle=SOFT;g.lineWidth=2.5;g.fillStyle='rgba(255,255,255,.8)';rrect(g,-60,-12,110,24,4);g.fill();g.stroke();
+  g.fillStyle=col;g.fillRect(50-110*fill,-9,110*fill-4,18);g.fillStyle=SOFT;g.fillRect(-85,-3,25,6);g.fillRect(-90,-14,6,28);g.fillRect(50,-5,14,10);g.strokeStyle='#8a969b';g.lineWidth=2;g.beginPath();g.moveTo(64,0);g.lineTo(100,0);g.stroke();g.restore();}
+function person(g,x,y,col,s=1){g.fillStyle=col;g.beginPath();g.arc(x,y-6*s,4*s,0,7);g.fill();g.beginPath();g.moveTo(x-5*s,y+8*s);g.quadraticCurveTo(x,y-6*s,x+5*s,y+8*s);g.fill();}
+function microbeDraw(g,kind,cx,cy,s){g.save();g.translate(cx,cy);g.scale(s,s);g.lineCap='round';
+  if(kind==='gonorrea'){g.fillStyle='#d8607a';g.strokeStyle='#9c3550';g.lineWidth=3;for(const[x,y,a]of[[-50,-30,.3],[40,-45,-.4],[-20,45,.1],[55,35,.8]]){g.save();g.translate(x,y);g.rotate(a);for(const k of[-1,1]){g.beginPath();g.ellipse(k*17,0,17,23,0,0,7);g.fill();g.stroke();}g.restore();}}
+  if(kind==='vph'){g.fillStyle='#79c2b5';g.strokeStyle='#3d8a7e';g.lineWidth=3;g.beginPath();for(let i=0;i<6;i++){const a=i/6*Math.PI*2+Math.PI/6;g.lineTo(Math.cos(a)*80,Math.sin(a)*80);}g.closePath();g.fill();g.stroke();
+    g.fillStyle='#a8e0d5';for(let r=0;r<3;r++)for(let i=0;i<6*(r||1);i++){const a=i/(6*(r||1))*Math.PI*2;g.beginPath();g.arc(Math.cos(a)*r*27,Math.sin(a)*r*27,9,0,7);g.fill();g.stroke();}}
+  if(kind==='tricomonas'){g.fillStyle='#9fd38a';g.strokeStyle='#4f8f43';g.lineWidth=3;g.beginPath();g.ellipse(0,10,48,62,0,0,7);g.fill();g.stroke();g.fillStyle='#5f9f5a';g.beginPath();g.ellipse(-5,-15,14,20,0,0,7);g.fill();
+    g.strokeStyle='#4f8f43';for(let i=0;i<4;i++){g.beginPath();g.moveTo(-6+i*4,-50);g.bezierCurveTo(-30+i*20,-80,-10+i*10,-100,-40+i*25,-115);g.stroke();}g.beginPath();g.moveTo(0,72);g.lineTo(0,110);g.stroke();
+    g.beginPath();for(let i=0;i<=20;i++)g.lineTo(46+Math.sin(i*.9)*6,-40+i*4.5);g.stroke();}
+  if(kind==='vih'){for(let i=0;i<22;i++){const a=i/22*Math.PI*2;g.strokeStyle='#d9a93a';g.lineWidth=5;g.beginPath();g.moveTo(Math.cos(a)*78,Math.sin(a)*78);g.lineTo(Math.cos(a)*100,Math.sin(a)*100);g.stroke();g.fillStyle='#e8c35a';g.beginPath();g.arc(Math.cos(a)*103,Math.sin(a)*103,8,0,7);g.fill();}
+    g.fillStyle='#c98ab0';g.beginPath();g.arc(0,0,82,0,7);g.fill();g.fillStyle='#8f4f7c';g.beginPath();g.moveTo(-18,-42);g.lineTo(18,-42);g.lineTo(30,36);g.lineTo(-30,36);g.closePath();g.fill();
+    g.strokeStyle='#ffe28a';g.lineWidth=3;for(const k of[-1,1]){g.beginPath();for(let i=0;i<=12;i++)g.lineTo(k*6+Math.sin(i)*4,-30+i*5);g.stroke();}}
+  g.restore();}
+function drawUterusMini(g,cx,cy,s,hi){g.save();g.translate(cx,cy);g.scale(s,s);g.translate(-300,-200);g.lineCap='round';
+  for(const k of[-1,1]){const X=v=>300+k*v;g.strokeStyle='#d9837d';g.lineWidth=12;g.beginPath();g.moveTo(X(48),128);g.bezierCurveTo(X(100),58,X(170),70,X(196),132);g.stroke();
+    g.fillStyle=hi?'#f2c14e':'#ecbaa6';g.strokeStyle='#bf8a76';g.lineWidth=3;g.beginPath();g.ellipse(X(165),185,33,21,k*.3,0,7);g.fill();g.stroke();}
+  g.fillStyle='#e48f88';g.strokeStyle='#b85c58';g.lineWidth=4;g.beginPath();g.moveTo(245,105);g.quadraticCurveTo(300,90,355,105);g.quadraticCurveTo(382,116,372,160);g.quadraticCurveTo(360,232,326,266);
+  g.lineTo(318,300);g.lineTo(282,300);g.lineTo(274,266);g.quadraticCurveTo(240,232,228,160);g.quadraticCurveTo(218,116,245,105);g.closePath();g.fill();g.stroke();
+  g.fillStyle=hi?'#f7d36a':'#f6cdc7';g.strokeStyle=hi?'#c79a2a':'transparent';g.lineWidth=hi?6:0;g.beginPath();g.moveTo(262,128);g.quadraticCurveTo(300,120,338,128);g.quadraticCurveTo(330,190,305,240);g.lineTo(295,240);g.quadraticCurveTo(270,190,262,128);g.fill();if(hi)g.stroke();
+  g.fillStyle='#eaa39d';rrect(g,283,298,34,84,10);g.fill();g.restore();}
+function numTag(g,n,x,y,lx,ly){g.strokeStyle=INK;g.lineWidth=2;g.beginPath();g.moveTo(x,y);g.lineTo(lx,ly);g.stroke();g.fillStyle=ORANGE;g.beginPath();g.arc(x,y,14,0,7);g.fill();txt(g,String(n),x,y+7,20,'#fff',700,'center');}
+
+const FIG={
+  camila:artBox(g=>{txt(g,'Ficha de control de salud',30,48,30);txt(g,'Camila · 13 años · últimos 8 meses',30,76,19,SOFT,500,'left','body');
+    const rows=[['Estatura','+ 6 cm','ruler'],['Masa corporal','+ 4 kg','scale'],['Vello axilar y púbico','aparece','hair'],['Desarrollo de las mamas','comienza','bud']];
+    rows.forEach(([a,b,ic],i)=>{const y=110+i*68;g.fillStyle=i%2?'#ffffff':'#f6f9f9';rrect(g,26,y,548,58,10);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();
+      g.save();g.translate(66,y+29);g.strokeStyle=BLUE;g.fillStyle=BLUE;g.lineWidth=3;
+      if(ic==='ruler'){g.strokeRect(-8,-22,16,44);for(let k=-18;k<=18;k+=6){g.beginPath();g.moveTo(-8,k);g.lineTo(k%12?-2:2,k);g.stroke();}}
+      if(ic==='scale'){rrect(g,-20,-6,40,22,5);g.stroke();g.beginPath();g.arc(0,5,7,Math.PI,0);g.stroke();}
+      if(ic==='hair'){for(let k=-12;k<=12;k+=6){g.beginPath();g.moveTo(k,14);g.quadraticCurveTo(k+6,0,k-2,-14);g.stroke();}}
+      if(ic==='bud'){g.beginPath();g.arc(0,2,14,Math.PI*1.1,Math.PI*1.9);g.stroke();g.beginPath();g.moveTo(-18,14);g.quadraticCurveTo(0,-2,18,14);g.stroke();}
+      g.restore();txt(g,a,104,y+37,23);txt(g,b,550,y+37,24,ORANGE,700,'right');});}),
+  hormonas:artBox(g=>{txt(g,'Hormonas sexuales entre los 7 y los 17 años',24,38,24);const x0=90,y0=340,x1=560,y1=70,X=a=>x0+(a-7)/10*(x1-x0),Y=v=>y0-v*(y0-y1);
+    axes(g,x0,y0,x1,y1,'Edad (años)','Concentración');for(let a=7;a<=17;a+=2)txt(g,String(a),X(a),y0+22,16,SOFT,600,'center');
+    g.strokeStyle='rgba(0,0,0,.08)';g.lineWidth=1;for(let v=.25;v<=1;v+=.25){g.beginPath();g.moveTo(x0,Y(v));g.lineTo(x1,Y(v));g.stroke();}
+    const c=(k,lo,hi)=>Array.from({length:41},(_,i)=>{const a=7+i/4;return[X(a),Y(lo+(hi-lo)*smooth(9,16,a)*k)];});
+    curve(g,c(1,.08,.92),BLUE,6);curve(g,c(1,.07,.78),PINK,6);curve(g,c(1,.06,.16),BLUE,3,[8,8]);curve(g,c(1,.05,.14),PINK,3,[8,8]);
+    g.strokeStyle=SOFT;g.setLineDash([4,6]);g.beginPath();g.moveTo(X(9),y0);g.lineTo(X(9),y1);g.stroke();g.setLineDash([]);txt(g,'9 años',X(9)+6,y1+16,15,SOFT,600);
+    legend(g,[[BLUE,'Testosterona (hombres)'],[PINK,'Estrógenos (mujeres)'],[BLUE,'Testosterona (mujeres)',[8,8]],[PINK,'Estrógenos (hombres)',[8,8]]],110,92);}),
+  esferas:artBox(g=>{const C=[[230,170,BLUE,'Biológica','Estirón, vello, voz'],[370,170,PINK,'Afectiva','Emociones, ánimo'],[300,275,GREEN,'Social','Amistades, identidad']];
+    for(const[x,y,c]of C){g.globalAlpha=.22;g.fillStyle=c;g.beginPath();g.arc(x,y,115,0,7);g.fill();g.globalAlpha=1;g.strokeStyle=c;g.lineWidth=4;g.stroke();}
+    txt(g,'Biológica',165,120,26,BLUE,700,'center');txt(g,'Estirón, vello, voz',165,146,16,INK,600,'center');
+    txt(g,'Afectiva',435,120,26,PINK,700,'center');txt(g,'Emociones, ánimo',435,146,16,INK,600,'center');
+    txt(g,'Social',300,335,26,GREEN,700,'center');txt(g,'Amistades, identidad',300,360,16,INK,600,'center');
+    g.fillStyle='#fff';rrect(g,245,188,110,40,20);g.fill();txt(g,'Pubertad',300,216,24,INK,700,'center');}),
+  maqueta:artBox(g=>{drawUterusMini(g,160,190,.62,false);
+    g.save();g.translate(440,170);g.fillStyle='#e2b39f';g.strokeStyle='#b5806b';g.lineWidth=3;g.beginPath();g.ellipse(0,60,38,50,0,0,7);g.fill();g.stroke();
+    g.strokeStyle='#c9917b';g.lineWidth=12;g.beginPath();g.arc(0,60,48,-Math.PI*.4,Math.PI*.15);g.stroke();
+    g.strokeStyle='#4b7fd6';g.lineWidth=8;g.beginPath();g.moveTo(46,90);g.bezierCurveTo(80,40,60,-40,10,-60);g.lineTo(-40,-60);g.stroke();
+    g.fillStyle='#c98bb0';g.beginPath();g.arc(-45,-60,16,0,7);g.fill();g.strokeStyle='#e3a07b';g.lineWidth=12;g.beginPath();g.moveTo(-45,-44);g.lineTo(-45,40);g.quadraticCurveTo(-45,70,-80,80);g.stroke();g.restore();
+    numTag(g,1,560,150,486,215);numTag(g,2,330,300,382,232);numTag(g,3,40,260,96,215);numTag(g,4,250,70,163,150);
+    txt(g,'1 Epidídimo · 2 Uretra · 3 Ovario · 4 Endometrio',300,385,20,INK,700,'center');}),
+  gametos:artBox(g=>{txt(g,'Misma escala de aumento',24,38,22,SOFT);const cx=230,cy=215;
+    for(let i=0;i<40;i++){const a=i/40*Math.PI*2;g.fillStyle='#f1d9b5';g.beginPath();g.arc(cx+Math.cos(a)*158,cy+Math.sin(a)*158,13,0,7);g.fill();}
+    g.fillStyle='rgba(220,240,245,.9)';g.beginPath();g.arc(cx,cy,145,0,7);g.fill();g.strokeStyle='#9fc4cc';g.lineWidth=5;g.stroke();
+    g.fillStyle='#f6e6c8';g.beginPath();g.arc(cx,cy,128,0,7);g.fill();for(let i=0;i<70;i++){g.fillStyle='rgba(190,150,90,.35)';g.beginPath();g.arc(cx+rr(-110,110)*.8,cy+rr(-110,110)*.8,rr(2,5),0,7);g.fill();}
+    g.fillStyle='#c9a0dc';g.beginPath();g.arc(cx+30,cy-20,32,0,7);g.fill();txt(g,'Ovocito',cx,cy+90,26,INK,700,'center');
+    sperm(g,480,210,1.6,0);txt(g,'Espermatozoide',470,260,22,INK,700,'center');g.strokeStyle=INK;g.lineWidth=4;g.beginPath();g.moveTo(420,345);g.lineTo(520,345);g.stroke();txt(g,'≈ 0,03 mm',470,372,16,SOFT,600,'center');}),
+  mitocondrias:artBox(g=>{txt(g,'Espermatozoide (micrografía aumentada)',24,38,22,SOFT);
+    g.fillStyle='#f4f4ef';g.strokeStyle='#55646b';g.lineWidth=3;g.beginPath();g.ellipse(120,200,62,40,0,0,7);g.fill();g.stroke();g.fillStyle='#d9e9f7';g.beginPath();g.ellipse(146,200,36,32,0,-1.4,1.4);g.fill();
+    g.fillStyle='#ddd8cf';rrect(g,180,186,150,28,12);g.fill();g.stroke();g.fillStyle='#e0802a';for(let i=0;i<14;i++){g.save();g.translate(190+i*10,200);g.rotate(.9);g.beginPath();g.ellipse(0,0,4,11,0,0,7);g.fill();g.restore();}
+    g.strokeStyle='#55646b';g.lineWidth=4;g.beginPath();g.moveTo(330,200);for(let i=1;i<=50;i++)g.lineTo(330+i*5,200+Math.sin(i*.5)*14*(1-i/70));g.stroke();
+    lbl(g,'Cabeza (núcleo)',70,110,110,168,20);lbl(g,'Pieza media: mitocondrias en espiral',230,300,255,214,20);lbl(g,'Flagelo',470,130,450,196,20);}),
+  ratas:artBox(g=>{txt(g,'Experimento: estrógenos y endometrio',24,38,24);['Dosis baja','Dosis media','Dosis alta'].forEach((t,i)=>{const x=105+i*195;g.fillStyle='#fff';rrect(g,x-85,62,170,200,14);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();
+      txt(g,t,x,92,22,INK,700,'center');syringe(g,x-10,122,.6,[.25,.55,.9][i]);rat(g,x-25,185,.7);rat(g,x+35,220,.7);});
+    g.fillStyle='#fff';rrect(g,20,280,560,100,14);g.fill();txt(g,'Se mide a los 15 días: grosor del endometrio',300,316,21,INK,700,'center');txt(g,'Iguales en los 3 grupos: peso · alimentación · horas de luz',300,352,19,SOFT,600,'center');}),
+  lhfsh:artBox(g=>{txt(g,'LH y FSH durante un ciclo de 28 días',24,38,24);const x0=90,y0=330,x1=560,y1=70,X=d=>x0+(d-1)/27*(x1-x0),Y=v=>y0-v*(y0-y1);
+    axes(g,x0,y0,x1,y1,'Día del ciclo','Concentración');[1,7,14,21,28].forEach(d=>txt(g,String(d),X(d),y0+22,16,SOFT,600,'center'));
+    const lh=[],fsh=[];for(let i=0;i<=108;i++){const d=1+i/4;lh.push([X(d),Y(.12+.82*Math.exp(-((d-14)**2)/1.6))]);fsh.push([X(d),Y(.2+.16*Math.exp(-((d-4)**2)/10)+.22*Math.exp(-((d-14)**2)/2))]);}
+    curve(g,lh,ORANGE,6);curve(g,fsh,GREEN,5);g.strokeStyle=SOFT;g.setLineDash([4,6]);g.beginPath();g.moveTo(X(14),y0);g.lineTo(X(14),y1);g.stroke();g.setLineDash([]);
+    txt(g,'día 14',X(14)+8,y1+16,15,SOFT,600);legend(g,[[ORANGE,'LH'],[GREEN,'FSH']],420,100);}),
+  investigable:artBox(g=>{txt(g,'Comparar dos métodos con datos',24,38,24);
+    [['Preservativo femenino','#5aa7c8'],['Parche anticonceptivo',PINK]].forEach(([t,c],k)=>{const x0=40+k*290;g.fillStyle='#fff';rrect(g,x0,60,250,300,14);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();txt(g,t,x0+125,90,21,INK,700,'center');
+      for(let i=0;i<100;i++)person(g,x0+30+(i%10)*21,130+Math.floor(i/10)*21,c,.9);txt(g,'100 usuarias · 1 año',x0+125,348,17,SOFT,600,'center');});
+    txt(g,'vs',300,215,30,SOFT,700,'center');}),
+  clasificar:artBox(g=>{const items=[['Diafragma',(x,y)=>{g.fillStyle='rgba(230,240,245,.9)';g.strokeStyle='#7aa2ae';g.lineWidth=4;g.beginPath();g.ellipse(x,y+10,60,22,0,0,Math.PI);g.moveTo(x-60,y+10);g.quadraticCurveTo(x,y-60,x+60,y+10);g.fill();g.stroke();}],
+    ['Inyección hormonal',(x,y)=>syringe(g,x-5,y,.95,.6)],
+    ['Vasectomía',(x,y)=>{g.strokeStyle='#4b7fd6';g.lineWidth=9;g.beginPath();g.moveTo(x-70,y);g.lineTo(x-12,y);g.moveTo(x+12,y);g.lineTo(x+70,y);g.stroke();g.fillStyle=INK;g.fillRect(x-16,y-14,6,28);g.fillRect(x+10,y-14,6,28);g.strokeStyle='#e0302b';g.lineWidth=4;g.beginPath();g.moveTo(x-8,y-30);g.lineTo(x+8,y-46);g.moveTo(x+8,y-30);g.lineTo(x-8,y-46);g.stroke();}],
+    ['Método de Billings',(x,y)=>{g.fillStyle='#fff';g.strokeStyle=SOFT;g.lineWidth=3;rrect(g,x-60,y-40,120,80,8);g.fill();g.stroke();for(let i=0;i<14;i++){g.fillStyle=i>=6&&i<=9?'#7fc8f8':'#e3e9ea';g.fillRect(x-52+(i%7)*15,y-28+Math.floor(i/7)*30,11,22);}}]];
+    items.forEach(([t,fn],i)=>{const x=155+(i%2)*290,y=100+Math.floor(i/2)*175;g.fillStyle='#fff';rrect(g,x-130,y-80,260,160,14);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();fn(x,y-10);txt(g,t,x,y+62,22,INK,700,'center');});}),
+  mural:artBox(g=>{g.fillStyle='#c79a63';rrect(g,20,20,560,360,14);g.fill();for(let i=0;i<500;i++){g.fillStyle='rgba(90,60,30,.18)';g.fillRect(rr(24,576),rr(24,376),2,2);}
+    g.fillStyle='#fff7a8';g.save();g.translate(300,200);g.rotate(-.03);g.fillRect(-210,-110,420,220);g.fillStyle='#d6457e';g.beginPath();g.arc(0,-100,9,0,7);g.fill();
+    g.font=font(700,30,'hand');g.fillStyle='#22324a';g.textAlign='center';g.fillText('"Si tomo anticonceptivos',0,-45);g.fillText('orales no necesito',0,0);g.fillText('preservativo, porque',0,45);g.fillText('me cuidan de todo"',0,90);g.restore();
+    g.fillStyle='#bfe3f2';g.save();g.translate(80,330);g.rotate(.1);g.fillRect(-40,-30,80,60);g.restore();g.fillStyle='#f6c7d7';g.save();g.translate(530,80);g.rotate(-.12);g.fillRect(-35,-28,70,56);g.restore();}),
+  vasectomia:artBox(g=>{g.fillStyle='#e2b39f';g.strokeStyle='#b5806b';g.lineWidth=3;g.beginPath();g.ellipse(250,270,70,90,0,0,7);g.fill();g.stroke();
+    g.strokeStyle='#c9917b';g.lineWidth=14;g.beginPath();g.arc(250,270,84,-Math.PI*.42,Math.PI*.2);g.stroke();
+    g.strokeStyle='#d64545';g.lineWidth=7;g.beginPath();g.moveTo(230,180);g.bezierCurveTo(220,130,200,90,170,40);g.stroke();g.strokeStyle='#4b6fd6';g.beginPath();g.moveTo(255,180);g.bezierCurveTo(250,130,240,90,215,40);g.stroke();
+    g.strokeStyle='#4b7fd6';g.lineWidth=9;g.beginPath();g.moveTo(320,300);g.bezierCurveTo(370,240,360,180,345,150);g.moveTo(340,112);g.bezierCurveTo(330,80,320,60,330,30);g.stroke();
+    g.fillStyle=INK;g.fillRect(332,142,28,7);g.fillRect(328,114,28,7);g.strokeStyle='#e0302b';g.lineWidth=4;g.beginPath();g.moveTo(370,120);g.lineTo(390,140);g.moveTo(390,120);g.lineTo(370,140);g.stroke();
+    lbl(g,'Testículo',40,330,190,290,20);lbl(g,'Vasos sanguíneos',30,70,205,105,20);lbl(g,'Conducto deferente (cortado)',400,200,352,175,20);}),
+  fallas:artBox(g=>{txt(g,'Falla en el uso habitual',24,38,24);txt(g,'Embarazos por cada 100 personas en un año',24,64,17,SOFT,600,'left','body');
+    const y0=330;[['Preservativo masculino',13,'#5aa7c8','13 %'],['Implante hormonal',.4,PINK,'< 1 %']].forEach(([t,v,c,lab],i)=>{const x=150+i*280,h=v*15;
+      g.fillStyle=c;rrect(g,x-60,y0-h,120,Math.max(h,6),8);g.fill();txt(g,lab,x,y0-h-14,30,INK,700,'center');txt(g,t,x,y0+34,20,INK,700,'center');});
+    g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.moveTo(40,y0);g.lineTo(560,y0);g.stroke();}),
+  ligadura:artUterus({cut:true}),
+  its3:artBox(g=>{[['Gonorrea','gonorrea'],['VPH','vph'],['Tricomoniasis','tricomonas']].forEach(([t,k],i)=>{const x=105+i*195;g.fillStyle='#fff';rrect(g,x-90,30,180,340,14);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();
+      microbeDraw(g,k,x,190,.9);txt(g,t,x,345,24,INK,700,'center');});}),
+  vih:artBox(g=>{microbeDraw(g,'vih',220,205,1.45);lbl(g,'Proteínas de superficie',400,80,300,110,20);lbl(g,'Envoltura',430,200,338,200,20);lbl(g,'Cápsida',430,280,250,240,20);lbl(g,'ARN (material genético)',380,360,230,250,20);
+    txt(g,'Virus de Inmunodeficiencia Humana',24,38,22,SOFT);}),
+  cd4:artBox(g=>{txt(g,'Defensas (linfocitos CD4) en el tiempo',24,38,24);const x0=90,y0=330,x1=560,y1=70,X=a=>x0+a/12*(x1-x0),Y=v=>y0-v/1200*(y0-y1);
+    axes(g,x0,y0,x1,y1,'Años desde la infección','CD4 por mm³');g.fillStyle='rgba(214,69,126,.15)';g.fillRect(x0,Y(200),x1-x0,y0-Y(200));txt(g,'Zona SIDA (menos de 200)',x1-10,Y(200)+24,16,PINK,700,'right');
+    [0,200,500,1000].forEach(v=>txt(g,String(v),x0-8,Y(v)+5,14,SOFT,600,'right'));[0,3,6,9,12].forEach(a=>txt(g,String(a),X(a),y0+22,16,SOFT,600,'center'));
+    const sin=[],con=[];for(let i=0;i<=120;i++){const a=i/10;sin.push([X(a),Y(a<.4?1000-700*a/.4:720-560*smooth(.4,11,a)+40*Math.sin(a*3))]);con.push([X(a),Y(a<.4?1000-700*a/.4:720+180*smooth(.4,3,a))]);}
+    curve(g,sin,PINK,6);curve(g,con,GREEN,5,[10,8]);legend(g,[[PINK,'Sin tratamiento'],[GREEN,'Con tratamiento',[10,8]]],330,96);}),
+  origen:artBox(g=>{const A=[[90,40],[150,30],[230,45],[255,90],[290,140],[322,150],[285,190],[270,260],[240,320],[200,340],[180,300],[165,240],[150,180],[120,160],[70,150],[40,110],[60,60]];
+    g.fillStyle='#bfe0c2';g.strokeStyle='#5d8a62';g.lineWidth=3;g.beginPath();A.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();g.stroke();
+    g.beginPath();g.ellipse(305,280,10,26,.3,0,7);g.fill();g.stroke();g.fillStyle='rgba(214,69,126,.35)';g.beginPath();g.arc(175,200,34,0,7);g.fill();g.fillStyle=PINK;g.beginPath();g.arc(175,200,7,0,7);g.fill();
+    txt(g,'África central',175,255,18,INK,700,'center');txt(g,'Origen del VIH',355,70,26);
+    [['1920 aprox.','El virus de chimpancés pasa a personas'],['1981','Se describen los primeros casos de SIDA'],['1983','Se identifica el virus VIH']].forEach(([a,b],i)=>{const y=125+i*80;g.fillStyle=ORANGE;g.beginPath();g.arc(360,y,9,0,7);g.fill();txt(g,a,378,y+7,22,INK,700);g.font=font(400,16,'body');g.fillStyle=SOFT;wrapText(g,b,378,y+30,200,20);});
+    g.strokeStyle=ORANGE;g.lineWidth=3;g.beginPath();g.moveTo(360,125);g.lineTo(360,285);g.stroke();}),
+  oportunistas:artBox(g=>{txt(g,'Infecciones oportunistas',24,38,24);g.fillStyle='#dfe9f7';g.strokeStyle='#5b84b8';g.lineWidth=5;g.beginPath();g.moveTo(300,70);g.lineTo(400,105);g.quadraticCurveTo(400,260,300,330);g.quadraticCurveTo(200,260,200,105);g.closePath();g.fill();g.stroke();
+    g.strokeStyle=INK;g.lineWidth=4;g.beginPath();g.moveTo(300,80);g.lineTo(285,150);g.lineTo(318,200);g.lineTo(292,260);g.stroke();txt(g,'Defensas débiles',300,360,20,INK,700,'center');
+    g.fillStyle='#d9534f';for(const[x,y,a]of[[90,120,.4],[120,170,-.3],[80,210,.9],[130,240,.1]]){g.save();g.translate(x,y);g.rotate(a);rrect(g,-20,-6,40,12,6);g.fill();g.restore();}txt(g,'Tuberculosis',105,290,18,INK,700,'center');
+    g.fillStyle='#f2e2b0';g.strokeStyle='#b89a4b';g.lineWidth=2;for(const[x,y,r]of[[490,140,20],[515,160,12],[470,200,18],[500,230,14],[520,250,9]]){g.beginPath();g.ellipse(x,y,r,r*1.3,.4,0,7);g.fill();g.stroke();}txt(g,'Hongo Candida',495,300,18,INK,700,'center');}),
+  transmision:artBox(g=>{const it=[['Abrazo o beso',(x,y)=>{person(g,x-18,y+10,BLUE,3);person(g,x+18,y+10,PINK,3);}],['Vaso y cubiertos',(x,y)=>{g.fillStyle='rgba(180,220,240,.8)';g.strokeStyle=SOFT;g.lineWidth=3;g.beginPath();g.moveTo(x-25,y-30);g.lineTo(x+25,y-30);g.lineTo(x+18,y+35);g.lineTo(x-18,y+35);g.closePath();g.fill();g.stroke();}],
+    ['Zancudo o mosquito',(x,y)=>{g.strokeStyle=INK;g.lineWidth=3;g.beginPath();g.ellipse(x,y,22,8,0,0,7);g.stroke();g.beginPath();g.moveTo(x-22,y);g.lineTo(x-45,y+6);for(const k of[-12,0,12]){g.moveTo(x+k,y+6);g.lineTo(x+k-8,y+28);}g.stroke();g.fillStyle='rgba(180,210,230,.7)';g.beginPath();g.ellipse(x+4,y-18,16,8,-.5,0,7);g.fill();}],
+    ['Jeringa usada',(x,y)=>syringe(g,x-5,y,.8,.5,'#c4302b')]];
+    it.forEach(([t,fn],i)=>{const x=155+(i%2)*290,y=100+Math.floor(i/2)*175;g.fillStyle='#fff';rrect(g,x-130,y-80,260,160,14);g.fill();g.strokeStyle='#cfdcdc';g.lineWidth=2;g.stroke();fn(x,y-12);txt(g,t,x,y+62,22,INK,700,'center');});})
+};
+const FIGURL={};
+function figURL(id){if(FIGURL[id])return FIGURL[id];const c=cvs(900,600),g=c.getContext('2d');g.scale(1.5,1.5);FIG[id](g,0,0,600,400);return FIGURL[id]=c.toDataURL('image/png');}
+
+/* =====================================================================
+   MODELOS 3D NUEVOS
+   ===================================================================== */
+function diafragma(p){const g=grp(p);const pts=[[0,.34],[.12,.335],[.22,.31],[.3,.26],[.35,.18],[.37,.1],[.37,.08]];
+  const a=Lathe(pts,MAT.polyB,g,64),b=Lathe(pts,MAT.polyF,g,64);a.renderOrder=1;b.renderOrder=2;Tor(.37,.035,mat('#e8eef0',.25),0,.08,0,g);return g;}
+function jeringa(p){const g=grp(p);const m=mat('#ffffff',.2);Cy(.1,.1,.9,MAT.glass,0,.45,0,g,32);Cy(.088,.088,.5,mat('#d6457e',.25),0,.27,0,g,28);
+  Cy(.085,.085,.05,mat('#2b3236',.5),0,.53,0,g,28);Cy(.022,.022,.55,m,0,.8,0,g,12);Cy(.09,.09,.03,m,0,1.08,0,g,28);B(.36,.03,.12,m,0,.88,0,g);
+  Cy(.045,.03,.08,mat('#7fc8f8',.3),0,-.04,0,g,20);Cy(.006,.006,.35,MAT.chrome,0,-.25,0,g,8);return g;}
+function hormoneSculpture(p){const g=grp(p);B(1.5,.05,.5,MAT.ped,0,0,0,g);B(.03,1.0,.03,MAT.steel,-.7,.5,0,g);B(1.45,.03,.03,MAT.steel,0,.02,.16,g);
+  const line=(col,hi,z)=>{const pts=[];for(let i=0;i<=40;i++){const a=7+i/4;pts.push([-.7+(a-7)/10*1.4,.08+(.05+hi*smooth(9,16,a))*.9,z]);}Tube(pts,.025,mat(col,.3,.1),g,120,12);};
+  line('#2f7fd6',.85,-.05);line('#d6457e',.72,.08);return g;}
+function barChart3D(p){const g=grp(p);B(2.2,.06,.8,MAT.ped,0,.03,0,g);B(.04,1.6,.04,MAT.steel,-1.05,.83,-.3,g);
+  for(let i=1;i<=3;i++)B(2.1,.008,.008,mat('#5d6a70',.5),0,.06+i*.45,-.32,g);
+  B(.5,1.3,.5,mat('#5aa7c8',.35),-.45,.71,0,g);B(.5,.06,.5,mat('#d6457e',.35),.55,.09,0,g);return g;}
+function ovocito(p){const g=dyn(grp(p));Sp(.43,mat('#f3e2c4',.55),0,0,0,g,1,1,1,40,28);Sp(.11,mat('#c9a0dc',.4),.12,.1,.36,g);
+  const z=Sp(.48,new T.MeshStandardMaterial({color:'#e9f4f6',roughness:.1,transparent:true,opacity:.28,depthWrite:false}),0,0,0,g,1,1,1,40,28);
+  const cm=mat('#f1d9b5',.6);for(const v of fib(70))Sp(.045,cm,v.x*.54,v.y*.54,v.z*.54,g,1,1,1,10,8);return g;}
+function mitoSperm(p){const g=dyn(grp(p));const m=mat('#f1f1ec',.3);Sp(.07,m,0,0,0,g,.75,.62,1.1,20,14);
+  const mid=Cy(.022,.026,.1,mat('#ddd8cf',.4),0,0,-.12,g,16);mid.rotation.x=Math.PI/2;
+  const pts=[];for(let i=0;i<=120;i++){const a=i/120*Math.PI*2*7;pts.push([Math.cos(a)*.03,Math.sin(a)*.03,-.07-i/120*.1]);}Tube(pts,.008,mat('#e0802a',.35),g,240,8);
+  const tail=grp(g,0,0,-.18);const segs=[];for(let i=0;i<12;i++){const s=Cy(.011-i*.0008,.011-i*.0008,.06,m,0,0,-i*.055,tail,8);s.rotation.x=Math.PI/2;segs.push(s);}g.userData.segs=segs;return g;}
+function ratCage(p,x,z,dose){const g=grp(p,x,0,z);B(.55,.03,.38,MAT.white,0,.95,0,g);const wm=MAT.steel;
+  for(let i=0;i<=8;i++){Cy(.004,.004,.3,wm,-.27+i*.0675,1.1,-.19,g,6);Cy(.004,.004,.3,wm,-.27+i*.0675,1.1,.19,g,6);}for(let i=0;i<=5;i++){Cy(.004,.004,.3,wm,-.27,1.1,-.19+i*.076,g,6);Cy(.004,.004,.3,wm,.27,1.1,-.19+i*.076,g,6);}
+  B(.56,.02,.4,wm,0,1.25,0,g);const rm=mat('#e6e1d8',.8);Sp(.06,rm,0,1.0,0,g,1.4,.8,.9);Sp(.035,rm,.09,1.01,0,g,1.2,1,1);Sp(.012,mat('#e9b4b4',.6),.08,1.04,.025,g);Sp(.012,mat('#e9b4b4',.6),.08,1.04,-.025,g);
+  Tube([[-.08,.99,0],[-.15,.98,.04],[-.22,.985,.0]],.006,mat('#d9b0a8',.6),g,16,6);const l=labelSprite(dose,'Estrógenos','#d6457e',.62);l.position.set(0,1.45,0);g.add(l);return g;}
 
 function poster(p,tex,w,h,x,y,z,ry){const g=grp(p,x,y,z,ry);B(w+.06,h+.06,.025,MAT.frame,0,0,0,g);Pl(w,h,litTex(tex),0,0,.016,g);return g;}
 
@@ -1111,25 +1275,26 @@ function limbGeo(len,r0,r1,r2,seg=28){
 }
 function latheGeo(pts,seg=40){const g=new T.LatheGeometry(pts.map(([r,y])=>new T.Vector2(r,y)),seg);g.rotateY(Math.PI);return g;}
 /* Cráneo esculpido: esfera densa deformada vértice a vértice (mandíbula, mentón, nuca, cuencas, pómulos) */
-function headShape(n,fem){const{x,y,z}=n;const low=smooth(-.05,-.95,y);let sx=(fem?.82:.86)*(1-.26*low),sz=1;
+const F0={w:1,jaw:1,nose:1,lips:1};
+function headShape(n,fem,f=F0){const{x,y,z}=n;const low=smooth(-.05,-.95,y);let sx=(fem?.82:.86)*f.w*(1-.26*f.jaw*low),sz=1;
   if(z>0)sz*=1+.07*low*z;if(z<0)sz*=1+.06*(-z)*smooth(-.4,.3,y);if(y>.2)sx*=1+.03*(y-.2);return[sx,1.1,sz];}
-function headGeo(fem){return GEOc('head'+fem,()=>{
+function headGeo(fem,f=F0){return GEOc('head'+fem+f.w+f.jaw,()=>{
   const g=new T.SphereGeometry(.1,64,48);g.rotateY(-Math.PI/2);const p=g.attributes.position,v=new T.Vector3(),n=new T.Vector3();
   const bump=(x,y,z,cx,cy,cz,r)=>Math.exp(-((x-cx)**2+(y-cy)**2+(z-cz)**2)/(r*r));
-  for(let i=0;i<p.count;i++){n.fromBufferAttribute(p,i).normalize();const{x,y,z}=n,[sx,sy,sz]=headShape(n,fem);
+  for(let i=0;i<p.count;i++){n.fromBufferAttribute(p,i).normalize();const{x,y,z}=n,[sx,sy,sz]=headShape(n,fem,f);
     v.set(x*sx,y*sy,z*sz).multiplyScalar(.1);let o=0;
     for(const s of[-1,1]){o-=.006*bump(x,y,z,s*.36,.12,.93,.17);o+=.005*bump(x,y,z,s*.56,-.1,.8,.2);o+=.003*bump(x,y,z,s*.3,.3,.9,.16);}
     o+=.004*bump(x,y,z,0,-.45,.9,.22)+.003*bump(x,y,z,0,-.82,.55,.2);if(!fem)o+=.003*bump(x,y,z,0,.3,.95,.25);
     v.addScaledVector(n,o);p.setXYZ(i,v.x,v.y,v.z);}
   g.computeVertexNormals();return g;});}
 /* Cáscara que sigue la forma del cráneo; lo que queda fuera de la región se esconde dentro de la cabeza */
-function shellGeo(key,fem,fn){return GEOc(key+fem,()=>{
+function shellGeo(key,fem,fn,f=F0){return GEOc(key+fem+f.w+f.jaw,()=>{
   const g=new T.SphereGeometry(.1,64,44);g.rotateY(-Math.PI/2);const p=g.attributes.position,n=new T.Vector3();
-  for(let i=0;i<p.count;i++){n.fromBufferAttribute(p,i).normalize();const[sx,sy,sz]=headShape(n,fem),r=fn(n.x,n.y,n.z,Math.abs(Math.atan2(n.x,n.z))/Math.PI);
+  for(let i=0;i<p.count;i++){n.fromBufferAttribute(p,i).normalize();const[sx,sy,sz]=headShape(n,fem,f),r=fn(n.x,n.y,n.z,Math.abs(Math.atan2(n.x,n.z))/Math.PI);
     p.setXYZ(i,n.x*sx*.1*r,n.y*sy*.1*r,n.z*sz*.1*r);}
   g.computeVertexNormals();return g;});}
 const LINES={m:[[0,.76],[.22,.56],[.5,.26],[.7,.05],[1,-.5]],f:[[0,.72],[.22,.46],[.5,-.06],[1,-.62]],cap:[[0,.66],[.3,.3],[.55,-.04],[1,-.5]]};
-function hairGeo(st,fem){
+function hairGeo(st,fem,f=F0){
   const curly=st.startsWith('curly'),cap=st==='cap',buzz=st==='buzz';
   const sc=cap?1.075:curly?1.11:buzz?1.028:st==='short'?1.06:1.07,line=cap?LINES.cap:(fem||curly)?LINES.f:LINES.m;
   return shellGeo('hair'+st,fem,(x,y,z,a)=>{
@@ -1137,11 +1302,11 @@ function hairGeo(st,fem){
     if(curly)r+=.035*Math.max(0,Math.sin(x*23)*Math.sin(y*21)*Math.sin(z*19+1.3))+.018*smooth(-.2,.6,y);
     else if(cap)r+=.006*Math.sin(ph*14)*smooth(.2,.9,y);
     else if(!buzz)r+=.022*smooth(.1,.9,y)*(1-a*.5)+.005*Math.sin(ph*30)*smooth(0,.6,y);
-    const ln=pw(a,line)+(fem&&!cap?.12*x:!cap?-.06*x:0);if(y<ln-.025)return .82;if(y<ln)return lerp(.86,r,(y-ln+.025)/.025);return r;});
+    const ln=pw(a,line)+(fem&&!cap?.12*x:!cap?-.06*x:0);if(y<ln-.025)return .82;if(y<ln)return lerp(.86,r,(y-ln+.025)/.025);return r;},f);
 }
-function beardGeo(fem){return shellGeo('beard',fem,(x,y,z)=>{
-  const mouth=Math.hypot(x/.36,(y+.52)/.13)<1&&z>.6;if(y>-.08||z<-.15||mouth)return .8;return 1.03+.004*Math.sin(x*60)*Math.sin(y*50);});}
-function maskGeo(fem){return shellGeo('mask',fem,(x,y,z)=>{if(y>-.02||y<-.92||z<.22)return .8;return 1.06+.004*Math.sin(y*40);});}
+function beardGeo(fem,f=F0){return shellGeo('beard',fem,(x,y,z)=>{
+  const mouth=Math.hypot(x/.36,(y+.52)/.13)<1&&z>.6;if(y>-.08||z<-.15||mouth)return .8;return 1.03+.004*Math.sin(x*60)*Math.sin(y*50);},f);}
+function maskGeo(fem,f=F0){return shellGeo('mask',fem,(x,y,z)=>{if(y>-.02||y<-.92||z<.22)return .8;return 1.06+.004*Math.sin(y*40);},f);}
 function hairBackGeo(len,curly){return GEOc('hback'+len+curly,()=>{
   const g=new T.CylinderGeometry(.088,.108,len,48,14,true,Math.PI*.5,Math.PI),p=g.attributes.position;
   for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),t=(len/2-y)/len,ph=Math.atan2(x,z);
@@ -1171,7 +1336,7 @@ function buildHandMesh(p,m,s){
 function makePerson(key,pose){
   const L=LOOK[key],sit=pose==='sit',fem=!!L.female,P=dyn(new T.Group());
   const coat=!!L.coat,scrub=L.sleeve==='short',sk=skinMat(L.skin);
-  const top=scrub?scrubMat(L.top,L.skin):clothMat(coat?'#f4f5f3':L.top),bot=clothMat(L.bottom,DENIM.has(key)?'denim':'cloth');
+  const top=scrub?scrubMat(L.top,L.skin):clothMat(coat?'#f4f5f3':L.top),bot=clothMat(L.bottom,L.denim?'denim':'cloth'),FC=Object.assign({},F0,L.face);
   const shoe=mat(L.shoes||'#2b2b2e',.36),sole=mat('#1b1c1e',.8),hr=hairMat(L.hairColor),s0=fem?.965:1;P.scale.setScalar(s0);
   const hipY=sit?.52:.92;
   // pelvis y piernas
@@ -1194,7 +1359,7 @@ function makePerson(key,pose){
   const NK=grp(SP,0,.435,0);
   mesh(GEOc('neck',()=>latheGeo([[0,-.03],[.05,-.03],[.049,.04],[.046,.1],[.045,.135],[0,.136]],32)),sk,NK);
   if(!coat&&!scrub){const c=mesh(GEOc('collar',()=>new T.TorusGeometry(.056,.013,14,48)),top,NK,0,.012,.006);c.rotation.x=Math.PI/2-.28;c.scale.set(1.1,1.18,1);}
-  if(HOOD.has(key)){const h=mesh(GEOc('hood',()=>new T.TorusGeometry(.085,.042,18,48)),top,SP,0,.445,-.065);h.rotation.x=1.2;h.scale.set(1.25,1,1);
+  if(L.hood){const h=mesh(GEOc('hood',()=>new T.TorusGeometry(.085,.042,18,48)),top,SP,0,.445,-.065);h.rotation.x=1.2;h.scale.set(1.25,1,1);
     for(const s of[-1,1])mesh(GEOc('cord',()=>limbGeo(.13,.0055,.005,.0045,10)),mat('#ececec',.6),SP,s*.032,.455,.118);}
   if(coat){const cm=clothMat('#f4f5f3');mesh(GEOc('coatSkirt',()=>latheGeo([[.205,-.86],[.19,-.6],[.172,-.35],[.16,-.15],[.156,-.05]],56)),cm,SP).scale.set(1.2,1,.86);
     for(const s of[-1,1]){const lp=mesh(GEOc('lapel',()=>roundBoxGeo(.05,.21,.012)),cm,SP,s*.046,.37,.118);lp.rotation.set(-.2,0,-s*.36);
@@ -1218,17 +1383,17 @@ function makePerson(key,pose){
   }
   // cabeza
   const HD=dyn(grp(NK,0,.1,.01)),HC=grp(HD,0,.1,0);
-  mesh(headGeo(fem),sk,HC);
+  mesh(headGeo(fem,FC),sk,HC);
   for(const s of[-1,1]){const e=mesh(GEOc('ear',()=>{const g=new T.SphereGeometry(.026,24,16);g.scale(.36,1,.7);return g;}),sk,HC,s*.083,-.005,-.008);e.rotation.y=s*.35;}
-  mesh(GEOc('nose',()=>{const g=new T.SphereGeometry(.017,24,18);g.scale(.72,1.5,1);g.rotateX(.32);return g;}),sk,HC,0,-.012,L.mask?.088:.093);
-  if(!L.mask){mesh(GEOc('ntip',()=>new T.SphereGeometry(.0135,20,14)),sk,HC,0,-.033,.1);
-  for(const s of[-1,1])mesh(GEOc('nwing',()=>new T.SphereGeometry(.0085,16,12)),sk,HC,s*.0115,-.036,.092);}
+  const NS_=FC.nose;mesh(GEOc('nose',()=>{const g=new T.SphereGeometry(.017,24,18);g.scale(.72,1.5,1);g.rotateX(.32);return g;}),sk,HC,0,-.012,L.mask?.088:.093).scale.set(NS_,1,NS_);
+  if(!L.mask){mesh(GEOc('ntip',()=>new T.SphereGeometry(.0135,20,14)),sk,HC,0,-.033,.1+(NS_-1)*.008).scale.setScalar(NS_);
+  for(const s of[-1,1])mesh(GEOc('nwing',()=>new T.SphereGeometry(.0085,16,12)),sk,HC,s*.0115*NS_,-.036,.092).scale.setScalar(NS_);}
   const lm=lipMat(L.skin);let LL=null;
   if(!L.mask){
-    mesh(GEOc('ulip',()=>{const g=new T.SphereGeometry(.0165,28,14);g.scale(1.5,.4,.58);return g;}),lm,HC,0,-.056,.088);
+    mesh(GEOc('ulip',()=>{const g=new T.SphereGeometry(.0165,28,14);g.scale(1.5,.4,.58);return g;}),lm,HC,0,-.056,.088).scale.set(FC.lips,FC.lips,1);
     mesh(GEOc('mline',()=>{const g=new T.SphereGeometry(.017,24,10);g.scale(1.45,.1,.45);return g;}),MAT.mouth,HC,0,-.0615,.089);
-    LL=dyn(grp(HC,0,-.064,.0855));mesh(GEOc('llip',()=>{const g=new T.SphereGeometry(.016,28,14);g.scale(1.38,.5,.6);return g;}),lm,LL);}
-  const eyes=[],lids=[],ex=fem?.03:.031,irisM=mat(IRIS[key.length%IRIS.length],.16),brow=hairMat(new T.Color(L.hairColor).multiplyScalar(.8).getStyle(),true);
+    LL=dyn(grp(HC,0,-.064,.0855));mesh(GEOc('llip',()=>{const g=new T.SphereGeometry(.016,28,14);g.scale(1.38,.5,.6);return g;}),lm,LL).scale.set(FC.lips,FC.lips,1);}
+  const eyes=[],lids=[],ex=(fem?.03:.031)*FC.w,irisM=mat(IRIS[key.length%IRIS.length],.16),brow=hairMat(new T.Color(L.hairColor).multiplyScalar(.8).getStyle(),true);
   for(const s of[-1,1]){
     const EY=dyn(grp(HC,s*ex,.013,.075));
     mesh(GEOc('eyeball',()=>new T.SphereGeometry(.0132,28,20)),MAT.eyeW,EY);
@@ -1240,7 +1405,9 @@ function makePerson(key,pose){
     const lo=mesh(GEOc('lidlow',()=>new T.SphereGeometry(.0144,28,8,0,Math.PI*2,Math.PI*.76,Math.PI*.24)),sk,HC,s*ex,.013,.075);lo.rotation.x=-.15;
     Tube([[s*.011,.033,.094],[s*.029,.041,.092],[s*.047,.035,.083]],.0036,brow,HC,16,8);
   }
-  mesh(hairGeo(L.hair,fem),hr,HC);
+  mesh(hairGeo(L.hair,fem,FC),hr,HC);
+  if(L.glasses){const gm=mat('#1c1f22',.25,.4);for(const s of[-1,1]){mesh(GEOc('rim',()=>new T.TorusGeometry(.0195,.0019,8,40)),gm,HC,s*ex,.012,.096);Tube([[s*(ex+.019),.016,.094],[s*.075,.018,.06],[s*.083,.012,-.01]],.0016,gm,HC,12,6);}
+    Tube([[-.012,.016,.097],[0,.019,.099],[.012,.016,.097]],.0018,gm,HC,8,6);}
   let HP=null;const st=L.hair;
   if(st==='long'||st==='curlylong'){HP=dyn(grp(HC,0,-.02,-.012));mesh(hairBackGeo(.3,st==='curlylong'),hr,HP,0,-.13,0);
     for(const s of[-1,1]){const f=mesh(GEOc('hside',()=>{const g=limbGeo(.17,.02,.022,.012,16);g.scale(1,1,.55);return g;}),hr,HC,s*.079,.02,.034);f.rotation.z=s*.12;}}
@@ -1248,8 +1415,8 @@ function makePerson(key,pose){
     const a=grp(HP,0,0,-.012);a.rotation.x=.5;mesh(GEOc('tail1',()=>limbGeo(.11,.026,.031,.022,24)),hr,a);const b=grp(a,0,-.11,0);b.rotation.x=-.25;mesh(GEOc('tail2',()=>limbGeo(.1,.022,.02,.007,24)),hr,b);}
   if(st==='bun'){mesh(GEOc('bun',()=>{const g=new T.SphereGeometry(.046,32,24);g.scale(1,.88,.9);return g;}),hr,HC,0,.065,-.1);
     const t2=mesh(GEOc('tie',()=>new T.TorusGeometry(.022,.007,10,28)),mat('#2b2b2b',.5),HC,0,.048,-.088);t2.rotation.x=1.1;}
-  if(L.beard)mesh(beardGeo(fem),hairMat(L.hairColor,true),HC);
-  if(L.mask){mesh(maskGeo(fem),MAT.mask,HC);for(const s of[-1,1]){const t3=mesh(GEOc('strap',()=>new T.TorusGeometry(.03,.0016,6,28)),MAT.mask,HC,s*.085,-.012,-.012);t3.rotation.y=Math.PI/2;}}
+  if(L.beard)mesh(beardGeo(fem,FC),hairMat(L.hairColor,true),HC);
+  if(L.mask){mesh(maskGeo(fem,FC),MAT.mask,HC);for(const s of[-1,1]){const t3=mesh(GEOc('strap',()=>new T.TorusGeometry(.03,.0016,6,28)),MAT.mask,HC,s*.085,-.012,-.012);t3.rotation.y=Math.PI/2;}}
   const sh_=Pl(.9,.9,MAT.shadow,0,.006,sit?.15:0,P);sh_.rotation.x=-Math.PI/2;
   // fusión por articulación: cada grupo animado queda en pocas llamadas de dibujo
   for(const a of arms){mergeInto(a.EJ,a.EJ);mergeInto(a.SH,a.SH);}
@@ -1281,18 +1448,19 @@ function iud(p,type){const g=grp(p);const pl=MAT.iudPlastic;Cy(.045,.045,1.22,pl
   else{Cy(.105,.105,.74,mat('#f2eee2',.35),0,.66,0,g,24);Cy(.108,.108,.08,mat('#cf5a86',.5),0,.66,0,g,24);}
   for(const s of[-1,1])Tube([[s*.012,.02,0],[s*.03,-.2,.02],[s*.02,-.45,-.02]],.007,mat(type==='cobre'?'#3d5f8a':'#3a3a3a',.6),g,16,4);
   return g;}
-function uterusModel(p){const g=grp(p);
+function uterusModel(p,cut=true){const g=grp(p);
   const pts=[[0,-.62],[.1,-.62],[.12,-.45],[.15,-.32],[.22,-.18],[.36,.05],[.44,.25],[.42,.42],[.3,.54],[.12,.6],[0,.61]];const u=Lathe(pts,MAT.organ,g,36);u.scale.z=.62;
   for(const s of[-1,1]){const tube1=Tube([[s*.32,.42,0],[s*.55,.6,0],[s*.78,.62,.04]],.05,MAT.organ,g,24,10);const tube2=Tube([[s*.9,.6,.04],[s*1.12,.52,.06],[s*1.3,.32,.05],[s*1.38,.1,0]],.05,MAT.organ,g,24,10);
     for(let i=0;i<6;i++){const f=Cy(.012,.02,.14,MAT.organDark,s*(1.38+Math.cos(i)*.05),.04,Math.sin(i)*.06,g,6);f.rotation.z=s*(.4+i*.12);}
     Sp(.14,MAT.ovary,s*1.08,.1,.0,g,1.3,.85,.8);
-    for(const xx of[.79,.89]){const c=B(.05,.16,.14,MAT.clip,s*xx,.61,.04,g);}
-    const ring=Tor(.07,.012,MAT.cutGlow,s*.84,.61,.04,g,0);ring.rotation.y=Math.PI/2;ring.userData.keep=true;}
+    if(cut){for(const xx of[.79,.89]){const c=B(.05,.16,.14,MAT.clip,s*xx,.61,.04,g);}
+    const ring=Tor(.07,.012,MAT.cutGlow,s*.84,.61,.04,g,0);ring.rotation.y=Math.PI/2;ring.userData.keep=true;}else Tube([[s*.74,.62,.035],[s*.84,.615,.04],[s*.94,.59,.045]],.05,MAT.organ,g,12,10);}
+  if(!cut){const en=Lathe([[0,-.18],[.08,-.16],[.16,.05],[.22,.25],[.18,.4],[0,.44]],mat('#f2c14e',.45),g,40);en.scale.z=.7;en.position.z=.02;en.scale.multiplyScalar(1.02);}
   Cy(.1,.12,.4,MAT.organDark,0,-.8,0,g,16);return g;}
-function vasModel(p){const g=grp(p);
+function vasModel(p,cut=true){const g=grp(p);
   for(const s of[-1,1]){Sp(.17,MAT.testis,s*.25,0,0,g,1,1.3,1);Tube([[s*.36,.12,-.05],[s*.42,-.05,-.08],[s*.38,-.2,-.06]],.045,mat('#c9917b',.5),g,20,8);
     Tube([[s*.38,-.2,-.06],[s*.5,.1,-.1],[s*.46,.45,-.05]],.032,MAT.vas,g,24,8);Tube([[s*.42,.62,0],[s*.32,.95,.05],[s*.14,1.12,.1],[s*.03,1.15,.1]],.032,MAT.vas,g,30,8);
-    for(const yy of[.47,.6])B(.12,.04,.1,MAT.clip,s*.44,yy,-.03,g);const ring=Tor(.06,.01,MAT.cutGlow,s*.44,.535,-.03,g);ring.userData.keep=true;}
+    if(cut){for(const yy of[.47,.6])B(.12,.04,.1,MAT.clip,s*.44,yy,-.03,g);const ring=Tor(.06,.01,MAT.cutGlow,s*.44,.535,-.03,g);ring.userData.keep=true;}else Tube([[s*.46,.43,-.05],[s*.45,.535,-.03],[s*.42,.64,0]],.032,MAT.vas,g,12,8);}
   Sp(.13,MAT.prostate,0,1.18,.1,g,1.2,.9,1);Tube([[0,1.1,.12],[0,.85,.25],[0,.6,.32]],.05,mat('#e3a07b',.5),g,20,10);return g;}
 function gelTube(p){const g=grp(p);const lbl_=paint(512,256,(c,w,h)=>{c.fillStyle='#f6f8f8';c.fillRect(0,0,w,h);c.fillStyle='#1d6f73';c.fillRect(0,0,w,70);c.fillStyle='#fff';c.font=font(700,52);c.fillText('ESPERMICIDA',24,54);
     c.fillStyle='#1d282c';c.font=font(600,34);c.fillText('Gel vaginal · uso con condón',24,124);c.font=font(400,26,'body');c.fillStyle='#55646b';c.fillText('Aplicar antes de la relación.',24,176);c.fillText('No protege de ITS.',24,214);});
@@ -1314,7 +1482,21 @@ function microbe(p,kind){const g=dyn(grp(p));const inner=grp(g);
   if(kind==='gonorrea'){const m=mat('#d8607a',.45);for(const [x,y,z,a] of[[-.25,.1,0,.3],[.2,.2,.1,-.5],[0,-.18,-.1,.9],[.28,-.12,.12,.2]]){const pr=grp(inner,x,y,z);pr.rotation.set(a,a*2,0);for(const s of[-1,1])Sp(.09,m,s*.085,0,0,pr,.8,1,1,14,10);}}
   if(kind==='vph'){const ic=add(new T.Mesh(new T.IcosahedronGeometry(.28,1),new T.MeshStandardMaterial({color:'#79c2b5',roughness:.4,flatShading:true})),inner);
     const pos=ic.geometry.attributes.position,seen=new Set();for(let i=0;i<pos.count;i++){const v=new T.Vector3().fromBufferAttribute(pos,i);const k=v.toArray().map(n=>n.toFixed(2)).join();if(seen.has(k))continue;seen.add(k);v.multiplyScalar(1.05);Sp(.05,mat('#a8e0d5',.35),v.x,v.y,v.z,inner,1,1,1,8,6);}}
+  if(kind==='tricomonas'){const m=mat('#9fd38a',.45),fl=mat('#6fae5f',.5);Lathe([[0,-.3],[.12,-.26],[.2,-.12],[.22,.04],[.17,.18],[.08,.27],[0,.29]],m,inner,48);
+    for(let i=0;i<4;i++)Tube([[-.03+i*.02,.27,0],[-.1+i*.07,.42,.05],[-.05+i*.05,.58,-.04]],.008,fl,inner,24,6);Tube([[0,-.3,0],[0,-.47,0]],.012,fl,inner,8,6);
+    const um=[];for(let i=0;i<=30;i++)um.push([.205+Math.sin(i*.8)*.02,-.12+i*.012,.02]);Tube(um,.01,fl,inner,60,6);Sp(.07,mat('#5f9f5a',.5),-.02,.12,.15,inner,1,1.3,.6);}
+  if(kind==='linfocito'){Sp(.3,mat('#d9e6f7',.5),0,0,0,inner,1,1,1,40,28);for(const v of fib(60))Sp(.024,mat('#c4d6ef',.5),v.x*.3,v.y*.3,v.z*.3,inner,1,1,1,8,6);
+    for(const v of fib(7)){const vg=grp(inner,v.x*.37,v.y*.37,v.z*.37);Sp(.06,mat('#c98ab0',.45),0,0,0,vg,1,1,1,16,12);for(const w of fib(10))Sp(.014,mat('#e8c35a',.4),w.x*.066,w.y*.066,w.z*.066,vg,1,1,1,6,5);}}
+  if(kind==='globo'){add(new T.Mesh(new T.SphereGeometry(.32,56,36),new T.MeshStandardMaterial({map:globeTex(),roughness:.55,envMapIntensity:.8})),inner);
+    const th=(90+2)*Math.PI/180,ph=(15+180)/360*Math.PI*2,R_=.33;Sp(.03,mat('#ff3b6b',.3),-R_*Math.cos(ph)*Math.sin(th),R_*Math.cos(th),R_*Math.sin(ph)*Math.sin(th),inner);}
+  if(kind==='oportunistas'){const rm=mat('#d9534f',.45),ym=mat('#f2e2b0',.5);for(let i=0;i<9;i++){const c=Ca(.028,.14,rm,rr(-.3,0),rr(-.25,.25),rr(-.2,.2),inner);c.rotation.set(rr(0,3),rr(0,3),rr(0,3));}
+    for(const[x,y,z,r_]of[[.18,.05,0,.1],[.28,.15,.05,.07],[.12,-.15,.08,.09],[.25,-.1,-.08,.06],[.32,-.02,-.02,.05]])Sp(r_,ym,x,y,z,inner,1,1.3,1,20,14);}
   mergeInto(inner,inner);g.userData.inner=inner;return g;}
+function globeTex(){return paint(512,256,(g,w,h)=>{g.fillStyle='#3f7fb5';g.fillRect(0,0,w,h);const P=(lo,la)=>[(lo+180)/360*w,(90-la)/180*h];
+  const land=[[[-17,21],[-10,30],[10,37],[32,31],[43,12],[51,11],[40,-3],[40,-15],[33,-26],[20,-35],[12,-17],[9,-1],[10,4],[-8,5],[-17,14]],[[-9,37],[-9,43],[0,49],[8,54],[25,60],[40,65],[45,45],[28,41],[12,44],[3,42]],
+    [[45,45],[60,70],[140,70],[145,40],[120,22],[100,10],[78,8],[55,25]],[[-80,10],[-60,8],[-35,-6],[-40,-22],[-58,-38],[-70,-52],[-75,-15]],[[-165,65],[-60,60],[-55,47],[-80,25],[-97,17],[-118,32],[-125,50]],[[115,-20],[130,-12],[150,-25],[145,-38],[115,-34]]];
+  g.fillStyle='#8cc084';g.strokeStyle='#5d8a52';g.lineWidth=2;for(const poly of land){g.beginPath();poly.forEach(([a,b],i)=>{const[x,y]=P(a,b);i?g.lineTo(x,y):g.moveTo(x,y);});g.closePath();g.fill();g.stroke();}
+  const[cx,cy]=P(15,-2);g.fillStyle='rgba(214,69,126,.6)';g.beginPath();g.arc(cx,cy,14,0,7);g.fill();grain(g,w,h,10);});}
 function displayCase(p,x,z,kind,title,sub){const g=grp(p,x,0,z);B(.9,1,.9,MAT.ped,0,.5,0,g);const ring=B(.92,.02,.92,MAT.pedRing,0,1.0,0,g);ring.userData.keep=true;
   B(.88,1.0,.88,MAT.glass,0,1.5,0,g);B(.9,.05,.9,MAT.ped,0,2.02,0,g);const m=microbe(g,kind);m.position.y=1.5;ANIMS.push({fn:(t)=>{m.rotation.y=t*.35;m.rotation.x=Math.sin(t*.5)*.25;}});
   const l=labelSprite(title,sub,'#cf5a86',1.0);l.position.set(0,2.35,0);g.add(l);solidL(p.userData.tr,x-.5,x+.5,z-.5,z+.5);return g;}
@@ -1379,7 +1561,7 @@ function buildLobby(){
   B(1.5,.88,.06,MAT.black,5.5,2.1,.14,P);Pl(1.42,.8,basic(tvt),5.5,2.1,.175,P);ANIMS.push({every:6,fn:tvDraw});
   // directorio
   const dir=paint(600,800,(g,w,h)=>{g.fillStyle='#163f4c';g.fillRect(0,0,w,h);g.fillStyle='#fff';g.font=font(700,58);g.fillText('DIRECTORIO',36,80);g.fillStyle='#3fb8a9';g.fillRect(36,100,120,6);
-    const rows=[['Consultas 101–105','Pasillo, puertas izquierdas'],['Salas de métodos 201–205','Pasillo, puertas derechas'],['Pabellón ITS 301–305','Fondo del pasillo · acceso con 10 aciertos'],['Admisión','Este hall, a la izquierda']];
+    const rows=[['Consultas 101–105','Pasillo, puertas izquierdas'],['Salas de estudio 201–205','Pasillo, puertas derechas'],['Pabellón ITS 301–305','VIH y SIDA · acceso con 10 aciertos'],['Admisión','Este hall, a la izquierda']];
     let y=180;for(const[a,b]of rows){g.fillStyle='#fff';g.font=font(700,44);g.fillText(a,36,y);g.fillStyle='#a9cfd5';g.font=font(400,28,'body');y=wrapText(g,b,36,y+40,w-72,34)+36;}
     g.fillStyle='#f2c14e';g.font=font(700,34);g.fillText('USTED ESTÁ AQUÍ: HALL CENTRAL',36,h-50);});
   poster(P,dir,1.05,1.4,-7.86,1.6,9.6,Math.PI/2);INTER.push({x:-7.2,z:9.6,r:1.9,zone:'lobby',label:()=>'Ver el mapa del hospital',use:()=>openMap()});
@@ -1396,9 +1578,9 @@ function buildLobby(){
 }
 function buildCorridors(){
   const P=STATIC;
-  hangSign(P,0,-1.4,0,['◀ Consultas 101–105','Salas de métodos 201–205 ▶'],5.2);
-  hangSign(P,0,-43.5,0,['▲ Pabellón ITS 301–305'],4.2);
-  hangSign(P,0,-48.6,0,['◀ 301 VIH · 303 Sífilis','302 Clamidia · 304 Gonorrea ▶'],5.2);
+  hangSign(P,0,-1.4,0,['◀ Consultas 101–105','Salas de estudio 201–205 ▶'],5.2);
+  hangSign(P,0,-43.5,0,['▲ Pabellón ITS · VIH y SIDA'],4.2);
+  hangSign(P,0,-48.6,0,['◀ 301 VIH · 303 Origen','302 SIDA · 304 Infecciones ▶'],5.2);
   hangSign(P,0,-73.4,0,['▲ 305 Espacio Amigable'],4.2);
   bench(P,-2.6,-10,Math.PI/2);bench(P,-2.6,-26,Math.PI/2);bench(P,2.6,-18,-Math.PI/2);bench(P,2.6,-34,-Math.PI/2);
   bench(P,-2.6,-60,Math.PI/2);bench(P,2.6,-60,-Math.PI/2);
@@ -1479,10 +1661,10 @@ function buildItsDoor(){
   itsDoor={leaves,t:0,ledM,bx,bt,px,pt,
     draw(){const s=stats('met'),open=S.itsOpen;
       bx.fillStyle=open?'#5c2347':'#2d2a30';bx.fillRect(0,0,1024,150);bx.fillStyle='#fff';bx.textBaseline='middle';bx.font=font(700,74);bx.fillText('PABELLÓN ITS',30,58);
-      bx.font=font(500,36);bx.fillStyle=open?'#f7c9db':'#b9b3bd';bx.fillText('Infecciones de Transmisión Sexual · Boxes 301–305',30,118);
+      bx.font=font(500,36);bx.fillStyle=open?'#f7c9db':'#b9b3bd';bx.fillText('VIH y SIDA · Boxes 301–305',30,118);
       bx.fillStyle=open?'#3ddc84':'#ff4d4d';bx.beginPath();bx.arc(960,75,34,0,7);bx.fill();bt.needsUpdate=true;
       px.fillStyle='#0d1c22';px.fillRect(0,0,256,320);px.textAlign='center';px.fillStyle=open?'#3ddc84':'#ff6b6b';px.font=font(700,40);px.fillText(open?'ABIERTO':'BLOQUEADO',128,58);
-      px.fillStyle='#fff';px.font=font(700,96);px.fillText(`${Math.min(s.ok,UNLOCK)}/${UNLOCK}`,128,170);px.font=font(500,26);px.fillStyle='#a9c4c8';px.fillText('respuestas correctas',128,214);px.fillText('de Métodos',128,246);
+      px.fillStyle='#fff';px.font=font(700,96);px.fillText(`${Math.min(s.ok,UNLOCK)}/${UNLOCK}`,128,170);px.font=font(500,26);px.fillStyle='#a9c4c8';px.fillText('respuestas correctas',128,214);px.fillText('del Bloque 1',128,246);
       px.fillStyle=open?'#3ddc84':'#ff6b6b';px.fillRect(28,276,200*Math.min(1,s.ok/UNLOCK),14);px.strokeStyle='#4b5d63';px.strokeRect(28,276,200,14);pt.needsUpdate=true;
       ledM.color.set(open?'#3ddc84':'#ff3b3b');itsLine.color.set(open?'#cf5a86':'#5b4b58');}};
   itsDoor.draw();
@@ -1513,33 +1695,36 @@ function buildRoom(r){
     cabinet(P,ox-1.2,D-.32,0,1.6,true);sol(ox-2.05,ox-.35,D-.65,D);ivStand(P,ox+2.0,6.6);
     if(k==='its'){
       const m=MICRO[r.microbe];displayCase(P,4.4,6.4,r.microbe,m.title,m.sub);
-      poster(P,posterTex({kicker:m.kicker,title:m.title,color:'#8a2f5b',art:microbeArt(r.microbe),bullets:r.facts}),1.1,1.47,W/2-.13,1.75,2.4,-Math.PI/2);
+      poster(P,posterTex({kicker:m.kicker,title:r.sign.split('·')[0].trim(),color:'#8a2f5b',art:FIG[Q[r.qs[0]].fig],bullets:r.facts}),1.1,1.47,W/2-.13,1.75,2.4,-Math.PI/2);
       windowOut(P,1.5,1.75,D-.12,Math.PI);
     }else{
-      const fem=['r101','r103','r105'].includes(r.id);
-      poster(P,posterTex(fem?{kicker:'Anatomía',title:'Aparato reproductor femenino',color:'#1f6f8b',art:artUterus(),bullets:['Los ovarios liberan óvulos.','En la trompa de Falopio el óvulo puede encontrarse con un espermatozoide.','El útero es donde se desarrolla un embarazo.']}
-        :{kicker:'Anatomía',title:'Aparato reproductor masculino',color:'#1f6f8b',art:artMale(),bullets:['Los testículos producen espermatozoides.','Los conductos deferentes los llevan hacia la uretra.','La próstata produce parte del líquido del semen.']}),.9,1.2,-W/2+.13,1.75,2.3,Math.PI/2);
+      const q0=Q[r.qs[0]];poster(P,posterTex({kicker:'Caso clínico · consulta '+r.num,title:r.person.name+', '+r.person.age+' años',color:'#1f6f8b',art:FIG[q0.fig],bullets:[q0.ctx]}),.95,1.27,-W/2+.13,1.75,2.3,Math.PI/2);
       windowOut(P,1.6,1.75,D-.12,Math.PI);
     }
     clock(P,W/2-.13,2.45,1.2,-Math.PI/2);
     ix=ox+.3;iz=4.1;rad=2.3;r.npc=n;
   }
   if(k==='expo'){
-    if(r.model==='condones'){pedestal(P,-1.3,4.4);const m1=condomMale(P);m1.position.set(-1.3,.9,4.4);pedestal(P,1.3,4.4);const m2=condomFemale(P);m2.position.set(1.3,.9,4.4);
-      const l1=labelSprite('Condón masculino','Látex · protege de ITS');l1.position.set(-1.3,2.62,4.4);P.add(l1);const l2=labelSprite('Condón femenino','Dos anillos · protege de ITS');l2.position.set(1.3,2.62,4.4);P.add(l2);
-      const wr=paint(256,256,(g,w,h)=>{g.fillStyle='#c9cfd4';g.fillRect(0,0,w,h);g.strokeStyle='#9aa3a8';g.lineWidth=3;g.beginPath();g.arc(128,118,70,0,7);g.stroke();g.fillStyle='#1d282c';g.font=font(700,30);g.textAlign='center';g.fillText('CONDÓN',128,224);g.font=font(600,22);g.fillText('VENCE: 12/2028',128,248);});
-      const tb=grp(P,0,0,6.2);B(.9,.75,.5,MAT.ped,0,.375,0,tb);const pk=B(.5,.02,.5,new T.MeshStandardMaterial({map:wr,roughness:.3,metalness:.6,envMapIntensity:1.2}),0,.77,0,tb);pk.rotation.y=.3;
-      Tor(.12,.025,MAT.latexF,.0,.8,0,tb).renderOrder=2;const ls=labelSprite('Revisa la fecha','Envase sin daños',undefined,.9);ls.position.set(0,1.25,0);tb.add(ls);sol(-.45,.45,5.95,6.45);
-      sol(-1.95,-.65,3.75,5.05);sol(.65,1.95,3.75,5.05);
-    }
-    if(r.model==='diu'){pedestal(P,-1.3,4.4);const m1=iud(P,'cobre');m1.position.set(-1.3,1.15,4.4);pedestal(P,1.3,4.4);const m2=iud(P,'hormonal');m2.position.set(1.3,1.15,4.4);
-      const l1=labelSprite('DIU de cobre','No hormonal · hasta 10 años');l1.position.set(-1.3,2.85,4.4);P.add(l1);const l2=labelSprite('DIU hormonal','Libera hormona · ~5 años');l2.position.set(1.3,2.85,4.4);P.add(l2);
-      ANIMS.push({room:r,fn:t=>{m1.rotation.y=t*.4;m2.rotation.y=-t*.4;}});m1.userData.dyn=m2.userData.dyn=true;sol(-1.95,-.65,3.75,5.05);sol(.65,1.95,3.75,5.05);}
-    const art=r.model==='condones'?artCondoms:artIUDs;
-    poster(P,posterTex({kicker:'Sala de métodos '+r.num,title:r.sign,color:'#1f6f8b',art,bullets:r.facts}),1.5,2.0,0,1.65,D-.14,Math.PI);
-    if(r.model==='diu')poster(P,posterTex({kicker:'Dónde va el DIU',title:'Dentro del útero',color:'#1f6f8b',art:artUterus({iud:'cobre'}),bullets:['Lo coloca un profesional de salud en una consulta breve.','Se puede retirar cuando la persona lo decida.']}),1.0,1.33,-W/2+.14,1.7,4.4,Math.PI/2);
-    else poster(P,tablePosterTex(),1.9,1.34,-W/2+.14,1.7,4.4,Math.PI/2);
-    poster(P,posterTex({kicker:'Recuerda',title:'Doble protección',color:'#1f6f8b',art:artDouble,bullets:['Solo el condón protege de las ITS.']}),1.0,1.33,W/2-.14,1.7,4.4,-Math.PI/2);
+    const figs=r.qs.map(id=>Q[id].fig);
+    if(r.model==='anatomia'){pedestal(P,-1.4,4.0);const u=uterusModel(grp(P,-1.4,.9,4.0),false);u.position.y=.62;u.scale.setScalar(.55);
+      pedestal(P,1.4,4.0);const v=vasModel(grp(P,1.4,.9,4.0),false);v.position.y=.3;v.scale.setScalar(.72);
+      const l1=labelSprite('Sistema femenino','Ovario · útero · endometrio');l1.position.set(-1.4,2.75,4.0);P.add(l1);const l2=labelSprite('Sistema masculino','Testículo · epidídimo · uretra');l2.position.set(1.4,2.75,4.0);P.add(l2);
+      const tb=grp(P,0,0,6.4);B(1.8,.8,.7,MAT.ped,0,.4,0,tb);const ring=B(1.82,.02,.72,MAT.pedRing,0,.8,0,tb);ring.userData.keep=true;
+      const ov=ovocito(tb);ov.position.set(-.35,1.35,0);const sp=spermModel(tb,false);sp.scale.setScalar(.5);sp.position.set(.6,1.25,.05);sp.rotation.y=-Math.PI/2;
+      ANIMS.push({room:r,fn:t=>{ov.rotation.y=t*.15;sp.position.y=1.25+Math.sin(t*1.3)*.02;sp.userData.segs.forEach((g_,j_)=>g_.position.x=Math.sin(t*9-j_*.8)*.012*j_);}});
+      const l3=labelSprite('Ovocito y espermatozoide','A la misma escala');l3.position.set(0,2.2,6.4);P.add(l3);
+      sol(-2.05,-.75,3.35,4.65);sol(.75,2.05,3.35,4.65);sol(-.9,.9,6.05,6.75);}
+    if(r.model==='metodos'){pedestal(P,-1.4,4.0);const d1=diafragma(P);d1.position.set(-1.4,.94,4.0);d1.scale.setScalar(1.5);
+      pedestal(P,1.4,4.0);const jg=jeringa(P);jg.position.set(1.4,1.45,4.0);jg.rotation.z=.3;ANIMS.push({room:r,fn:t=>{jg.rotation.y=t*.4;d1.rotation.y=-t*.3;}});jg.userData.dyn=d1.userData.dyn=true;
+      const l1=labelSprite('Diafragma','Cúpula de silicona flexible');l1.position.set(-1.4,2.6,4.0);P.add(l1);const l2=labelSprite('Inyección anticonceptiva','Mensual o trimestral');l2.position.set(1.4,2.75,4.0);P.add(l2);
+      const bc=barChart3D(P);bc.position.set(0,0,6.6);const b1=labelSprite('13 %','Preservativo masculino','#5aa7c8',.95);b1.position.set(-.45,1.75,6.6);P.add(b1);const b2=labelSprite('< 1 %','Implante hormonal','#d6457e',.95);b2.position.set(.55,.55,6.6);P.add(b2);
+      const lt=labelSprite('Falla en el uso habitual','Embarazos por cada 100 personas en 1 año',undefined,1.3);lt.position.set(0,2.35,6.6);P.add(lt);
+      sol(-2.05,-.75,3.35,4.65);sol(.75,2.05,3.35,4.65);sol(-1.15,1.15,6.15,7.05);}
+    if(r.model==='its3'){displayCase(P,-2.2,4.4,'gonorrea','Gonorrea','¿Virus, bacteria o parásito?');displayCase(P,0,5.6,'vph','VPH','¿Virus, bacteria o parásito?');displayCase(P,2.2,4.4,'tricomonas','Tricomoniasis','¿Virus, bacteria o parásito?');}
+    poster(P,posterTex({kicker:r.name,title:r.sign,color:'#1f6f8b',art:FIG[figs[0]],bullets:r.facts}),1.5,2.0,0,1.65,D-.14,Math.PI);
+    poster(P,posterTex({kicker:'Pregunta N° '+Q[r.qs[figs.length>1?1:0]].n,title:r.model==='its3'?'Tres agentes, tres tratamientos':'Analiza el gráfico',color:'#1f6f8b',art:FIG[figs[1]||figs[0]],bullets:[]}),1.0,1.33,-W/2+.14,1.7,4.4,Math.PI/2);
+    if(r.model==='metodos')poster(P,tablePosterTex(),1.9,1.34,W/2-.14,1.7,4.4,-Math.PI/2);
+    else poster(P,posterTex({kicker:'Recuerda',title:'Doble protección',color:'#1f6f8b',art:artDouble,bullets:['Solo el condón protege de las ITS.']}),1.0,1.33,W/2-.14,1.7,4.4,-Math.PI/2);
     ix=0;iz=4.4;rad=2.9;
   }
   if(k==='quirofano'){
@@ -1566,22 +1751,24 @@ function buildRoom(r){
     ix=0;iz=4.0;rad=3.0;
   }
   if(k==='lab'){
+    const figs=r.qs.map(id=>Q[id].fig);
     const bn=grp(P,-W/2+.45,0,4.2,Math.PI/2);B(3.6,.9,.7,mat('#e3e6e6',.5),0,.45,0,bn);B(3.7,.05,.75,mat('#2b3236',.3),0,.92,0,bn);
     const mic=grp(bn,-.8,.95,0);B(.22,.05,.3,MAT.black,0,.025,0,mic);B(.06,.4,.06,MAT.black,0,.25,-.1,mic);Cy(.035,.035,.22,MAT.black,0,.45,.02,mic,12).rotation.x=.5;B(.14,.02,.14,MAT.steel,0,.18,.03,mic);
     for(let i=0;i<5;i++){const fx=.1+i*.28;Cy(.05,.07,.18,MAT.glass,fx,1.04,.1,bn,14);Cy(.06,.06,.08,mat(['#7fc8f8','#f6b26b','#9fe0a0','#c9a0dc','#f4cccc'][i],.2),fx,.99,.1,bn,14);}
     B(.4,.35,.4,MAT.white,1.4,1.12,0,bn);sol(-W/2,-W/2+.85,2.35,6.05);
-    const sc=cvs(512,288),sx=sc.getContext('2d'),stx=ctex(sc);const sp=[];for(let i=0;i<14;i++)sp.push({x:rr(-60,200),y:rr(30,260),a:rr(-.4,.4),v:rr(40,70),st:false,ph:rr(0,6)});
-    const drawLab=(t,dt)=>{sx.fillStyle='#0b1f2a';sx.fillRect(0,0,512,288);sx.fillStyle='rgba(120,190,230,.28)';sx.beginPath();sx.ellipse(400,150,140,150,0,0,7);sx.fill();
-      sx.fillStyle='#7fd0ff';sx.font=font(700,22);sx.fillText('MICROSCOPIO · 400x',14,26);sx.fillStyle='#bfe9ff';sx.fillText('GEL ESPERMICIDA',320,26);
-      for(const s of sp){if(!s.st){s.x+=s.v*dt;s.y+=Math.sin(t*2+s.ph)*.4;if(s.x>300&&Math.hypot((s.x-400)/140,(s.y-150)/150)<1)s.st=true;if(s.x>560){s.x=-40;s.st=false;}}else{s.x+=6*dt;if(s.x>560){s.x=-40;s.st=false;}}
-        sx.save();sx.translate(s.x,s.y);sx.rotate(s.a);sx.fillStyle=s.st?'#8a959a':'#f2f2ee';sx.beginPath();sx.ellipse(0,0,9,6,0,0,7);sx.fill();sx.strokeStyle=s.st?'#8a959a':'#e6efe9';sx.lineWidth=2;sx.beginPath();sx.moveTo(-9,0);
-        for(let i=1;i<=16;i++)sx.lineTo(-9-i*3,Math.sin(i*.8-(s.st?0:t*14))*(s.st?1:4));sx.stroke();sx.restore();}stx.needsUpdate=true;};
-    const scr=grp(P,0,0,D-.12,Math.PI);B(2.5,1.45,.06,MAT.black,0,1.85,0,scr);Pl(2.4,1.35,basic(stx),0,1.85,.035,scr);ANIMS.push({room:r,every:1/30,fn:drawLab});
-    pedestal(P,1.3,4.4,.55,.75);const gt=gelTube(P);gt.position.set(1.3,.75,4.4);sol(.7,1.9,3.8,5.0);
-    const lg=labelSprite('Espermicida','Gel · uso con condón');lg.position.set(1.3,2.55,4.4);P.add(lg);
-    const sps=[];for(let i=0;i<4;i++){const s=spermModel(P,i>1);s.position.set(rr(-.4,2.6),rr(1.6,2.3),rr(2.4,6.2));s.rotation.y=rr(0,6);sps.push(s);}
-    ANIMS.push({room:r,fn:(t)=>{sps.forEach((s,i)=>{const st=s.userData.stopped;if(!st){s.rotation.y+=.004;s.position.y+=Math.sin(t*1.5+i)*.0015;}s.userData.segs.forEach((g,j)=>g.position.x=st?0:Math.sin(t*9-j*.8)*.012*j);});}});
-    poster(P,posterTex({kicker:'Laboratorio '+r.num,title:'Espermicida',color:'#1d6f73',art:artSperm,bullets:r.facts}),1.1,1.47,W/2-.13,1.75,3.6,-Math.PI/2);
+    // pantalla: los gráficos se van trazando de izquierda a derecha, como en un monitor clínico
+    const sc=cvs(900,600),sx=sc.getContext('2d'),stx=ctex(sc);const imgs=figs.map(f=>{const c=cvs(900,600),g_=c.getContext('2d');g_.scale(1.5,1.5);FIG[f](g_,0,0,600,400);return c;});
+    const drawScr=(t)=>{const per=9,k=Math.floor(t/per)%imgs.length,pr=Math.min(1,(t%per)/4);sx.fillStyle='#0b1f2a';sx.fillRect(0,0,900,600);sx.globalAlpha=.25;sx.drawImage(imgs[k],0,0);sx.globalAlpha=1;
+      sx.save();sx.beginPath();sx.rect(0,0,900*pr,600);sx.clip();sx.drawImage(imgs[k],0,0);sx.restore();sx.fillStyle='rgba(63,184,169,.85)';sx.fillRect(900*pr-3,0,6,600);stx.needsUpdate=true;};
+    const scr=grp(P,0,0,D-.12,Math.PI);B(2.5,1.7,.06,MAT.black,0,1.85,0,scr);Pl(2.4,1.6,basic(stx),0,1.85,.035,scr);ANIMS.push({room:r,every:1/20,fn:drawScr});
+    if(r.model==='hormonas'){const tb=grp(P,1.2,0,4.4);B(1.7,.78,.65,MAT.ped,0,.39,0,tb);const ring=B(1.72,.02,.67,MAT.pedRing,0,.78,0,tb);ring.userData.keep=true;const hs=hormoneSculpture(tb);hs.position.y=.81;hs.rotation.y=Math.PI;
+      const lg=labelSprite('Hormonas de 7 a 17 años','Azul: testosterona · rosado: estrógenos');lg.position.set(1.2,2.25,4.4);P.add(lg);sol(.3,2.1,4.0,4.8);}
+    if(r.model==='investigacion'){pedestal(P,1.3,4.0,.55,.75);const ms=mitoSperm(P);ms.position.set(1.3,1.65,4.0);ms.scale.setScalar(3.2);ms.rotation.y=-Math.PI/2;
+      ANIMS.push({room:r,fn:t=>{ms.rotation.y=-Math.PI/2+Math.sin(t*.4)*.6;ms.position.y=1.65+Math.sin(t*1.2)*.03;ms.userData.segs.forEach((g_,j_)=>g_.position.x=Math.sin(t*7-j_*.7)*.01*j_);}});
+      const lg=labelSprite('Pieza media','Mitocondrias en espiral (naranjo)');lg.position.set(1.3,2.55,4.0);P.add(lg);sol(.7,1.9,3.4,4.6);
+      const tb=grp(P,1.6,0,6.95);B(2.1,.9,.6,mat('#e3e6e6',.5),0,.45,0,tb);['Dosis baja','Dosis media','Dosis alta'].forEach((d,i)=>ratCage(tb,-.68+i*.68,0,d));sol(.5,2.7,6.6,7.3);}
+    poster(P,posterTex({kicker:r.name,title:r.sign,color:'#1d6f73',art:FIG[figs[0]],bullets:r.facts}),1.1,1.47,W/2-.13,1.75,3.0,-Math.PI/2);
+    if(figs[1])poster(P,posterTex({kicker:'Pregunta N° '+Q[r.qs[1]].n,title:'Analiza el gráfico',color:'#1d6f73',art:FIG[figs[1]],bullets:[]}),.9,1.2,W/2-.13,1.75,5.2,-Math.PI/2);
     const n=npc(r.person.key,'stand',P,-1.0,5.6,Math.PI*.85,r);r.npc=n;
     ix=.6;iz=4.3;rad=3.0;
   }
@@ -1595,8 +1782,8 @@ function buildRoom(r){
     for(let i=0;i<4;i++)B(.16,.01,.22,mat(['#cf5a86','#3fb8a9','#f2c14e','#5b84b8'][i],.6),Math.cos(i)*.2,.475,Math.sin(i)*.2,tb).rotation.y=i;sol(-1.35,-.45,3.45,4.35);
     Sp(.42,mat('#f2c14e',.9),2.2,.25,6.6,P,1.1,.6,1.1);Sp(.42,mat('#cf5a86',.9),3.2,.25,6.2,P,1.1,.6,1.1);sol(1.8,3.6,5.8,7.0);
     const bk=grp(P,-W/2+.25,0,7.6,Math.PI/2);B(.4,1.9,1.4,MAT.wood,0,.95,0,bk,1);for(let s=0;s<4;s++)for(let i=0;i<9;i++)B(.26,.3,.1,mat(['#cf5a86','#3fb8a9','#f2c14e','#5b84b8','#7a5fa8'][(s+i)%5],.7),.04,.25+s*.45,-.55+i*.135,bk);sol(-W/2,-W/2+.5,6.9,8.3);
-    displayCase(P,3.6,3.6,'vph','VPH','Virus · existe vacuna');
-    poster(P,posterTex({kicker:'Espacio Amigable',title:'Prevención de ITS',color:'#d07a1f',art:microbeArt('vph'),bullets:r.facts}),1.1,1.47,W/2-.13,1.75,6.6,-Math.PI/2);
+    displayCase(P,3.6,3.6,r.microbe,MICRO[r.microbe].title,MICRO[r.microbe].sub);
+    poster(P,posterTex({kicker:'Espacio Amigable',title:'Transmisión del VIH',color:'#d07a1f',art:FIG[Q[r.qs[0]].fig],bullets:r.facts}),1.1,1.47,W/2-.13,1.75,6.6,-Math.PI/2);
     poster(P,posterTex({kicker:'Tus derechos',title:'Atención confidencial',color:'#2f7a4f',bullets:['Puedes consultar en tu CESFAM sin pagar.','El equipo de salud cuida tu privacidad.','Pregunta todo: no hay preguntas tontas.']}),1.0,1.33,-W/2+.13,1.75,3.4,Math.PI/2);
     windowOut(P,1.5,1.75,D-.12,Math.PI,2.4,1.2);windowOut(P,-2.5,1.75,D-.12,Math.PI,1.6,1.2);plant(P,4.9,9.3);plant(P,-5.2,1.0,.8);
     ix=-.7;iz=5.4;rad=2.6;
@@ -1607,11 +1794,10 @@ function buildRoom(r){
 }
 const SHORT={r101:'Valentina',r102:'Andrea',r103:'Javiera',r104:'Patricia',r105:'Matías',r201:'Condones',r202:'DIU',r203:'Ligadura',r204:'Vasectomía',r205:'Espermicida',r301:'VIH',r302:'Clamidia',r303:'Sífilis',r304:'Gonorrea',r305:'Prevención'};
 const MICRO={
-  vih:{title:'VIH',sub:'Virus · ataca las defensas',kicker:'Box 301 · Virus'},
-  clamidia:{title:'Clamidia',sub:'Bacteria · infección silenciosa',kicker:'Box 302 · Bacteria'},
-  sifilis:{title:'Sífilis',sub:'Bacteria · llaga sin dolor',kicker:'Box 303 · Bacteria'},
-  gonorrea:{title:'Gonorrea',sub:'Bacteria · ardor al orinar',kicker:'Box 304 · Bacteria'},
-  vph:{title:'VPH',sub:'Virus · existe vacuna',kicker:'Box 305 · Virus'}
+  vih:{title:'VIH',sub:'Virus · ataca las defensas',kicker:'VIH y SIDA'},
+  linfocito:{title:'Linfocito CD4',sub:'La defensa que ataca el VIH',kicker:'VIH y SIDA'},
+  globo:{title:'África central',sub:'Origen del VIH',kicker:'VIH y SIDA'},
+  oportunistas:{title:'Oportunistas',sub:'Tuberculosis y Candida',kicker:'VIH y SIDA'}
 };
 function interLabel(r){
   const st=roomStatus(r),who=r.person?r.person.name:'';
@@ -1645,8 +1831,8 @@ function drawClip(){
   g.fillStyle='#4c5b7e';g.font=font(700,22);g.fillText('HOSPITAL ESCUELA ESPERANZA',64,52);
   g.fillStyle='#1d2f5c';fitFont(g,docTitle(),700,46,W-80,'hand');g.fillText(docTitle(),64,102);
   const sm=stats('met'),si=stats('its');g.font=font(700,30,'hand');
-  g.fillText(`Métodos: ${sm.ok}/15 correctas`,64,182);g.fillStyle=sm.ok>=UNLOCK?'#17703f':'#a42c2c';g.font=font(400,24,'hand');g.fillText(sm.ok>=UNLOCK?'Pabellón ITS abierto':`meta: ${UNLOCK} para abrir ITS`,64,214);
-  g.fillStyle='#1d2f5c';g.font=font(700,30,'hand');g.fillText(S.itsOpen?`ITS: ${si.done}/15 respondidas`:'ITS: bloqueado',64,262);
+  g.fillText(`Bloque 1: ${sm.ok}/${sm.total} correctas`,64,182);g.fillStyle=sm.ok>=UNLOCK?'#17703f':'#a42c2c';g.font=font(400,24,'hand');g.fillText(sm.ok>=UNLOCK?'Pabellón ITS abierto':`meta: ${UNLOCK} para abrir ITS`,64,214);
+  g.fillStyle='#1d2f5c';g.font=font(700,30,'hand');g.fillText(S.itsOpen?`VIH y SIDA: ${si.done}/${si.total}`:'Pabellón ITS: bloqueado',64,262);
   let y=318;g.font=font(400,24,'hand');
   for(const r of ROOMS){if(y>Hh-20)break;const st=roomStatus(r);const mk={new:'○',part:'◐',ok:'✓',err:'✗',review:'!',locked:'·'}[st];
     g.fillStyle=ST_COL[st]==='#3aa0ff'?'#4c5b7e':st==='ok'?'#17703f':st==='locked'?'#9aa3b5':'#a42c2c';g.fillText(`${mk} ${r.num} ${r.sign.split('·').pop().replace('Paciente: ','').trim()}`,64+(r.block==='its'?0:0),y);y+=24.5;}
@@ -1765,7 +1951,7 @@ function qSteps(){return BK.steps.filter(s=>s.t==='q');}
 function renderStep(){
   clearInterval(typer);TALKER=null;const s=BK.steps[BK.i];let h='';
   if(s.t==='intro'){const r=s.r;
-    h+=head(`${r.name} · ${r.block==='its'?'Pabellón ITS':'Turno de métodos'}`,r.sign.replace('Paciente: ',''));
+    h+=head(`${r.name} · ${r.block==='its'?'Pabellón ITS · VIH y SIDA':'Bloque 1 · Cuestionario'}`,r.sign.replace('Paciente: ',''));
     if(r.person){h+=avatar(r.person);h+=`<div class="speech" id="say" role="status"></div>`;}
     if(r.intro)h+=`<p>${esc(r.intro)}</p>`;
     if(r.kind==='expo'||r.kind==='quirofano'||r.kind==='lab'){h+=`<div class="sec">Ficha de estudio</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;}
@@ -1780,9 +1966,10 @@ function renderStep(){
     h+=`<div class="row"><button class="btn primary" data-act="next">Responder de nuevo</button></div>`;nb.innerHTML=h;}
   else if(s.t==='q'){const r=s.r,q=Q[s.id],qs=qSteps(),n=qs.indexOf(s)+1;if(!s.order)s.order=shuffle([0,1,2,3]);const opts=[q.ok,...q.no];
     h+=head(`${r.name} · ${s.retry?'Repaso':'Diagnóstico'}`,r.person&&r.kind!=='quirofano'&&r.kind!=='lab'?r.person.name:r.sign);
-    h+=`<div class="qhead"><span class="qtag">Pregunta ${n} de ${qs.length}</span><span class="dots">${qs.map(x=>`<i class="${x===s?'on':''} ${x.done?(x.correct?'okd':'badd'):''}"></i>`).join('')}</span></div>`;
+    h+=`<div class="qhead"><span class="qtag">Pregunta ${n} de ${qs.length} · N° ${q.n} del cuestionario</span><span class="dots">${qs.map(x=>`<i class="${x===s?'on':''} ${x.done?(x.correct?'okd':'badd'):''}"></i>`).join('')}</span></div>`;
+    h+=`<p class="qctx">${esc(q.ctx)}</p>`;if(q.fig)h+=`<img class="fig" src="${figURL(q.fig)}" alt="Gráfico de apoyo de la pregunta ${q.n}">`;
     h+=`<p class="qtext">${esc(q.q)}</p><div class="opts" role="group" aria-label="Opciones de respuesta">`;
-    s.order.forEach((oi,i)=>{h+=`<button class="opt" data-act="ans" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${esc(opts[oi])}</span></button>`;});
+    s.order.forEach((oi,i)=>{h+=`<button class="opt" data-act="ans" data-i="${i}"><span class="l">${'ABCD'[i]}</span><span>${esc(opts[oi]).replace(/ · /g,'<br>')}</span></button>`;});
     h+=`</div><div id="fb"></div>`;nb.innerHTML=h;if(s.done)showAnswer(s);}
   else if(s.t==='done'){const r=s.r,res=r.qs.map(id=>S.ans[id]),ok=res.filter(a=>a&&a.ok).length;
     h+=head(`${r.name} · Caso cerrado`,ok===r.qs.length?'¡Caso resuelto!':'Caso cerrado con observaciones');
@@ -1790,12 +1977,12 @@ function renderStep(){
     h+=`<p>Respuestas correctas en esta sala: <b>${ok} de ${r.qs.length}</b>.</p>`;
     h+=`<div class="sec">Apuntes para tu libreta</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul>`;
     const sm=stats('met');
-    if(r.block==='met'&&!S.itsOpen)h+=`<div class="goal">Métodos: <b>${sm.ok}</b> correctas de 15 · necesitas <b>${UNLOCK}</b> para abrir el Pabellón ITS. Respondidas: <b>${sm.done}/15</b>.</div>`;
-    if(r.block==='its'){const si=stats('its');h+=`<div class="goal">Pabellón ITS: <b>${si.done}/15</b> respondidas · <b>${si.ok}</b> correctas.</div>`;}
+    if(r.block==='met'&&!S.itsOpen)h+=`<div class="goal">Bloque 1: <b>${sm.ok}</b> correctas de ${sm.total} · necesitas <b>${UNLOCK}</b> para abrir el Pabellón ITS. Respondidas: <b>${sm.done}/${sm.total}</b>.</div>`;
+    if(r.block==='its'){const si=stats('its');h+=`<div class="goal">Pabellón ITS: <b>${si.done}/${si.total}</b> respondidas · <b>${si.ok}</b> correctas.</div>`;}
     h+=`<div class="row"><button class="btn primary" data-act="close">Volver al pasillo</button></div>`;nb.innerHTML=h;}
   else if(s.t==='review'){const r=s.r;
     h+=head(`${r.name} · Historial`,r.sign);h+=`<p>Ya atendiste esta sala. Aquí está el registro de tus respuestas.</p>`;
-    for(const id of r.qs){const q=Q[id],a=S.ans[id];h+=`<div class="review"><p class="qtext">${esc(q.q)}</p><p><span class="chip" style="color:${a.ok?'#17703f':'#a42c2c'}">${a.ok?'Correcta':'Incorrecta'}${a.first?' al primer intento':''}</span></p><p><b>Respuesta correcta:</b> ${esc(q.ok)}</p><p>${esc(q.exp)}</p></div>`;}
+    for(const id of r.qs){const q=Q[id],a=S.ans[id];h+=`<div class="review"><p class="qctx">${esc(q.ctx)}</p><img class="fig" src="${figURL(q.fig)}" alt=""><p class="qtext">${esc(q.q)}</p><p><span class="chip" style="color:${a.ok?'#17703f':'#a42c2c'}">${a.ok?'Correcta':'Incorrecta'}${a.first?' al primer intento':''}</span></p><p><b>Respuesta correcta:</b> ${esc(q.ok).replace(/ · /g,'; ')}</p><p>${esc(q.exp)}</p></div>`;}
     h+=`<div class="sec">Apuntes</div><ul class="facts">${r.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><div class="row"><button class="btn primary" data-act="close">Cerrar libreta</button></div>`;nb.innerHTML=h;}
   else if(s.t==='brief'){
     h+=head('Admisión · Enfermera jefa Rosa','Instrucciones del turno');
@@ -1803,8 +1990,8 @@ function renderStep(){
     h+=`<div class="speech" id="say"></div>`;
     h+=`<div class="tbl-wrap"><table class="rooms"><thead><tr><th>Etapa</th><th>Dónde</th><th>Qué haces</th></tr></thead><tbody>
       <tr><td><b>1</b></td><td>Consultas 101–105 (puertas izquierdas)</td><td>Atiendes a 5 pacientes: 1 pregunta cada uno.</td></tr>
-      <tr><td><b>2</b></td><td>Salas 201–205 (puertas derechas)</td><td>Estudias métodos en modelos gigantes y pabellones: 2 preguntas por sala.</td></tr>
-      <tr><td><b>3</b></td><td>Pabellón ITS (fondo del pasillo)</td><td>Se abre con ${UNLOCK} correctas de 15. Ahí atiendes 5 boxes: 3 preguntas cada uno.</td></tr></tbody></table></div>
+      <tr><td><b>2</b></td><td>Salas 201–205 (puertas derechas)</td><td>Laboratorio de hormonas, anatomía, investigación, métodos y microbiología: 10 preguntas con gráficos.</td></tr>
+      <tr><td><b>3</b></td><td>Pabellón ITS (fondo del pasillo)</td><td>Se abre con ${UNLOCK} correctas de 15. Ahí atiendes 5 boxes sobre VIH y SIDA: 1 pregunta cada uno.</td></tr></tbody></table></div>
       <div class="goal">Las luces sobre cada puerta indican su estado: <b style="color:#1d6fd6">azul</b> por atender, <b style="color:#b8860b">amarilla</b> en curso, <b style="color:#17703f">verde</b> todo correcto, <b style="color:#c0661a">naranja</b> con errores y <b style="color:#c22">roja</b> para repasar.</div>
       <div class="row"><button class="btn primary" data-act="close">Empezar a atender</button></div>`;
     nb.innerHTML=h;const txt=fmt(`Bienvenid{a}, ${docTitle()}. Hoy tienes turno en la Unidad de Salud Sexual y Reproductiva. Lleva tu libreta, entra a cada sala y responde con calma: cada respuesta trae una explicación para que aprendas.`);
@@ -1823,7 +2010,7 @@ function showAnswer(s){
   const q=Q[s.id],btns=nb.querySelectorAll('.opt');
   btns.forEach((b,i)=>{b.disabled=true;const isOk=s.order[i]===0;if(isOk)b.classList.add('ok');else if(i===s.choice)b.classList.add('bad');else b.classList.add('dim');});
   const last=BK.i===BK.steps.length-2;
-  $('#fb').innerHTML=`<div class="fb" role="status"><h4 class="${s.correct?'y':'n'}">${s.correct?'¡Correcto!':'No es correcto'}</h4>${s.correct?'':`<p><b>Respuesta correcta:</b> ${esc(q.ok)}</p>`}<p>${esc(q.exp)}</p></div>
+  $('#fb').innerHTML=`<div class="fb" role="status"><h4 class="${s.correct?'y':'n'}">${s.correct?'¡Correcto!':'No es correcto'}</h4>${s.correct?'':`<p><b>Respuesta correcta:</b> ${esc(q.ok).replace(/ · /g,'; ')}</p>`}<p>${esc(q.exp)}</p></div>
     <div class="row"><button class="btn primary" data-act="next">${last?'Cerrar el caso':'Siguiente pregunta'}</button></div>`;
   const dots=nb.querySelectorAll('.dots i');qSteps().forEach((x,i)=>{if(x.done)dots[i].classList.add(x.correct?'okd':'badd');});
 }
@@ -1833,7 +2020,7 @@ function answer(s,i){
   const beforeOpen=S.itsOpen;
   if(!S.itsOpen&&stats('met').ok>=UNLOCK){S.itsOpen=true;pendingUnlock=true;}
   if(!S.itsOpen&&needsReview())pendingReview=true;
-  if(S.itsOpen&&stats('its').done===15&&!S.ended){S.ended=true;pendingEnd=true;}
+  if(S.itsOpen&&stats('its').done===BLOCK_QS.its.length&&!S.ended){S.ended=true;pendingEnd=true;}
   save();if(s.correct){SFX.ok();buzz(25);}else{SFX.bad();buzz([50,40,50]);}
   showAnswer(s);const nx=nb.querySelector('.fb');if(nx)nx.scrollIntoView({behavior:'smooth',block:'nearest'});
   if(!beforeOpen&&S.itsOpen&&itsDoor)itsDoor.draw();
@@ -1863,7 +2050,7 @@ function renderMain(s){
   const sm=stats('met'),si=stats('its');let h=head(`Libreta de ${docTitle()}`,'Mi turno');
   h+=`<div class="tabs" role="tablist">${[['prog','Pacientes y salas'],['notes','Apuntes'],['table','Tabla de métodos'],['help','Cómo jugar']].map(([k,l])=>`<button role="tab" aria-selected="${s.tab===k}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
   if(s.tab==='prog'){
-    h+=`<div class="goal">Métodos: <b>${sm.ok}/15</b> correctas (meta ${UNLOCK}) · ITS: <b>${si.done}/15</b> respondidas, <b>${si.ok}</b> correctas.</div>`;
+    h+=`<div class="goal">Bloque 1: <b>${sm.ok}/${sm.total}</b> correctas (meta ${UNLOCK}) · VIH y SIDA: <b>${si.done}/${si.total}</b> respondidas, <b>${si.ok}</b> correctas.</div>`;
     for(const[blk,tt]of[['met','Métodos anticonceptivos'],['its','Pabellón ITS']]){
       h+=`<div class="sec">${tt}</div><div class="tbl-wrap"><table class="rooms"><thead><tr><th>Sala</th><th>Caso</th><th>Estado</th><th>Correctas</th></tr></thead><tbody>`;
       for(const r of ROOMS.filter(x=>x.block===blk)){const st=roomStatus(r),ok=r.qs.filter(id=>S.ans[id]&&S.ans[id].ok).length;
@@ -1881,7 +2068,7 @@ function renderMain(s){
       <div class="goal">Solo el condón (masculino o femenino) protege de las ITS. La doble protección es condón más otro método.</div>`;
   }
   if(s.tab==='help'){
-    h+=`<ul class="facts"><li>Teléfono: el círculo de la izquierda sirve para caminar; desliza el dedo por la derecha para mirar.</li><li>Computador: W A S D o flechas para caminar, arrastra con el mouse para mirar, E para atender, M para el mapa, N para la libreta.</li><li>Cuando estés cerca de un paciente o modelo aparecerá un botón amarillo. Tócalo para abrir el caso.</li><li>Con ${UNLOCK} correctas de las 15 preguntas de métodos se abre el Pabellón ITS.</li><li>Si respondes las 15 y no alcanzas ${UNLOCK}, las salas en rojo te dejan repasar lo que fallaste.</li></ul>
+    h+=`<ul class="facts"><li>Teléfono: el círculo de la izquierda sirve para caminar; desliza el dedo por la derecha para mirar.</li><li>Computador: W A S D o flechas para caminar, arrastra con el mouse para mirar, E para atender, M para el mapa, N para la libreta.</li><li>Cuando estés cerca de un paciente o modelo aparecerá un botón amarillo. Tócalo para abrir el caso.</li><li>Con ${UNLOCK} correctas de las 15 preguntas del Bloque 1 se abre el Pabellón ITS (VIH y SIDA).</li><li>Si respondes las 15 del Bloque 1 y no alcanzas ${UNLOCK}, las salas en rojo te dejan repasar lo que fallaste.</li></ul>
       <div class="row"><button class="btn ghost" data-act="map">Ver mapa</button><button class="btn ghost" data-act="reset">Borrar mi progreso</button></div>`;
   }
   h+=`<div class="row"><button class="btn primary" data-act="close">Volver al hospital</button></div>`;nb.innerHTML=h;
@@ -1903,16 +2090,16 @@ function updateHUD(){
   const sm=stats('met'),si=stats('its');
   if(!S.itsOpen){
     const rev=needsReview();
-    $('#objText').textContent=rev?'Repasa las salas con luz roja':'Atiende las consultas y salas de métodos';
-    $('#objBar').style.width=(sm.ok/15*100)+'%';$('#objMark').style.left=(UNLOCK/15*100)+'%';$('#objMark').hidden=false;
-    $('#objSub').textContent=`Correctas: ${sm.ok}/15 · necesitas ${UNLOCK} para abrir el Pabellón ITS`;
+    $('#objText').textContent=rev?'Repasa las salas con luz roja':'Atiende las consultas y salas de estudio';
+    $('#objBar').style.width=(sm.ok/sm.total*100)+'%';$('#objMark').style.left=(UNLOCK/sm.total*100)+'%';$('#objMark').hidden=false;
+    $('#objSub').textContent=`Correctas: ${sm.ok}/${sm.total} · necesitas ${UNLOCK} para abrir el Pabellón ITS`;
   }else if(!S.ended){
-    $('#objText').textContent=si.done?'Atiende los 5 boxes del Pabellón ITS':'Entra al Pabellón ITS (fondo del pasillo)';
-    $('#objBar').style.width=(si.done/15*100)+'%';$('#objMark').hidden=true;
-    $('#objSub').textContent=`ITS: ${si.done}/15 respondidas · ${si.ok} correctas`;
+    $('#objText').textContent=si.done?'Atiende los 5 boxes de VIH y SIDA':'Entra al Pabellón ITS (fondo del pasillo)';
+    $('#objBar').style.width=(si.done/si.total*100)+'%';$('#objMark').hidden=true;
+    $('#objSub').textContent=`VIH y SIDA: ${si.done}/${si.total} respondidas · ${si.ok} correctas`;
   }else{
     $('#objText').textContent='¡Turno completado!';$('#objBar').style.width='100%';$('#objMark').hidden=true;
-    $('#objSub').textContent=`Métodos ${sm.ok}/15 · ITS ${si.ok}/15 · certificado en tu libreta`;
+    $('#objSub').textContent=`Bloque 1 ${sm.ok}/${sm.total} · VIH y SIDA ${si.ok}/${si.total} · certificado en tu libreta`;
   }
 }
 function refreshWorld(){
@@ -1949,20 +2136,20 @@ function drawBigMap(){
   for(const z of ZONES)rect(z.r,z.id==='corrB'&&!S.itsOpen?'#262a2d':'#2a4048');
   for(const r of ROOMS){const st=roomStatus(r);rect(r.rect,st==='locked'?'#1f2326':'#183039',ST_COL[st]);const c_=P((r.rect[0]+r.rect[1])/2,(r.rect[2]+r.rect[3])/2);
     g.fillStyle='#fff';g.font=font(700,Math.max(12,s*1.6));g.textAlign='center';g.textBaseline='middle';g.fillText(r.num,c_[0],c_[1]-s*.9);g.fillStyle='#9cb6b9';g.font=font(600,Math.max(10,s*1.05));
-    g.fillText(SHORT[r.id],c_[0],c_[1]+s*.8);}
+    g.fillText(r.short,c_[0],c_[1]+s*.8);}
   const it=P(0,-46);g.fillStyle=S.itsOpen?'#3ddc84':'#ff4d4d';g.fillRect(it[0]-3,it[1]-1.5*s,6,3*s);
   g.fillStyle='#cfe0e0';g.font=font(700,Math.max(12,s*1.5));g.textAlign='center';const hl=P(0,7);g.fillText('HALL',hl[0],hl[1]);const ad=P(-5,5);g.font=font(600,Math.max(10,s*1.1));g.fillText('Admisión',ad[0],ad[1]);
   const pp=P(player.x,player.z);g.save();g.translate(pp[0],pp[1]);g.rotate(-player.yaw-Math.PI/2);g.fillStyle='#f2c14e';g.beginPath();g.moveTo(0,-10);g.lineTo(7,8);g.lineTo(0,4);g.lineTo(-7,8);g.closePath();g.fill();g.restore();
   g.fillStyle='#f2c14e';g.font=font(700,14);g.textAlign='left';g.fillText('▲ Tú',pp[0]+10,pp[1]-10);
 }
 function showEnd(){
-  const sm=stats('met'),si=stats('its'),tot=sm.first+si.first;const stars=tot>=27?3:tot>=21?2:1;
+  const sm=stats('met'),si=stats('its'),tot=sm.first+si.first;const NT=sm.total+si.total,stars=tot>=Math.round(NT*.9)?3:tot>=Math.round(NT*.7)?2:1;
   const d=new Date();const fecha=d.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
   $('#cert').innerHTML=`<div class="k">Hospital Escuela Esperanza · Unidad de Salud Sexual y Reproductiva</div><h2>Certificado de Residencia</h2>
-    <p>Se certifica que</p><div class="nm">${esc(docTitle())}</div><p>completó el turno de residencia atendiendo 10 salas de métodos anticonceptivos y 5 boxes del Pabellón de Infecciones de Transmisión Sexual.</p>
+    <p>Se certifica que</p><div class="nm">${esc(docTitle())}</div><p>completó el turno de residencia: 10 salas sobre pubertad, sistema reproductor, hormonas, investigación científica y métodos anticonceptivos, y 5 boxes sobre VIH y SIDA.</p>
     <div class="stars" aria-label="${stars} de 3 estrellas">${'★'.repeat(stars)}${'☆'.repeat(3-stars)}</div>
-    <div class="scores"><div><b>${sm.first}/15</b><span>Métodos correctas al primer intento</span></div><div><b>${si.first}/15</b><span>ITS correctas al primer intento</span></div><div><b>${tot}/30</b><span>Puntaje total del turno</span></div></div>
-    <ul class="keys"><li>El condón es el único método que protege del embarazo y de las ITS.</li><li>Ligadura de trompas y vasectomía son permanentes; el DIU y el implante duran años.</li><li>La píldora de emergencia se toma lo antes posible y no es para usar siempre.</li><li>Muchas ITS no dan síntomas: la forma segura de saber es un examen.</li><li>VIH, sífilis, clamidia y gonorrea tienen tratamiento: consulta en tu CESFAM o Espacio Amigable.</li></ul>
+    <div class="scores"><div><b>${sm.first}/${sm.total}</b><span>Bloque 1 correctas al primer intento</span></div><div><b>${si.first}/${si.total}</b><span>VIH y SIDA correctas al primer intento</span></div><div><b>${tot}/${NT}</b><span>Puntaje total del turno</span></div></div>
+    <ul class="keys"><li>Los caracteres sexuales secundarios aparecen en la pubertad por acción de las hormonas sexuales.</li><li>El aumento brusco de LH provoca la ovulación; luego el cuerpo lúteo mantiene el endometrio.</li><li>Una pregunta investigable se responde con datos; las variables controladas se mantienen iguales.</li><li>Vasectomía y ligadura no cambian las hormonas, y solo el preservativo protege de las ITS.</li><li>El VIH es un virus que ataca las defensas; el SIDA es su etapa avanzada y el tratamiento lo evita.</li></ul>
     <p style="margin-top:14px;font-size:14px;color:#5b6870">Emitido el ${esc(fecha)}. Toma una captura de pantalla y envíasela a tu profesor o profesora.</p>
     <div class="row"><button class="btn primary" id="cKeep">Seguir explorando</button><button class="btn ghost" id="cNew">Nueva partida</button></div>`;
   $('#end').hidden=false;setPlaying(false);SFX.unlock();

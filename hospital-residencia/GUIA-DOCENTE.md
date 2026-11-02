@@ -1,6 +1,6 @@
 # Turno de Residencia · Guía docente
 
-Juego 3D en primera persona para **Ciencias Naturales, 7° básico**. El estudiante es un médico o médica residente que recorre un hospital con su libreta, entra a cada sala, atiende pacientes y estudia modelos gigantes de métodos anticonceptivos. Con **10 respuestas correctas de 15** se desbloquea el **Pabellón ITS**, donde responde 15 preguntas más sobre VIH, clamidia, sífilis, gonorrea y prevención (VPH y herpes).
+Juego 3D en primera persona para **Ciencias Naturales**. El estudiante es un médico o médica residente que recorre un hospital con su libreta, atiende pacientes y estudia gráficos, maquetas y modelos gigantes. Las **15 preguntas del cuestionario de Biología** (pubertad, sistema reproductor, hormonas, investigación científica y métodos anticonceptivos) están en las consultas y salas de estudio. Con **10 respuestas correctas de 15** se abre el **Pabellón ITS**, donde hay **5 preguntas más sobre VIH y SIDA**: qué es el VIH, qué es el SIDA, su origen, las infecciones oportunistas y la transmisión.
 
 Archivo del juego: `hospital-residencia/index.html` (un solo archivo, sin instalación).
 
@@ -10,9 +10,11 @@ Archivo del juego: `hospital-residencia/index.html` (un solo archivo, sin instal
 
 | Eje | Lo que el estudiante practica en el juego |
 |---|---|
-| Métodos de control de la natalidad (OA 2, 7° básico) | Distinguir métodos de barrera, hormonales, intrauterinos, químicos y quirúrgicos; reconocer cuáles son permanentes y cuáles duran años. |
-| Infecciones de transmisión sexual (OA 3, 7° básico) | Mecanismos de transmisión, medidas de prevención, síntomas generales y consecuencias de VIH, clamidia, sífilis, gonorrea, VPH y herpes. |
-| Autocuidado y derechos | Doble protección, píldora de emergencia, exámenes gratuitos y confidenciales, CESFAM y Espacio Amigable. |
+| Pubertad y hormonas | Reconocer caracteres sexuales secundarios, leer gráficos de testosterona, estrógenos, LH y FSH, y valorar las dimensiones biológica, afectiva y social de la pubertad. |
+| Sistema reproductor y gametos | Relacionar estructura y función (epidídimo, uretra, ovario, endometrio) y comparar ovocito y espermatozoide. |
+| Investigación científica | Distinguir preguntas investigables de opiniones o valores e identificar variables independiente, dependiente y controladas. |
+| Métodos anticonceptivos | Clasificar métodos por su mecanismo, interpretar tasas de falla y corregir mitos sobre la pastilla, la vasectomía y la ligadura. |
+| ITS, VIH y SIDA | Identificar agentes causales (virus, bacteria, parásito), diferenciar VIH y SIDA, conocer su origen, las infecciones oportunistas y las vías de transmisión. |
 
 ## 2. Cómo abrirlo
 
@@ -24,7 +26,7 @@ Archivo del juego: `hospital-residencia/index.html` (un solo archivo, sin instal
 | Google Meet | Abrir el juego en una pestaña y usar **Presentar → Una pestaña** para jugarlo en vivo con el curso. |
 | Google Drive | Drive guarda el archivo pero **no lo ejecuta**. Compartan el **enlace web** del juego, no el archivo `.html` subido a Drive. |
 
-Requisitos: navegador actualizado con gráficos 3D (WebGL) y conexión a internet al abrirlo (carga el motor 3D desde la web). El progreso se guarda solo en ese navegador.
+Requisitos: navegador actualizado con gráficos 3D (WebGL) y conexión a internet al abrirlo. El progreso se guarda solo en ese navegador.
 
 **Controles**
 
@@ -36,97 +38,90 @@ Requisitos: navegador actualizado con gráficos 3D (WebGL) y conexión a interne
 
 ## 3. Estructura del hospital
 
-| Zona | Salas | Contenido | Preguntas |
+| Zona | Sala | Contenido | Preguntas del cuestionario |
 |---|---|---|---|
-| Hall central | Admisión | La enfermera Rosa explica el turno. Directorio, televisor con mensajes de salud. | 0 |
-| Pasillo, puertas izquierdas | Consultas 101–105 | Pacientes: Valentina (doble protección), Andrea (métodos de larga duración), Javiera (píldora de emergencia), Patricia (método definitivo), Matías (mito de la primera vez). | 5 (1 por sala) |
-| Pasillo, puertas derechas | Salas 201–205 | Condón masculino y femenino gigantes · DIU de cobre y hormonal · Pabellón de ligadura de trompas · Pabellón de vasectomía · Laboratorio de espermicida. | 10 (2 por sala) |
-| Fondo del pasillo | Pabellón ITS (bloqueado) | Se abre con 10 correctas de las 15 anteriores. | — |
-| Pabellón ITS | Boxes 301–305 | Tomás (VIH), Fernanda (clamidia), Ricardo (sífilis), Sebastián (gonorrea), Ignacia en el Espacio Amigable (VPH, herpes, exámenes). Cada box tiene un microbio gigante en vitrina. | 15 (3 por box) |
+| Hall central | Admisión | La enfermera Rosa explica el turno. | — |
+| Puertas izquierdas | Consulta 101 · Camila, 13 años | Ficha de control de salud | N° 1 |
+| | Consulta 102 · Matías, 13 años | Diagrama de las 3 dimensiones de la pubertad | N° 3 |
+| | Consulta 103 · Valentina, 17 años | Mensaje del diario mural | N° 11 |
+| | Consulta 104 · Roberto, 38 años | Esquema del testículo y los conductos | N° 12 |
+| | Consulta 105 · Patricia, 39 años | Útero con trompas ligadas | N° 14 |
+| Puertas derechas | Laboratorio 201 · Hormonas | Pantalla que traza los gráficos y gráfico 3D de hormonas | N° 2 y 8 |
+| | Sala 202 · Anatomía | Maquetas gigantes femenina y masculina; ovocito y espermatozoide a la misma escala | N° 4 y 5 |
+| | Laboratorio 203 · Investigación | Espermatozoide gigante con mitocondrias, jaulas del experimento con 3 dosis | N° 6, 7 y 9 |
+| | Sala 204 · Métodos | Diafragma e inyección gigantes, gráfico de barras 3D de fallas | N° 10 y 13 |
+| | Sala 205 · Microbiología | Vitrinas con gonorrea, VPH y tricomonas | N° 15 |
+| Fondo del pasillo | Pabellón ITS (bloqueado) | Se abre con 10 correctas de las 15. | — |
+| Pabellón ITS | Box 301 · Tomás | ¿Qué es el VIH? Virus gigante en vitrina | 16 |
+| | Box 302 · Héctor | ¿Qué es el SIDA? Linfocito CD4 atacado | 17 |
+| | Box 303 · Ricardo | Origen del VIH. Globo terráqueo con África central | 18 |
+| | Box 304 · Fernanda | Infecciones oportunistas. Tuberculosis y Candida | 19 |
+| | Espacio Amigable 305 · Ignacia | Transmisión del VIH | 20 |
 
 **Luces sobre las puertas:** azul = por atender · amarilla = en curso · verde = todo correcto · naranja = con errores · roja (parpadea) = repasar.
 
-**Si un estudiante no llega a 10:** al responder las 15 preguntas de Métodos sin alcanzar 10 correctas, las salas con errores se ponen en rojo y permiten responder de nuevo solo lo fallado (con las opciones en otro orden). El certificado final muestra el puntaje **al primer intento**, así que el repaso no infla la nota.
+**Si un estudiante no llega a 10:** al responder las 15 preguntas sin alcanzar 10 correctas, las salas con errores se ponen en rojo y permiten responder de nuevo solo lo fallado (con las opciones en otro orden). El certificado final muestra el puntaje **al primer intento**, sobre 20.
 
-## 4. Diseño de las preguntas
+## 4. Cómo se adaptaron las preguntas del cuestionario
 
-- Todas son de **selección simple** con 4 opciones y **una sola correcta**.
-- Las opciones tienen largos parecidos y **la correcta nunca es la más larga** (se verificó con un script sobre las 30 preguntas).
-- El orden de las opciones se mezcla cada vez.
-- Después de cada respuesta aparece una **explicación** breve, sin tecnicismos, aunque el estudiante acierte.
+- Cada pregunta conserva **el caso original** del cuestionario (aparece en un recuadro) y lleva **un gráfico o dibujo** que se ve en la libreta y en las láminas de la sala.
+- Como el juego es de **selección simple**, cada pregunta abierta se transformó en 4 opciones con **una sola correcta**. En las preguntas que pedían identificar varias cosas (N° 4, 7, 10 y 15), cada opción presenta la clasificación completa.
+- Las opciones tienen largos parecidos y **la correcta nunca es la más larga** (verificado con un script sobre las 20 preguntas). El orden se mezcla cada vez.
+- Después de cada respuesta aparece la **explicación**, que corresponde al "explica por qué" o "fundamenta" del cuestionario original. Se puede usar como pauta para la versión escrita.
 
 ## 5. Propuesta de clase (90 minutos)
 
 | Momento | Tiempo | Actividad |
 |---|---|---|
-| Inicio | 10 min | Pregunta gatillo: "¿Qué método protege del embarazo y de las ITS al mismo tiempo?". Se anotan hipótesis sin corregir. |
-| Demostración | 5 min | El docente proyecta el juego (Meet o proyector), habla con la enfermera Rosa y muestra los controles. |
-| Juego Bloque 1 | 30 min | Parejas o individual. Meta: abrir el Pabellón ITS. Cada estudiante copia en su cuaderno 1 dato de cada sala (pestaña **Apuntes** de la libreta). |
-| Juego Bloque 2 | 25 min | Pabellón ITS completo. Al terminar, captura de pantalla del certificado. |
-| Cierre | 20 min | Revisión con la pestaña **Tabla de métodos** proyectada. Preguntas de cierre (abajo). Se contrastan con las hipótesis del inicio. |
+| Inicio | 10 min | Pregunta gatillo: "¿La pubertad es solo cosa del cuerpo?" (pregunta 3). Se anotan hipótesis. |
+| Demostración | 5 min | El docente proyecta el juego, habla con la enfermera Rosa y muestra los controles. |
+| Bloque 1 | 40 min | Parejas o individual. Meta: abrir el Pabellón ITS. Cada pareja copia en su cuaderno la explicación de 3 preguntas que hayan fallado. |
+| Bloque 2 | 15 min | Pabellón ITS: VIH y SIDA. Captura de pantalla del certificado. |
+| Cierre | 20 min | Se responde por escrito, de forma abierta, una pregunta del cuestionario original (sugeridas: 7, 8 o 12) usando lo aprendido en el juego. |
 
-**Preguntas de cierre**
-
-1. ¿Por qué el condón es el único método que protege de las ITS?
-2. ¿Qué diferencia hay entre un método permanente y uno de larga duración? Da un ejemplo de cada uno.
-3. Si una ITS no da síntomas, ¿cómo puede saber una persona si la tiene?
-4. ¿Por qué discriminar a una persona con VIH es injusto y además no tiene base científica?
-5. ¿Dónde puede consultar un adolescente en Chile, gratis y de forma confidencial?
-
-**Evaluación sugerida:** captura del certificado (puntaje al primer intento, máximo 30) + respuestas escritas de cierre.
+**Evaluación sugerida:** captura del certificado (puntaje al primer intento, máximo 20) + una respuesta abierta del cuestionario original.
 
 | Puntaje del certificado | Estrellas | Lectura |
 |---|---|---|
-| 27 a 30 | ★★★ | Logrado |
-| 21 a 26 | ★★☆ | Mayormente logrado |
-| 20 o menos | ★☆☆ | Por lograr: repasar la pestaña Apuntes y volver a jugar |
+| 18 a 20 | ★★★ | Logrado |
+| 14 a 17 | ★★☆ | Mayormente logrado |
+| 13 o menos | ★☆☆ | Por lograr: repasar la pestaña Apuntes y volver a jugar |
 
 ## 6. Pauta de respuestas
 
-### Bloque 1 · Métodos anticonceptivos (15 preguntas · se necesitan 10 correctas)
+### Bloque 1 · Cuestionario de Biología (15 preguntas · se necesitan 10 correctas)
 
-| N° | Sala | Pregunta | Respuesta correcta |
-|---|---|---|---|
-| 1 | 101 · Valentina | ¿Qué método le recomiendas a Valentina para prevenir el embarazo y también las ITS? | El condón, en cada relación sexual |
-| 2 | 102 · Andrea | Andrea olvida la pastilla muy seguido. ¿Qué opción es mejor para ella? | Un implante en el brazo o un DIU, que duran años |
-| 3 | 103 · Javiera | A Javiera se le rompió el condón anoche. ¿Qué le indicas? | Tomar la píldora de emergencia lo antes posible |
-| 4 | 104 · Patricia | Patricia busca un método definitivo. ¿Cuál le corresponde a ella? | La ligadura de trompas |
-| 5 | 105 · Matías | Matías escuchó que en la primera relación sexual no hay embarazo. ¿Qué le respondes? | Es falso: sí puede haber embarazo la primera vez |
-| 6 | 201 · Condón masculino y femenino | ¿Qué tienen en común el condón masculino y el femenino? | Ambos protegen de embarazo y de ITS |
-| 7 | 201 · Condón masculino y femenino | ¿Cuál es una forma correcta de usar el condón? | Revisar la fecha de vencimiento antes de usarlo |
-| 8 | 202 · DIU de cobre y DIU hormonal | ¿En qué se diferencian el DIU de cobre y el DIU hormonal? | El de cobre no usa hormonas y el hormonal sí |
-| 9 | 202 · DIU de cobre y DIU hormonal | ¿Quién coloca el DIU y en qué parte del cuerpo? | Un profesional de salud, dentro del útero |
-| 10 | 203 · Ligadura de trompas | ¿Qué se hace en una ligadura de trompas? | Se bloquean las trompas de Falopio |
-| 11 | 203 · Ligadura de trompas | ¿Qué característica tiene la ligadura de trompas? | Es permanente y no protege de ITS |
-| 12 | 204 · Vasectomía | ¿Qué se corta en una vasectomía? | Los conductos que llevan los espermatozoides |
-| 13 | 204 · Vasectomía | Después de una vasectomía, ¿desde cuándo es efectiva? | Después de unos 3 meses y un examen |
-| 14 | 205 · Espermicida | ¿Qué hace el espermicida? | Inmoviliza o destruye a los espermatozoides |
-| 15 | 205 · Espermicida | ¿Cuál es la mejor forma de usar el espermicida? | Junto con el condón, porque solo es poco eficaz |
+| N° | Sala | Gráfico | Pregunta | Respuesta correcta |
+|---|---|---|---|---|
+| 1 | 101 · Camila | Ficha de control de salud | ¿Cuáles de estos cambios son exclusivamente caracteres sexuales secundarios? | El vello axilar y púbico, y el desarrollo de mamas |
+| 2 | 201 · Hormonas | Gráfico testosterona/estrógenos 7–17 años | ¿Qué conclusión se desprende directamente del gráfico? | Desde los 9 años, en cada sexo sube más una hormona distinta |
+| 3 | 102 · Matías | Diagrama de las 3 dimensiones de la pubertad | ¿Cómo evalúas la afirmación de Matías? | Es incorrecta: la pubertad también cambia emociones y relaciones |
+| 4 | 202 · Anatomía | Maqueta con 4 estructuras numeradas | ¿Qué opción describe correctamente la función de cada estructura? | Epidídimo: madura espermatozoides; Uretra: saca el semen; Ovario: produce ovocitos; Endometrio: recibe al embrión |
+| 5 | 202 · Anatomía | Ovocito y espermatozoide a la misma escala | ¿Qué comparación es correcta y se relaciona con su función? | El ovocito es más grande, con mucho citoplasma, y no se mueve |
+| 6 | 203 · Investigación | Micrografía del espermatozoide | ¿Cuál es una pregunta de investigación científica adecuada? | ¿Más mitocondrias hacen nadar más rápido al espermatozoide? |
+| 7 | 203 · Investigación | Esquema del experimento con 3 dosis | ¿Cuáles son las variables del experimento? | Independiente: dosis de estrógenos; Dependiente: grosor del endometrio; Controladas: peso, alimento y luz |
+| 8 | 201 · Hormonas | Gráfico LH y FSH, ciclo de 28 días | ¿Qué indica ese aumento y qué ocurre después? | Provoca la ovulación; luego se forma el cuerpo lúteo y el endometrio sigue grueso |
+| 9 | 203 · Investigación | Dos grupos de 100 usuarias | ¿Cuál es una pregunta investigable para este propósito? | ¿Con cuál de los dos hay menos embarazos por cada 100 usuarias en un año? |
+| 10 | 204 · Métodos | Dibujos de los 4 métodos | ¿Qué clasificación es correcta? | Diafragma: barrera; Inyección: hormonal; Vasectomía: quirúrgico; Billings: natural |
+| 11 | 103 · Valentina | Mensaje del diario mural | ¿Cómo evalúas este mensaje? | Es falso: la pastilla no protege de las ITS y el preservativo sí |
+| 12 | 104 · Roberto | Esquema testículo y conductos | ¿Qué argumento biológico refuta esta idea? | Los testículos siguen produciendo testosterona, que pasa a la sangre |
+| 13 | 204 · Métodos | Gráfico de barras 13 % vs < 1 % | ¿A qué se debe principalmente esta diferencia? | El condón depende de usarlo bien cada vez; el implante no |
+| 14 | 105 · Patricia | Útero con trompas ligadas | ¿Qué es lo correcto? | Los ovarios siguen funcionando: el ciclo y la regla continúan |
+| 15 | 205 · Agentes ITS | Los 3 agentes dibujados | ¿Cuál es el agente causal de cada una? | Gonorrea: bacteria; VPH: virus; Tricomoniasis: parásito |
 
-### Bloque 2 · Pabellón ITS (15 preguntas)
+### Bloque 2 · VIH y SIDA (5 preguntas agregadas)
 
-| N° | Sala | Pregunta | Respuesta correcta |
-|---|---|---|---|
-| 16 | 301 · VIH · Tomás | ¿Cuál de estas situaciones NO transmite el VIH? | Dar un abrazo o compartir un vaso |
-| 17 | 301 · VIH · Tomás | ¿Qué parte del cuerpo ataca el VIH? | Las defensas del cuerpo (sistema inmune) |
-| 18 | 301 · VIH · Tomás | Si el examen de Tomás sale positivo, ¿qué es lo correcto? | Iniciar su tratamiento, que controla el virus |
-| 19 | 302 · Clamidia · Fernanda | ¿Por qué Fernanda podría tener clamidia aunque se sienta bien? | Porque muchas veces no da ningún síntoma |
-| 20 | 302 · Clamidia · Fernanda | ¿Qué puede pasar si la clamidia NO se trata? | Puede dañar las trompas y causar infertilidad |
-| 21 | 302 · Clamidia · Fernanda | Fernanda recibe antibióticos. ¿Qué más es importante? | Que su pareja también se trate y usen condón |
-| 22 | 303 · Sífilis · Ricardo | ¿Cuál suele ser la primera señal de la sífilis? | Una llaga que no duele, en la zona de contagio |
-| 23 | 303 · Sífilis · Ricardo | La llaga de Ricardo desapareció sola. ¿Qué significa? | Que la infección sigue y necesita tratamiento |
-| 24 | 303 · Sífilis · Ricardo | ¿Por qué a las embarazadas se les hace el examen de sífilis? | Porque la sífilis puede pasar al bebé |
-| 25 | 304 · Gonorrea · Sebastián | ¿Qué síntomas de Sebastián son típicos de la gonorrea? | Ardor al orinar y una secreción amarilla |
-| 26 | 304 · Gonorrea · Sebastián | ¿Qué debe hacer Sebastián? | Ir al centro de salud a examinarse y tratarse |
-| 27 | 304 · Gonorrea · Sebastián | Si Sebastián se cura, ¿puede volver a tener gonorrea? | Sí, si vuelve a tener relaciones sin condón |
-| 28 | 305 · Prevención · Ignacia | ¿Contra qué ITS existe una vacuna que en Chile se pone gratis en el colegio? | Contra el VPH |
-| 29 | 305 · Prevención · Ignacia | ¿Qué es verdad sobre el herpes genital? | No tiene cura, pero se pueden controlar los brotes |
-| 30 | 305 · Prevención · Ignacia | ¿Cómo puede saber Ignacia si tiene una ITS? | Haciéndose un examen en un centro de salud |
+| N° | Sala | Gráfico | Pregunta | Respuesta correcta |
+|---|---|---|---|---|
+| 16 | 301 · VIH | Estructura del VIH | ¿Qué es el VIH? | Un virus que ataca las defensas del cuerpo |
+| 17 | 302 · SIDA | Gráfico de linfocitos CD4 en el tiempo | ¿Qué es el SIDA? | La etapa avanzada de la infección por VIH |
+| 18 | 303 · Origen | Mapa de África y línea de tiempo | Según la ciencia, ¿cuál es el origen del VIH? | Un virus de chimpancés de África que pasó a las personas |
+| 19 | 304 · Oportunistas | Defensas débiles y microbios | ¿Por qué una persona con SIDA se enferma con tanta facilidad? | Porque sus defensas están muy debilitadas |
+| 20 | 305 · Transmisión | 4 situaciones dibujadas | ¿Cuál de estas situaciones SÍ puede transmitir el VIH? | Usar jeringas que otra persona ya usó |
 
 ## 7. Notas técnicas
 
-- **Gráficos:** render a 720p nativo en teléfonos y 1080p en computador, sombras en tiempo real, mapas de relieve en pisos, azulejos, madera, tela, piel y pelo, muebles con aristas redondeadas y personajes esculpidos (ojos con iris y párpados que parpadean, labios que se mueven al hablar, manos con cinco dedos, pelo con inercia).
-- **Rendimiento:** el juego ajusta solo la resolución para mantenerse cerca de 60 cuadros por segundo y, si el teléfono no da abasto, desactiva las sombras; en equipos sencillos se verá un poco menos nítido, pero fluido.
+- **Gráficos:** render a 720p nativo en teléfonos y 1080p en computador, sombras en tiempo real, mapas de relieve, muebles con aristas redondeadas y personajes esculpidos con rasgos distintos (ancho de cara, mandíbula, nariz, labios, lentes, canas, barba). Parpadean, mueven los labios al hablar y su pelo se mece con inercia.
+- **Rendimiento:** el juego ajusta solo la resolución para mantenerse cerca de 60 cuadros por segundo y, si el teléfono no da abasto, desactiva las sombras.
 - **Progreso:** se guarda automáticamente en el navegador del estudiante. Para empezar de cero: botón **Empezar de cero** en la portada, o **Libreta → Cómo jugar → Borrar mi progreso**.
-- **Sonido:** se activa al tocar *Comenzar turno*; se puede silenciar con el botón del parlante.
-- **Contenido:** lenguaje adaptado a 7° básico; los datos de salud corresponden a la oferta pública chilena (píldora de emergencia y exámenes gratuitos, vacuna VPH en 4° y 5° básico, Espacio Amigable para 10 a 19 años, Salud Responde 600 360 7777).
+- **Contenido:** datos de salud según la oferta pública chilena (examen y tratamiento de VIH gratuitos y confidenciales, Espacio Amigable para 10 a 19 años).
