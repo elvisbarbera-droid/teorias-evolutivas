@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cadena Tóxica</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Juego de bloques para modelar la bioacumulación y la biomagnificación en un lago contaminado por una fábrica.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=VT323&display=swap">
+<style>
+/* Layout: corte de un lago hecho de bloques a la izquierda, tablero de datos a la derecha, guía de clase debajo. */
+:root{
+  color-scheme: dark;
+  /* superficies: pizarra profunda con bisel de bloque */
+  --bedrock:#11141a;
+  --grid:#171b23;
+  --slate:#1b1f27;
+  --slate-2:#232834;
+  --slate-hi:#394052;
+  --slate-lo:#090b0f;
+  --outline:#05060a;
+  --stone:#4a5262;
+  --stone-hi:#6b7489;
+  --stone-lo:#2a3040;
+  /* tinta */
+  --ink:#eef1f5;
+  --ink-2:#b9c1cf;
+  --ink-3:#8b94a7;
+  /* acentos del mundo */
+  --moss:#7fcf4f;
+  --moss-deep:#3f7d2a;
+  --moss-hi:#79bf52;
+  --moss-lo:#1f4514;
+  --gold:#f2c14e;
+  --toxin:#ff4d6d;
+  --toxin-deep:#7a1e33;
+  /* estados */
+  --ok:#7fcf4f;
+  --warn:#f2c14e;
+  --bad:#ff4d6d;
+  --dead:#8b94a7;
+  /* series (validadas para daltonismo sobre --slate) */
+  --s-agua:#3987e5;
+  --s-prod:#199e70;
+  --s-zoo:#c98500;
+  --s-pezp:#d55181;
+  --s-pezg:#9085e9;
+  --s-garza:#d95926;
+  /* balance */
+  --b-sed:#9b7a4e;
+  --b-vivo:#e66767;
+  --b-ret:#7c8594;
+  --b-deg:#4a5160;
+  /* tipografía */
+  --f-display:'Silkscreen', 'Courier New', monospace;
+  --f-body:'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+  --f-data:'VT323', ui-monospace, 'Consolas', monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{background:var(--bedrock)}
+body{
+  margin:0;
+  background-color:var(--bedrock);
+  background-image:
+    linear-gradient(var(--grid) 2px, transparent 2px),
+    linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+  background-size:48px 48px;
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px;
+  line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:20px 48px;
+}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.app{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+/* ---------- Cabecera ---------- */
+.masthead{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.brand{display:flex;gap:16px;align-items:center;min-width:0}
+.brand canvas{width:64px;height:64px;image-rendering:pixelated;flex:none;background:var(--slate-2);
+  box-shadow:inset 3px 3px 0 var(--slate-hi), inset -3px -3px 0 var(--slate-lo), 0 0 0 3px var(--outline)}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4.4vw,46px);line-height:1;
+  letter-spacing:.02em;text-transform:uppercase;color:var(--ink);text-shadow:4px 4px 0 var(--outline);text-wrap:balance}
+.brand h1 em{font-style:normal;color:var(--toxin)}
+.tagline{margin:8px 0 0;color:var(--ink-2);max-width:62ch;text-wrap:pretty}
+.mast-note{font-family:var(--f-data);font-size:20px;color:var(--ink-3);line-height:1.1;max-width:34ch}
+@media (max-width:640px){ .brand canvas,.mast-note{display:none} .tagline{font-size:15px} .stat{font-size:17px;padding:5px 8px} }
+
+/* ---------- Paneles ---------- */
+.panel{background:var(--slate);padding:16px;
+  box-shadow:inset 3px 3px 0 var(--slate-hi), inset -3px -3px 0 var(--slate-lo), 0 0 0 3px var(--outline);min-width:0}
+.panel h2{margin:0 0 4px;font-family:var(--f-display);font-size:15px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.panel h3{margin:16px 0 6px;font-family:var(--f-display);font-size:12px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.sub{margin:0 0 12px;color:var(--ink-3);font-size:14px;line-height:1.4}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:20px}
+@media (min-width:1040px){ .layout{grid-template-columns:minmax(0,1fr) 360px} }
+.side{display:flex;flex-direction:column;gap:20px;min-width:0}
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+
+/* ---------- Barra de estado ---------- */
+.statusbar{display:flex;flex-wrap:wrap;gap:8px}
+.stat{font-family:var(--f-data);font-size:20px;line-height:1;padding:6px 10px;background:var(--slate);color:var(--ink-2);
+  box-shadow:inset 2px 2px 0 var(--slate-hi), inset -2px -2px 0 var(--slate-lo), 0 0 0 2px var(--outline);display:inline-flex;gap:6px;align-items:center;font-variant-numeric:tabular-nums}
+.stat b{color:var(--ink);font-weight:400}
+.swatch{display:inline-block;width:12px;height:12px;background:var(--toxin);box-shadow:0 0 0 2px var(--outline)}
+
+/* ---------- Mundo ---------- */
+.world-frame{position:relative;background:var(--outline);padding:4px;
+  box-shadow:inset 3px 3px 0 var(--slate-hi), inset -3px -3px 0 var(--slate-lo), 0 0 0 3px var(--outline)}
+#world{display:block;width:100%;height:auto;aspect-ratio:16/9;max-width:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:crosshair;touch-action:manipulation;background:#6fb7f0}
+.chat{position:absolute;left:10px;bottom:10px;display:flex;flex-direction:column;gap:2px;max-width:min(70%,560px);pointer-events:none}
+.chat p{margin:0;padding:2px 8px;background:rgba(5,6,10,.66);color:var(--ink);font-family:var(--f-data);font-size:17px;line-height:1.12;transition:opacity .6s}
+.chat p.old{opacity:0}
+.chat p.warn{color:#ffd1d9}
+.chat p.good{color:#d3f5bf}
+.chat p.mission{color:var(--gold)}
+@media (max-width:640px){ .chat{position:static;max-width:none;margin-top:4px} .chat p{font-size:16px;background:var(--slate-2)} .chat p:nth-last-child(n+3){display:none} .chat p.old{display:none} }
+.hover-tip{position:absolute;pointer-events:none;padding:4px 8px;background:rgba(5,6,10,.88);color:var(--ink);font-family:var(--f-data);font-size:18px;line-height:1.1;
+  box-shadow:0 0 0 2px var(--slate-hi);white-space:nowrap;transform:translate(-50%,-130%)}
+.paused-badge{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:var(--f-display);font-size:14px;padding:4px 10px;background:rgba(5,6,10,.8);color:var(--gold);letter-spacing:.1em}
+
+/* ---------- Barra de herramientas ---------- */
+.tool-name{align-self:center;font-family:var(--f-display);font-size:13px;letter-spacing:.06em;color:var(--ink);text-shadow:2px 2px 0 var(--outline);min-height:1.2em}
+.hotbar{display:flex;justify-content:center;gap:4px;flex-wrap:nowrap}
+.slot{position:relative;width:clamp(36px,10.5vw,56px);aspect-ratio:1;max-width:100%;padding:0;border:0;cursor:pointer;background:var(--slate-2);
+  box-shadow:inset 3px 3px 0 var(--slate-lo), inset -3px -3px 0 var(--slate-hi), 0 0 0 2px var(--outline);display:grid;place-items:center}
+.slot canvas{width:70%;height:70%;image-rendering:pixelated}
+.slot .key{position:absolute;left:3px;top:1px;font-family:var(--f-data);font-size:15px;line-height:1;color:var(--ink-3)}
+.slot[aria-pressed="true"]{background:#2f3646;box-shadow:inset 0 0 0 3px var(--ink), 0 0 0 2px var(--outline);z-index:1}
+.slot[aria-pressed="true"] .key{color:var(--ink)}
+.slot:hover{background:#2a303d}
+.tool-hint{margin:0;text-align:center;color:var(--ink-2);font-size:15px;min-height:3em;text-wrap:balance}
+
+/* ---------- Controles ---------- */
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px}
+.ctl{margin:0;padding:10px 12px 12px;border:0;background:var(--slate);min-width:0;
+  box-shadow:inset 2px 2px 0 var(--slate-hi), inset -2px -2px 0 var(--slate-lo), 0 0 0 2px var(--outline)}
+.ctl legend{float:left;width:100%;padding:0;margin-bottom:8px;font-family:var(--f-display);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.seg{clear:both;display:flex;flex-wrap:wrap;gap:6px}
+.btn{font-family:var(--f-display);font-size:11px;letter-spacing:.04em;text-transform:uppercase;line-height:1.2;color:var(--ink);background:var(--stone);
+  padding:8px 10px;border:0;cursor:pointer;
+  box-shadow:inset 2px 2px 0 var(--stone-hi), inset -2px -2px 0 var(--stone-lo), 0 0 0 2px var(--outline)}
+.btn:hover{background:#56607a}
+.btn:active{box-shadow:inset 2px 2px 0 var(--stone-lo), inset -2px -2px 0 var(--stone-hi), 0 0 0 2px var(--outline)}
+.btn[aria-pressed="true"]{background:var(--moss-deep);box-shadow:inset 2px 2px 0 var(--moss-hi), inset -2px -2px 0 var(--moss-lo), 0 0 0 2px var(--outline)}
+.btn .dot{display:inline-block;width:8px;height:8px;margin-right:6px;vertical-align:1px;box-shadow:0 0 0 1px var(--outline)}
+.btn.danger{background:#6a2a36}
+.btn.danger:hover{background:#7d3241}
+.ctl-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;align-content:center;background:transparent;box-shadow:none;padding:4px 2px}
+.confirm{padding:12px 14px;background:#2a2230;box-shadow:inset 2px 2px 0 #4a3a52, inset -2px -2px 0 var(--slate-lo), 0 0 0 2px var(--outline);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.confirm p{margin:0;flex:1 1 260px;min-width:0}
+.world-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;padding:0;list-style:none;color:var(--ink-3);font-size:14px}
+.world-legend li{display:flex;align-items:center;gap:6px}
+.world-legend i{width:10px;height:10px;display:inline-block;box-shadow:0 0 0 2px var(--outline)}
+
+/* ---------- Pirámide ---------- */
+.scale-toggle{display:flex;gap:6px;margin:0 0 10px}
+.scale-toggle .btn{padding:5px 8px;font-size:10px}
+.pyr{display:flex;flex-direction:column;gap:6px}
+.pyr-row{display:grid;grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);gap:6px;align-items:center}
+.pyr-mid{display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;min-width:0}
+.pyr-mid canvas{width:30px;height:30px;image-rendering:pixelated}
+.pyr-mid span{font-size:12px;line-height:1.1;color:var(--ink-2)}
+.pyr-side{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pyr-side.left{align-items:flex-end;text-align:right}
+.pyr-val{font-family:var(--f-data);font-size:18px;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pyr-val small{font-size:16px;color:var(--ink-3)}
+.track{position:relative;width:100%;height:12px;background:var(--slate-2);box-shadow:inset 1px 1px 0 var(--slate-lo)}
+.track .fill{position:absolute;top:0;bottom:0;min-width:2px;border-radius:0}
+.pyr-side.left .fill{right:0;background:var(--stone-hi)}
+.pyr-side.right .fill{left:0}
+.track .mark{position:absolute;top:-3px;bottom:-3px;width:0;border-left:2px dashed var(--ink-3)}
+.factor{font-family:var(--f-data);font-size:16px;line-height:1;color:var(--gold)}
+.pyr-axis{display:grid;grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);gap:6px;margin-top:4px}
+.axis-labels{position:relative;height:16px;font-family:var(--f-data);font-size:15px;color:var(--ink-3)}
+.axis-labels span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap}
+.axis-labels span:first-child{transform:none}
+.axis-labels span:last-child{transform:translateX(-100%)}
+.axis-left{text-align:right;font-size:12px;color:var(--ink-3);line-height:1.2}
+.axis-note{font-size:12px;color:var(--ink-3);text-align:center;line-height:1.2}
+.balance{display:flex;gap:2px;height:16px;background:var(--slate);margin-top:4px}
+.balance div{height:100%;min-width:0;transition:flex-basis .4s}
+.balance-legend{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px;font-size:13px;color:var(--ink-2)}
+.balance-legend li{display:flex;align-items:center;gap:6px;min-width:0}
+.balance-legend i{flex:none;width:10px;height:10px;box-shadow:0 0 0 1px var(--outline)}
+.balance-legend b{margin-left:auto;white-space:nowrap;font-family:var(--f-data);font-size:17px;font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---------- Inspector ---------- */
+.insp-head{display:flex;gap:12px;align-items:center}
+.insp-head canvas{width:84px;height:56px;flex:none;image-rendering:pixelated;background:#173a63;box-shadow:inset 2px 2px 0 var(--slate-lo), 0 0 0 2px var(--outline)}
+.insp-head h4{margin:0;font-family:var(--f-display);font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.insp-head p{margin:2px 0 0;color:var(--ink-3);font-size:13px;line-height:1.3}
+.pill{display:inline-block;margin-top:6px;padding:2px 8px;font-family:var(--f-display);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--outline)}
+.pill.ok{background:var(--ok)} .pill.warn{background:var(--warn)} .pill.bad{background:var(--bad)} .pill.dead{background:var(--dead)}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:12px 0}
+.kv div{min-width:0}
+.kv dt{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.kv dd{margin:0;font-family:var(--f-data);font-size:22px;line-height:1.05;color:var(--ink);font-variant-numeric:tabular-nums}
+.toxbar{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin:4px 0 2px}
+.toxbar i{height:10px;background:var(--slate-2);box-shadow:inset 1px 1px 0 var(--slate-lo)}
+.toxbar i.on{background:var(--toxin);box-shadow:none}
+.toxbar i.on.lo{background:var(--gold)}
+.toxlbl{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3)}
+.insp-note{margin:12px 0 0;font-size:14px;color:var(--ink-2);line-height:1.45}
+.insp-last{margin:8px 0 0;font-family:var(--f-data);font-size:18px;line-height:1.15;color:var(--gold)}
+.insp-empty{color:var(--ink-2);font-size:15px;margin:0 0 10px}
+.verdict{margin-top:10px;padding:8px 10px;font-size:14px;background:var(--slate-2);box-shadow:inset 2px 2px 0 var(--slate-lo)}
+.verdict b{font-family:var(--f-display);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- Misiones ---------- */
+.xp{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin:6px 0 4px}
+.xp i{height:8px;background:var(--slate-2);box-shadow:inset 1px 1px 0 var(--slate-lo)}
+.xp i.on{background:var(--gold);box-shadow:none}
+.xp-label{font-family:var(--f-data);font-size:17px;color:var(--ink-3);margin:0 0 8px}
+.missions{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.missions li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;align-items:start;padding:8px;background:var(--slate-2);box-shadow:inset 2px 2px 0 var(--slate-lo)}
+.missions .box{width:22px;height:22px;display:grid;place-items:center;font-family:var(--f-data);font-size:18px;line-height:1;background:var(--slate);color:var(--ink-3);box-shadow:0 0 0 2px var(--outline)}
+.missions li.done .box{background:var(--moss-deep);color:var(--ink)}
+.missions li.current{box-shadow:inset 0 0 0 2px var(--gold)}
+.missions h4{margin:0;font-size:14px;line-height:1.3}
+.missions p{margin:4px 0 0;font-size:13px;color:var(--ink-2);line-height:1.4}
+.missions li.done p.lesson{color:#c9e8b8}
+.missions li:not(.current):not(.done) p{display:none}
+
+/* ---------- Gráfico ---------- */
+.chart-panel{display:flex;flex-direction:column;gap:8px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;margin:0;padding:0;font-size:14px;color:var(--ink-2)}
+.chart-legend li{display:flex;align-items:center;gap:6px}
+.chart-legend i{width:14px;height:3px;display:inline-block}
+.chart-wrap{position:relative;width:100%;min-width:0}
+#chart{display:block;width:100%;height:240px;cursor:crosshair;touch-action:pan-y}
+.chart-tip{position:absolute;top:8px;pointer-events:none;padding:8px 10px;background:rgba(9,11,15,.94);box-shadow:0 0 0 2px var(--slate-hi);font-size:13px;min-width:170px}
+.chart-tip h5{margin:0 0 4px;font-family:var(--f-display);font-size:11px;letter-spacing:.06em;color:var(--ink-2)}
+.chart-tip div{display:flex;align-items:center;gap:6px;line-height:1.5}
+.chart-tip i{width:10px;height:3px;display:inline-block}
+.chart-tip b{margin-left:auto;font-family:var(--f-data);font-size:17px;font-weight:400;font-variant-numeric:tabular-nums}
+details.table-view summary{cursor:pointer;color:var(--ink-2);font-size:14px}
+.table-scroll{overflow-x:auto;margin-top:8px}
+.table-scroll table{border-collapse:collapse;font-size:14px;min-width:560px;width:100%}
+.table-scroll th,.table-scroll td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--slate-2);font-variant-numeric:tabular-nums}
+.table-scroll th:first-child,.table-scroll td:first-child{text-align:left}
+.table-scroll th{color:var(--ink-3);font-weight:400;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+
+/* ---------- Guía ---------- */
+.guide{display:flex;flex-direction:column;gap:14px}
+.guide > header h2{margin:0;font-family:var(--f-display);font-size:clamp(20px,2.6vw,28px);text-transform:uppercase;letter-spacing:.04em;text-shadow:3px 3px 0 var(--outline)}
+.guide > header p{margin:6px 0 0;color:var(--ink-2);max-width:70ch}
+.guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px}
+.guide article{background:var(--slate);padding:18px;box-shadow:inset 3px 3px 0 var(--slate-hi), inset -3px -3px 0 var(--slate-lo), 0 0 0 3px var(--outline);min-width:0}
+.guide article h3{margin:0 0 8px;font-family:var(--f-display);font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);text-wrap:balance}
+.guide article p,.guide article li{color:var(--ink-2);font-size:15px;max-width:65ch}
+.guide article p{margin:0 0 10px}
+.guide article ul,.guide article ol{margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.guide article strong{color:var(--ink)}
+.def{font-size:17px !important;color:var(--ink) !important;line-height:1.45}
+.data-table{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 8px}
+.data-table th,.data-table td{padding:5px 6px;border-bottom:1px solid var(--slate-2);text-align:left}
+.data-table td:last-child,.data-table th:last-child{text-align:right;font-family:var(--f-data);font-size:18px;font-variant-numeric:tabular-nums}
+.data-table th{font-weight:400;color:var(--ink-3);font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-family:var(--f-body)}
+.data-table th:last-child{font-family:var(--f-body);font-size:12px}
+.src{font-size:12px !important;color:var(--ink-3) !important}
+.keys{display:inline-flex;gap:4px}
+kbd{font-family:var(--f-data);font-size:17px;padding:0 6px;background:var(--slate-2);box-shadow:inset -2px -2px 0 var(--slate-lo), 0 0 0 1px var(--outline);color:var(--ink)}
+footer{color:var(--ink-3);font-size:13px;max-width:90ch}
+
+/* ---------- Aviso de logro ---------- */
+.toast-zone{position:fixed;top:calc(16px + env(safe-area-inset-top, 0px));right:max(16px, env(safe-area-inset-right, 0px));z-index:20;display:flex;flex-direction:column;gap:8px;pointer-events:none;max-width:min(360px, calc(100vw - 32px))}
+.toast{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;align-items:center;padding:10px 12px;background:var(--slate);
+  box-shadow:inset 3px 3px 0 var(--slate-hi), inset -3px -3px 0 var(--slate-lo), 0 0 0 3px var(--outline);animation:toastIn .35s steps(5) both}
+.toast canvas{width:40px;height:40px;image-rendering:pixelated}
+.toast b{display:block;font-family:var(--f-display);font-size:11px;letter-spacing:.06em;color:var(--gold);text-transform:uppercase}
+.toast span{font-size:14px;color:var(--ink)}
+.toast.out{animation:toastOut .3s steps(4) both}
+@keyframes toastIn{from{transform:translateX(110%)}to{transform:none}}
+@keyframes toastOut{to{transform:translateX(110%);opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .toast,.toast.out{animation:none}
+  .chat p,.balance div{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <div class="brand">
+      <canvas id="logo" width="16" height="16" aria-hidden="true"></canvas>
+      <div>
+        <h1>Cadena <em>Tóxica</em></h1>
+        <p class="tagline">Un lago, una fábrica que vierte residuos y una cadena alimentaria. Observa cómo cada ser vivo acumula partículas de contaminante y cómo la concentración se multiplica al subir de nivel.</p>
+      </div>
+    </div>
+    <p class="mast-note">Simulador de bioacumulación y biomagnificación · Ciencias Naturales</p>
+  </header>
+
+  <div class="layout">
+    <section class="stage" aria-label="Simulador del lago">
+      <div class="statusbar">
+        <span class="stat">Día <b id="hudDay">0</b></span>
+        <span class="stat"><i class="swatch" id="hudSw"></i><b id="hudPoll">Mercurio</b></span>
+        <span class="stat">Vertido <b id="hudLevel">Medio</b></span>
+        <span class="stat">Depuradora <b id="hudFilter">No</b></span>
+        <span class="stat">Partículas vertidas <b id="hudEmit">0</b></span>
+      </div>
+
+      <div class="world-frame">
+        <canvas id="world" width="384" height="216" role="img" aria-label="Corte de un lago con una fábrica en la orilla izquierda que vierte contaminante por una tubería. En el agua hay fitoplancton, zooplancton, plantas, peces pequeños y peces grandes; una garza vive en la orilla derecha."></canvas>
+        <div class="chat" id="chat" aria-live="polite"></div>
+        <div class="hover-tip" id="hoverTip" hidden></div>
+        <div class="paused-badge" id="pausedBadge" hidden>En pausa</div>
+      </div>
+
+      <div class="tool-name" id="toolName">Lupa</div>
+      <div class="hotbar" id="hotbar" role="toolbar" aria-label="Herramientas"></div>
+      <p class="tool-hint" id="toolHint"></p>
+
+      <div class="controls">
+        <fieldset class="ctl">
+          <legend>Contaminante</legend>
+          <div class="seg" id="segPoll"></div>
+        </fieldset>
+        <fieldset class="ctl">
+          <legend>Vertido de la fábrica</legend>
+          <div class="seg" id="segLevel"></div>
+        </fieldset>
+        <fieldset class="ctl">
+          <legend>Velocidad</legend>
+          <div class="seg" id="segSpeed"></div>
+        </fieldset>
+        <div class="ctl ctl-actions">
+          <button class="btn danger" id="btnReset" type="button">Reiniciar lago limpio</button>
+        </div>
+      </div>
+      <div class="confirm" id="confirmBox" hidden>
+        <p id="confirmText"></p>
+        <button class="btn" id="confirmYes" type="button">Sí, continuar</button>
+        <button class="btn" id="confirmNo" type="button">Cancelar</button>
+      </div>
+      <ul class="world-legend" aria-label="Leyenda del lago">
+        <li><i id="legPart"></i>Partícula de contaminante (en el agua y dentro de cada organismo)</li>
+        <li><i style="background:#9b7a4e"></i>Sedimento del fondo</li>
+        <li><i style="background:#8b7f99"></i>Organismo intoxicado</li>
+      </ul>
+    </section>
+
+    <aside class="side">
+      <section class="panel" aria-labelledby="pyrTitle">
+        <h2 id="pyrTitle">Pirámide trófica</h2>
+        <p class="sub">A la izquierda, cuántos individuos hay en cada nivel. A la derecha, la concentración media de contaminante en sus cuerpos. Menos individuos arriba, más contaminante arriba. El «×» indica cuántas veces más concentración hay que en el nivel de abajo.</p>
+        <div class="scale-toggle" role="group" aria-label="Escala de concentración">
+          <button class="btn" type="button" id="scaleLin" aria-pressed="true">Escala lineal</button>
+          <button class="btn" type="button" id="scaleLog" aria-pressed="false">Escala logarítmica</button>
+        </div>
+        <div class="pyr" id="pyr"></div>
+        <div class="pyr-axis" aria-hidden="true">
+          <div class="axis-left">individuos</div>
+          <div class="axis-note">ppm (mg/kg)</div>
+          <div class="axis-labels" id="axisLabels"></div>
+        </div>
+        <h3>¿Dónde está el contaminante?</h3>
+        <div class="balance" id="balance" role="img" aria-label="Distribución del contaminante vertido"></div>
+        <ul class="balance-legend" id="balanceLegend"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="inspTitle">
+        <h2 id="inspTitle">Inspector</h2>
+        <div id="insp"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="missTitle">
+        <h2 id="missTitle">Misiones</h2>
+        <div class="xp" id="xp" aria-hidden="true"></div>
+        <p class="xp-label" id="xpLabel">0 de 8 completadas</p>
+        <ol class="missions" id="missions"></ol>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel chart-panel" aria-labelledby="chartTitle">
+    <h2 id="chartTitle">Historial de concentración</h2>
+    <p class="sub">Concentración media de cada nivel trófico día a día, en escala logarítmica: cada línea horizontal del fondo vale diez veces más que la de abajo. Pasa el cursor para ver los valores.</p>
+    <ul class="chart-legend" id="chartLegend"></ul>
+    <div class="chart-wrap" id="chartWrap">
+      <canvas id="chart" role="img" aria-label="Gráfico de líneas de la concentración de contaminante por nivel trófico a lo largo del tiempo"></canvas>
+      <div class="chart-tip" id="chartTip" hidden></div>
+    </div>
+    <details class="table-view" id="tableView">
+      <summary>Ver los datos como tabla</summary>
+      <div class="table-scroll" id="chartTable"></div>
+    </details>
+  </section>
+
+  <section class="guide" aria-labelledby="guideTitle">
+    <header>
+      <h2 id="guideTitle">Guía para la clase</h2>
+      <p>Conceptos, casos reales y preguntas para discutir después de jugar. Los números del simulador son ilustrativos; los de la tabla de datos reales provienen de estudios de campo.</p>
+    </header>
+    <div class="guide-grid">
+      <article>
+        <h3>Bioacumulación</h3>
+        <p class="def">Es el aumento de la cantidad de una sustancia <strong>dentro de un mismo organismo</strong> a lo largo de su vida.</p>
+        <p>Ocurre cuando el ser vivo incorpora la sustancia (del agua, del sedimento o de su alimento) más rápido de lo que puede eliminarla. Por eso un pez viejo suele tener más mercurio que uno joven de su misma especie.</p>
+        <p>En el juego: inspecciona un mismo pez varias veces y mira cómo suben sus partículas con la edad.</p>
+      </article>
+      <article>
+        <h3>Biomagnificación</h3>
+        <p class="def">Es el aumento de la concentración de una sustancia <strong>de un nivel trófico al siguiente</strong>, a medida que se sube en la cadena alimentaria.</p>
+        <p>Cada depredador come muchas presas durante su vida y retiene casi todo el contaminante que ellas traían. La concentración puede multiplicarse varias veces en cada eslabón, y la cima de la cadena recibe la dosis más alta.</p>
+        <p>En el juego: compara los «×» de la pirámide trófica. Cada uno indica cuántas veces se multiplica la concentración respecto del nivel de abajo.</p>
+      </article>
+      <article>
+        <h3>¿Por qué se multiplica?</h3>
+        <p>En cada nivel trófico solo pasa al siguiente cerca del <strong>10 % de la energía</strong>. El resto se gasta en respirar, moverse y mantener el cuerpo. Para formar 1 kg de su cuerpo, un pez debe comer unos 10 kg de presas.</p>
+        <p>La energía se pierde en el camino, pero el contaminante de esos 10 kg <strong>se queda</strong>. Por eso hay menos biomasa en cada nivel y, a la vez, más contaminante por kilo.</p>
+      </article>
+      <article>
+        <h3>¿Qué sustancias se biomagnifican?</h3>
+        <p>Las que cumplen tres condiciones:</p>
+        <ol>
+          <li><strong>Son persistentes:</strong> no se degradan con facilidad. Ejemplos: metilmercurio, DDT, PCB.</li>
+          <li><strong>Se guardan en el cuerpo:</strong> se disuelven en la grasa o se unen a proteínas del músculo.</li>
+          <li><strong>Se excretan lentamente:</strong> el organismo no logra expulsarlas antes de ser comido.</li>
+        </ol>
+        <p>Un compuesto soluble en agua y biodegradable se elimina antes de pasar al siguiente nivel. Pruébalo con el contaminante «Biodegradable».</p>
+      </article>
+      <article>
+        <h3>Datos reales: PCB en los Grandes Lagos</h3>
+        <p>Concentración de PCB (bifenilos policlorados) medida en la cadena alimentaria de los Grandes Lagos de Norteamérica:</p>
+        <table class="data-table">
+          <thead><tr><th>Organismo</th><th>ppm</th></tr></thead>
+          <tbody>
+            <tr><td>Fitoplancton</td><td>0,025</td></tr>
+            <tr><td>Zooplancton</td><td>0,123</td></tr>
+            <tr><td>Eperlano (pez pequeño)</td><td>1,04</td></tr>
+            <tr><td>Trucha de lago (pez grande)</td><td>4,83</td></tr>
+            <tr><td>Huevos de gaviota argéntea</td><td>124</td></tr>
+          </tbody>
+        </table>
+        <p>Del fitoplancton a los huevos de gaviota, la concentración aumenta unas <strong>5000 veces</strong>.</p>
+        <p class="src">Datos clásicos citados en textos universitarios de biología (por ejemplo, Campbell, <em>Biología</em>).</p>
+      </article>
+      <article>
+        <h3>Casos que cambiaron leyes</h3>
+        <p><strong>Minamata, Japón.</strong> Una fábrica química vertió durante años aguas residuales con metilmercurio en la bahía. Peces y mariscos lo acumularon, y miles de personas que los comían sufrieron daño neurológico: la «enfermedad de Minamata», identificada en 1956. En 2013 se firmó el Convenio de Minamata sobre el mercurio.</p>
+        <p><strong>DDT y aves rapaces.</strong> El plaguicida DDT se biomagnificó hasta las aves que comen peces. Uno de sus derivados adelgaza la cáscara de los huevos, que se rompían durante la incubación. Poblaciones de águila calva, halcón peregrino y pelícano pardo cayeron en picada. Rachel Carson lo denunció en <em>Primavera silenciosa</em> (1962), y Estados Unidos prohibió su uso agrícola en 1972.</p>
+      </article>
+      <article>
+        <h3>Preguntas para discutir</h3>
+        <ol>
+          <li>¿Por qué la garza tiene más contaminante que el fitoplancton, si casi no lo absorbe del agua?</li>
+          <li>Si la fábrica cierra hoy el vertido, ¿por qué los peces grandes siguen contaminados durante mucho tiempo?</li>
+          <li>Compara la pirámide con mercurio y con el compuesto biodegradable. ¿Qué propiedad hace la diferencia?</li>
+          <li>¿Qué pez sería más seguro comer: uno pequeño y joven o uno grande y viejo? Justifica con los dos conceptos.</li>
+          <li>Evalúa la depuradora y la draga del juego. ¿Qué medidas reales podrían exigirse a una fábrica?</li>
+        </ol>
+      </article>
+      <article>
+        <h3>Cómo se juega</h3>
+        <ul>
+          <li>Elige una herramienta en la barra (o con las teclas <span class="keys"><kbd>1</kbd>–<kbd>8</kbd></span>) y haz clic en el lago.</li>
+          <li>Con la <strong>lupa</strong> sigues a un organismo. Si se lo comen, la lupa salta al depredador: así ves viajar el contaminante por la cadena.</li>
+          <li><kbd>Espacio</kbd> pausa la simulación. Usa ×3 o ×10 para que pasen los días más rápido.</li>
+          <li>Las misiones guían una clase de unos 20 minutos. Cada una deja una idea clave.</li>
+        </ul>
+        <p class="src">Modelo simplificado: cada punto verde representa una nube de millones de microalgas, y los umbrales de daño son ilustrativos.</p>
+      </article>
+    </div>
+  </section>
+
+  <footer>Cadena Tóxica es una simulación educativa simplificada. Los valores en ppm del juego sirven para comparar niveles entre sí, no para estimar riesgos reales. El límite de consumo usado en el juego (1 ppm) se inspira en las guías internacionales para mercurio en peces depredadores.</footer>
+</div>
+<div class="toast-zone" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   1. CONSTANTES DEL MUNDO
+   ========================================================= */
+const W = 384, H = 216, B = 8, SURF = 64;
+const WC0 = 11, WC1 = 41;                     // columnas con agua
+const BOT = [13,15,17,19,20,21,22,22,23,23,24,24,24,24,23,24,24,23,23,22,22,21,21,20,19,18,17,16,14,13,12];
+const OUT_X = 88, OUT_Y = 76;                 // boca de la tubería
+const EMIT = [0, 4, 10, 22];                  // partículas por día
+const LEVEL_NAMES = ['Cerrado', 'Bajo', 'Medio', 'Alto'];
+const SPEEDS = [0, 1, 3, 10];
+const MAXP = 1600;
+const F_ORG = 0.01;                           // partículas/biomasa → ppm
+const F_W = 0.0008;                           // partículas/px² de agua → ppm
+const LIMIT = 1, SICK = 3, LETHAL = 8;        // umbrales en ppm (ilustrativos)
+const PERCH = {x: 348, y: 24};
+
+let WATER_AREA = 0;
+for (let i = 0; i < BOT.length; i++) WATER_AREA += (BOT[i] * B - SURF) * B;
+
+const POLL = {
+  hg: {name: 'Mercurio', long: 'Mercurio (metilmercurio)', color: '#ff4d6d', murk: '#5d4a63', persistent: true, ret: 0.95, k: 0.003, waterLife: Infinity, sedDecay: 0,
+       desc: 'Metal pesado. En el agua se transforma en metilmercurio, que se une a las proteínas del músculo y casi no se elimina.'},
+  ddt: {name: 'DDT', long: 'DDT (plaguicida)', color: '#ffd23f', murk: '#6e6a35', persistent: true, ret: 0.92, k: 0.004, waterLife: Infinity, sedDecay: 0,
+       desc: 'Plaguicida que se disuelve en grasa: se guarda en los tejidos de los animales y tarda años en degradarse.'},
+  bio: {name: 'Biodegradable', long: 'Compuesto biodegradable', color: '#e0a36a', murk: '#6a4c33', persistent: false, ret: 0.4, k: 0.08, waterLife: 60, sedDecay: 0.05,
+       desc: 'Sustancia soluble en agua que las bacterias degradan y los organismos excretan con rapidez.'}
+};
+
+const K = {
+  fito:  {name: 'Fitoplancton', un: 'un fitoplancton', el: 'el fitoplancton', lvl: 1, role: 'Productor · nivel 1', w0: 1, wmax: 1, life: [14, 28], target: 110, respawn: 0.7, cap: 320, hw: 1, hh: 1,
+          tip: 'Microalga que flota cerca de la superficie. Absorbe el contaminante directamente del agua junto con los nutrientes. Es la puerta de entrada a la cadena.'},
+  planta:{name: 'Planta acuática', un: 'una planta acuática', el: 'la planta', lvl: 1, role: 'Productor · nivel 1', w0: 5, wmax: 5, hw: 3, hh: 10, kMul: 8,
+          tip: 'Planta enraizada en el fondo. Absorbe contaminante del agua y del sedimento por sus raíces. Algunos peces pequeños la mordisquean.'},
+  zoo:   {name: 'Zooplancton', un: 'un zooplancton', el: 'el zooplancton', lvl: 2, role: 'Consumidor primario · nivel 2', w0: 0.3, wmax: 1.5, eff: 0.25, hunger: 2.2, detect: 18, cruise: 6, chase: 12,
+          life: [45, 70], target: 36, respawn: 0.45, cap: 150, eats: ['fito'], ymin: SURF + 3, ymax: SURF + 40, hw: 2, hh: 2,
+          tip: 'Pequeños crustáceos como copépodos y dafnias. Cada uno se come decenas de microalgas y se queda con su contaminante.'},
+  pezp:  {name: 'Pez pequeño', un: 'un pez pequeño', el: 'el pez pequeño', lvl: 3, role: 'Consumidor secundario · nivel 3', w0: 0.3, wmax: 3, eff: 0.12, hunger: 5, detect: 40, cruise: 13, chase: 24,
+          life: [150, 220], target: 12, respawn: 0.14, cap: 40, eats: ['zoo', 'planta'], ymin: SURF + 4, ymax: 999, hw: 5, hh: 3,
+          tip: 'Come zooplancton y a veces plantas. No bebe más agua contaminada que los demás: el contaminante le llega concentrado en su comida.'},
+  pezg:  {name: 'Pez grande', un: 'un pez grande', el: 'el pez grande', lvl: 4, role: 'Consumidor terciario · nivel 4', w0: 0.8, wmax: 6, eff: 0.1, hunger: 8, detect: 64, cruise: 12, chase: 30,
+          life: [340, 480], target: 4, respawn: 0.02, cap: 12, eats: ['pezp'], ymin: SURF + 6, ymax: 999, hw: 11, hh: 5,
+          tip: 'Depredador de vida larga, como una trucha. Come decenas de peces pequeños durante años y acumula casi todo su contaminante. Es el pescado que más llega a nuestra mesa.'},
+  garza: {name: 'Garza', un: 'una garza', el: 'la garza', lvl: 5, role: 'Superdepredador · nivel 5', w0: 4, wmax: 4, eff: 0.1, hunger: 7, kMul: 0.5, hw: 6, hh: 8,
+          tip: 'Ave que pesca en la superficie. Casi no absorbe nada del agua, pero cada pez que atrapa le entrega una dosis concentrada: está en la cima de la biomagnificación.'}
+};
+
+/* =========================================================
+   2. UTILIDADES
+   ========================================================= */
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function hashf(i, s) { let h = Math.imul(i + 1, 374761393) ^ Math.imul(s + 7, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16; return (h >>> 0) / 4294967296; }
+function hash2(x, y, s) { return hashf(x * 131 + y * 977, s); }
+function hexToRgb(h) { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
+const mixCache = new Map();
+function mix(a, b, t) {
+  const key = a + b + (t * 10 | 0);
+  let v = mixCache.get(key);
+  if (v) return v;
+  const A = hexToRgb(a), Bc = hexToRgb(b), q = (t * 10 | 0) / 10;
+  v = 'rgb(' + Math.round(A[0] + (Bc[0] - A[0]) * q) + ',' + Math.round(A[1] + (Bc[1] - A[1]) * q) + ',' + Math.round(A[2] + (Bc[2] - A[2]) * q) + ')';
+  mixCache.set(key, v);
+  return v;
+}
+const nf3 = new Intl.NumberFormat('es-ES', {maximumSignificantDigits: 3});
+const nf2 = new Intl.NumberFormat('es-ES', {maximumSignificantDigits: 2});
+const nf0 = new Intl.NumberFormat('es-ES', {maximumFractionDigits: 0});
+const nf1 = new Intl.NumberFormat('es-ES', {maximumFractionDigits: 1});
+function fmtPpm(v) { if (v == null) return '—'; if (v === 0) return '0'; if (v < 1e-7) return '< 0,0000001'; return nf3.format(v); }
+function fmtFactor(f) { if (!isFinite(f) || f <= 0) return ''; return '×' + (f >= 100 ? nf0.format(f) : nf2.format(f)); }
+const SUP = {'-': '⁻', '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹'};
+function pow10Label(e) { if (e === 0) return '1'; if (e === 1) return '10'; return '10' + String(e).split('').map(c => SUP[c]).join(''); }
+
+/* terreno */
+function botY(x) { const c = Math.floor(x / B); if (c < WC0 || c > WC1) return SURF; return BOT[c - WC0] * B; }
+function inWater(x, y) { const c = Math.floor(x / B); if (c < WC0 || c > WC1) return false; return y >= SURF && y < BOT[c - WC0] * B; }
+function fitsAt(k, x, y) {
+  return inWater(x - k.hw, y - k.hh) && inWater(x + k.hw, y - k.hh) && inWater(x - k.hw, y + k.hh) && inWater(x + k.hw, y + k.hh);
+}
+function randomWaterPoint(k, ymin, ymax) {
+  ymin = ymin != null ? ymin : (k.ymin || SURF + 2);
+  ymax = ymax != null ? ymax : (k.ymax || 999);
+  for (let i = 0; i < 40; i++) {
+    const x = rand(WC0 * B + k.hw + 1, (WC1 + 1) * B - k.hw - 1);
+    const y = rand(ymin, Math.min(ymax, botY(x) - k.hh - 1));
+    if (fitsAt(k, x, y)) return {x, y};
+  }
+  return {x: 220, y: SURF + 30};
+}
+
+/* =========================================================
+   3. SPRITES (pixel art propio)
+   ========================================================= */
+function gridSprite(rows, pal, bodyChars, faceLeft) {
+  const px = []; let nb = 0;
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const ch = r[x]; if (ch === '.') continue; const body = bodyChars.indexOf(ch) >= 0; px.push([x, y, pal[ch], body ? nb++ : -1]); } });
+  return {w: rows[0].length, h: rows.length, px, nb, faceLeft: !!faceLeft};
+}
+function fishSprite(len, hgt, pal, opt) {
+  opt = opt || {};
+  const top0 = opt.dorsal ? 1 : 0;
+  const bh = hgt - top0;
+  const grid = Array.from({length: hgt}, () => Array(len).fill(null));
+  const body = Array.from({length: hgt}, () => Array(len).fill(false));
+  const tail = Math.max(2, Math.round(len * 0.24));
+  const x0 = tail - 0.5, x1 = len;
+  const cx = (x0 + x1) / 2, rx = (x1 - x0) / 2, cy = top0 + bh / 2, ry = bh / 2;
+  for (let y = top0; y < hgt; y++) for (let x = 0; x < len; x++) {
+    const nx = ((x + 0.5) - cx) / rx, ny = ((y + 0.5) - cy) / ry;
+    const shape = nx < 0 ? nx * nx + ny * ny * (1 + (-nx) * 0.7) : nx * nx + ny * ny;
+    if (shape <= 1) {
+      body[y][x] = true;
+      grid[y][x] = ny < -0.3 ? pal.top : ny > 0.38 ? pal.belly : pal.mid;
+      if (opt.stripe && Math.abs(ny + 0.02) < 0.16 && x > tail + 1 && x < len - 3) grid[y][x] = opt.stripe;
+      if (opt.spots && ny < 0 && ((x * 7 + y * 5) % 9 === 0)) grid[y][x] = opt.spots;
+    }
+  }
+  for (let y = top0; y < hgt; y++) for (let x = 0; x < tail; x++) {
+    if (body[y][x]) continue;
+    const d = Math.abs((y + 0.5) - cy);
+    const reach = (ry + 0.3) * (1 - (x + 0.5) / (tail + 0.8)) + 0.7;
+    if (d <= reach && !(x === 0 && d < 0.6 && hgt > 4)) grid[y][x] = pal.fin;
+  }
+  if (opt.dorsal) {
+    for (let x = Math.round(cx - 3); x <= Math.round(cx + 1); x++) if (body[1] && body[1][x]) grid[0][x] = pal.fin;
+  }
+  const ex = len - 1 - Math.max(1, Math.round(len * 0.1));
+  const ey = Math.max(top0, Math.round(cy - ry * 0.35 - 0.5));
+  grid[ey][ex] = pal.eye; body[ey][ex] = false;
+  if (opt.fin2) { const fy = Math.round(cy + ry * 0.2); const fx = Math.round(cx + rx * 0.2); if (grid[fy] && body[fy][fx]) { grid[fy][fx] = pal.fin; body[fy][fx] = false; } }
+  const px = []; let nb = 0;
+  for (let y = 0; y < hgt; y++) for (let x = 0; x < len; x++) { if (!grid[y][x]) continue; px.push([x, y, grid[y][x], body[y][x] ? nb++ : -1]); }
+  return {w: len, h: hgt, px, nb, faceLeft: false};
+}
+
+const SPR = {
+  fito: [
+    gridSprite(['.g.', 'gGg', '.g.'], {g: '#4fae3b', G: '#a6e35c'}, 'gG'),
+    gridSprite(['gG', 'Gg'], {g: '#5cb83f', G: '#c3e65a'}, 'gG'),
+    gridSprite(['gyg', '.g.'], {g: '#3f9e3a', y: '#d0e65a'}, 'gy')
+  ],
+  zoo: gridSprite(['a...a', '.aba.', '.bBb.', '.bbb.', '..b..'], {a: '#b9a77e', b: '#f0e3c2', B: '#ff9b5a'}, 'bB'),
+  pezp: fishSprite(10, 5, {top: '#56738f', mid: '#a7c0d4', belly: '#e8eff4', fin: '#7d9cb6', eye: '#0d1117'}, {}),
+  pezg: fishSprite(22, 10, {top: '#4b6838', mid: '#8ea65d', belly: '#e3dcae', fin: '#6a8848', eye: '#0b0e12'}, {stripe: '#d38b86', spots: '#2f3f22', dorsal: true, fin2: true}),
+  garza: gridSprite([
+    '...kk.......',
+    '..kwww......',
+    'yyywwk......',
+    '...www......',
+    '....ww......',
+    '....ww......',
+    '.....ww.....',
+    '....wwgggg..',
+    '...wwwgggggg',
+    '...wwwwggggk',
+    '....wwwwggk.',
+    '.....wwww...',
+    '......l.l...',
+    '......l.l...',
+    '......l.l...',
+    '.....ll.ll..'
+  ], {k: '#2b3038', w: '#e9eef2', g: '#8f9bab', y: '#e6b23a', l: '#8a6a3a'}, 'wg', true),
+  garzaUp: gridSprite([
+    '.....gg.......',
+    '....ggg.......',
+    '...gggg.......',
+    'yywwwwwwwwgg..',
+    '...wwwwwwwwkk.',
+    '..........lll.',
+    '..............'
+  ], {k: '#2b3038', w: '#e9eef2', g: '#8f9bab', y: '#e6b23a', l: '#8a6a3a'}, 'wg', true),
+  garzaDown: gridSprite([
+    '..............',
+    '..............',
+    '..............',
+    'yywwwwwwwwgg..',
+    '...wwwgggwwkk.',
+    '....gggg..lll.',
+    '.....gg.......'
+  ], {k: '#2b3038', w: '#e9eef2', g: '#8f9bab', y: '#e6b23a', l: '#8a6a3a'}, 'wg', true)
+};
+const ICON = {
+  lupa: gridSprite(['..kkkk......', '.kbbwwk.....', 'kbbwwwwk....', 'kbwwwwwk....', 'kwwwwwwk....', 'kwwwwwwk....', '.kwwwwk.....', '..kkkkhh....', '......hhh...', '.......hhh..', '........hhh.', '.........hh.'],
+    {k: '#d6dde6', w: '#6fa8dc', b: '#e6f2ff', h: '#a0683a'}, ''),
+  red: gridSprite(['..kkkkkk....', '.kmkmkmkk...', 'kmkmkmkmkk..', 'kkmkmkmkmk..', 'kmkmkmkmkk..', '.kkmkmkmk...', '..kkkkkk....', '....hh......', '...hh.......', '..hh........', '.hh.........', 'hh..........'],
+    {k: '#d6dde6', m: '#4a5262', h: '#a0683a'}, ''),
+  fito: gridSprite(['............', '..g.....yG..', '.gGg....Gg..', '..g.........', '......g.....', '.....gGg....', '......g..g..', '..Gg....gGg.', '..gG.....g..', '............', '.....gyg....', '......g.....'],
+    {g: '#4fae3b', G: '#a6e35c', y: '#d0e65a'}, ''),
+  filtro: gridSprite(['..kkkkkkkk..', '.kssssssssk.', '.ksggssssqk.', '.ksggssssqk.', '.kssssssssk.', '.kffffffffk.', '.kfmfmfmffk.', '.kffffffffk.', '.kssssssssk.', 'ppkkkkkkkkpp', 'pp........pp', '............'],
+    {s: '#8e9aab', g: '#7fcf4f', q: '#3987e5', f: '#e8e2cf', m: '#b9b29c', p: '#6b7685', k: '#3a4152'}, ''),
+  draga: gridSprite(['hh..........', '.hh.........', '..hh........', '...hh.......', '....hh......', '.....hkkkkkk', '.....kddddk.', '.....kdtdtk.', '.....kddddk.', '......kddk..', '.......kk...', '............'],
+    {d: '#6b4f35', t: '#ff4d6d', k: '#d6dde6', h: '#a0683a'}, ''),
+  agua: gridSprite(['....b.....', '....bb....', '...bbb....', '...bbbb...', '..bbbbbb..', '..bwbbbb..', '.bwbbbbbb.', '.bwbbbbbb.', '.bbbbbbbb.', '..bbbbbb..', '...bbbb...', '..........'],
+    {b: '#3987e5', w: '#cde2fb'}, ''),
+  planta: gridSprite(['...g....', '..gGg...', '...g.g..', '.g.gGg..', 'gGgg....', '...gg.g.', '..gg.gG.', '.gGg.g..', '...gg...', '..g.g...', '...g....', '...g....'],
+    {g: '#3d8a36', G: '#7ccf58'}, 'gG')
+};
+
+/* =========================================================
+   4. ESTADO
+   ========================================================= */
+let S;
+function freshState(pollutant, level) {
+  return {
+    t: 0, pollutant: pollutant || 'hg', level: level != null ? level : 2, filter: false,
+    parts: [], sed: new Float32Array(BOT.length), resAcc: new Float32Array(BOT.length),
+    orgs: [], plants: [], nextId: 1,
+    stats: {emitted: 0, removed: 0, degraded: 0},
+    emitAcc: 0, relAcc: 0, history: [], nextHist: 0,
+    selected: null, lastNote: '',
+    birdTimer: 0, eggsCracked: false, quiet: false,
+    flags: {fishedBig: false, dredged: false, bioDays: 0},
+    counts: {fito: 0, zoo: 0, pezp: 0, pezg: 0, garza: 0},
+    lastEatMsg: -99
+  };
+}
+
+/* partículas */
+function addParticle(x, y, vx) {
+  if (S.parts.length >= MAXP) return false;
+  S.parts.push({x, y, vx: vx || 0, dead: false});
+  return true;
+}
+function deposit(x, amt) {
+  const c = clamp(Math.floor(x / B) - WC0, 0, BOT.length - 1);
+  S.sed[c] += amt == null ? 1 : amt;
+}
+function release(x, y, amt) {
+  if (amt <= 0) return;
+  const P = POLL[S.pollutant];
+  if (!P.persistent) { S.stats.degraded += amt; return; }
+  S.relAcc += amt;
+  while (S.relAcc >= 1) {
+    S.relAcc -= 1;
+    if (inWater(x, y)) { if (!addParticle(x + rand(-1, 1), y + rand(-1, 1), 0)) deposit(x); }
+    else deposit(clamp(x, WC0 * B, (WC1 + 1) * B - 1));
+  }
+}
+
+/* organismos */
+function newOrg(kind, x, y) {
+  const k = K[kind];
+  const o = {id: S.nextId++, kind, x, y, vx: 0, vy: 0, face: Math.random() < 0.5 ? 1 : -1, w: k.w0, load: 0, age: 0,
+    life: k.life ? rand(k.life[0], k.life[1]) : 1e9, hunger: rand(0, k.hunger || 1), eaten: 0, last: 'Acaba de nacer: todavía está limpio.',
+    dead: false, deadT: 0, gone: false, wx: x, wy: y, wt: 0, v: (Math.random() * 3) | 0, phase: Math.random() * 6.28,
+    state: 'perch', target: null, preferPlant: false, warned: false};
+  S.orgs.push(o);
+  return o;
+}
+function spawn(kind, near) {
+  const k = K[kind];
+  let p;
+  if (near) {
+    for (let i = 0; i < 20; i++) {
+      const x = near.x + rand(-10, 10), y = near.y + rand(-8, 8);
+      if (fitsAt(k, x, y) && (!k.ymin || y >= k.ymin) && (!k.ymax || y <= k.ymax)) { p = {x, y}; break; }
+    }
+    if (!p) return null;
+  } else if (kind === 'fito') p = randomWaterPoint(k, SURF + 2, SURF + 34);
+  else if (kind === 'zoo') p = randomWaterPoint(k, SURF + 4, SURF + 50);
+  else if (kind === 'pezp' && S.plants.length) {
+    const pl = S.plants[(Math.random() * S.plants.length) | 0];
+    p = {x: pl.x + rand(-8, 8), y: pl.base - rand(6, Math.max(8, pl.h))};
+    if (!fitsAt(k, p.x, p.y)) p = randomWaterPoint(k);
+  } else if (kind === 'pezg') p = randomWaterPoint(k, SURF + 30, 999);
+  else p = randomWaterPoint(k);
+  return newOrg(kind, p.x, p.y);
+}
+function makePlants() {
+  const cols = [14, 17, 21, 26, 31, 35, 38];
+  cols.forEach((c, i) => {
+    const base = BOT[c - WC0] * B;
+    const maxH = base - SURF - 10;
+    const h = Math.round(clamp(rand(26, 52), 14, maxH));
+    const o = newOrg('planta', c * B + 4, base - h / 2);
+    o.base = base; o.h = h; o.stems = [{dx: 0, h}, {dx: -3, h: Math.round(h * rand(0.5, 0.8))}, {dx: 3, h: Math.round(h * rand(0.4, 0.75))}];
+    S.plants.push(o);
+  });
+}
+function spawnBird(arriving) {
+  const o = newOrg('garza', arriving ? W + 12 : PERCH.x, arriving ? 20 : PERCH.y);
+  o.state = arriving ? 'arrive' : 'perch';
+  o.hunger = rand(4, 10);
+  o.face = -1;
+  S.eggsCracked = false;
+  return o;
+}
+function ppm(o) { return o.w > 0 ? o.load / o.w * F_ORG : 0; }
+function waterPpm() { return S.parts.length / WATER_AREA * F_W; }
+
+function say(text, tone) {
+  if (S.quiet) return;
+  chatPush(text, tone);
+}
+
+function killOrg(o) {
+  o.gone = true;
+  if (S.selected === o) S.selected = null;
+}
+function dieNatural(o) {
+  release(o.x, o.y, o.load);
+  if (S.selected === o) { S.lastNote = K[o.kind].el.charAt(0).toUpperCase() + K[o.kind].el.slice(1) + ' que seguías murió de viejo. Su contaminante no desaparece: vuelve al agua y al sedimento.'; say('Tu ' + K[o.kind].name.toLowerCase() + ' murió de viejo. Su contaminante vuelve al lago.', 'info'); }
+  o.load = 0;
+  killOrg(o);
+}
+function dieToxic(o) {
+  o.dead = true; o.deadT = 0;
+  const k = K[o.kind];
+  if (o.kind === 'garza') {
+    say('La garza murió intoxicada con ' + fmtPpm(ppm(o)) + ' ppm. Otra garza llegará en unos días.', 'warn');
+  } else {
+    say(k.un.charAt(0).toUpperCase() + k.un.slice(1) + ' murió intoxicado (' + fmtPpm(ppm(o)) + ' ppm). Su contaminante vuelve al agua.', 'warn');
+  }
+}
+function eat(pred, prey, frac) {
+  const P = POLL[S.pollutant], k = K[pred.kind];
+  const got = prey.load * frac;
+  const kept = got * P.ret;
+  pred.load += kept;
+  release(prey.x, prey.y, got - kept);
+  pred.w = Math.min(k.wmax, pred.w + prey.w * frac * k.eff);
+  pred.eaten++;
+  const kp = K[prey.kind];
+  pred.last = (frac < 1 ? 'Mordisqueó ' + kp.un : 'Se comió ' + kp.un) + ' que traía ' + nf1.format(got) + ' partículas.';
+  if (frac >= 1) {
+    if (S.selected === prey) {
+      S.selected = pred;
+      say('¡' + kp.el.charAt(0).toUpperCase() + kp.el.slice(1) + ' que seguías fue devorado por ' + k.un + '! La lupa ahora sigue al depredador.', 'mission');
+    }
+    prey.load = 0;
+    killOrg(prey);
+  } else {
+    prey.load -= got;
+  }
+  if ((pred.kind === 'garza' || pred.kind === 'pezg') && S.t - S.lastEatMsg > 6) {
+    S.lastEatMsg = S.t;
+    say((k.el.charAt(0).toUpperCase() + k.el.slice(1)) + ' se comió ' + kp.un + ' (+' + nf1.format(kept) + ' partículas). Ahora tiene ' + fmtPpm(ppm(pred)) + ' ppm.', 'info');
+  }
+}
+function excrete(o, dt, P) {
+  const kk = P.k * (K[o.kind].kMul || 1);
+  const ex = o.load * kk * dt;
+  if (ex > 0) { o.load -= ex; release(o.x, o.y, ex); }
+}
+
+/* =========================================================
+   5. SIMULACIÓN
+   ========================================================= */
+const HCOLS = 48, HROWS = 27;
+const cellHead = new Int32Array(HCOLS * HROWS);
+let nextIdx = new Int32Array(MAXP + 8);
+function buildHash() {
+  cellHead.fill(-1);
+  const ps = S.parts;
+  for (let i = 0; i < ps.length; i++) {
+    const p = ps[i];
+    const cx = clamp(p.x / B | 0, 0, HCOLS - 1), cy = clamp(p.y / B | 0, 0, HROWS - 1);
+    const c = cy * HCOLS + cx;
+    nextIdx[i] = cellHead[c];
+    cellHead[c] = i;
+  }
+}
+function absorbAround(o, x, y, r, rate, dt) {
+  const ps = S.parts, r2 = r * r;
+  const cx = x / B | 0, cy = y / B | 0;
+  const pr = rate * dt;
+  for (let dy = -1; dy <= 1; dy++) {
+    const yy = cy + dy; if (yy < 0 || yy >= HROWS) continue;
+    for (let dx = -1; dx <= 1; dx++) {
+      const xx = cx + dx; if (xx < 0 || xx >= HCOLS) continue;
+      for (let i = cellHead[yy * HCOLS + xx]; i !== -1; i = nextIdx[i]) {
+        const p = ps[i];
+        if (p.dead) continue;
+        const ddx = p.x - x, ddy = p.y - y;
+        if (ddx * ddx + ddy * ddy < r2 && Math.random() < pr) { p.dead = true; o.load += 1; }
+      }
+    }
+  }
+}
+
+function stepParticles(dt, P) {
+  const sq = Math.sqrt(dt);
+  const minX = WC0 * B + 0.5, maxX = (WC1 + 1) * B - 0.5;
+  for (const p of S.parts) {
+    if (p.dead) continue;
+    if (!P.persistent && Math.random() < dt / P.waterLife) { p.dead = true; S.stats.degraded += 1; continue; }
+    const bottom = botY(p.x);
+    const depth = (p.y - SURF) / Math.max(8, bottom - SURF);
+    const cur = 5 * (1 - 2 * depth);
+    p.vx *= Math.max(0, 1 - 1.2 * dt);
+    let nx = p.x + (p.vx + cur) * dt + (Math.random() * 2 - 1) * 9 * sq;
+    let ny = p.y + 1.0 * dt + (Math.random() * 2 - 1) * 6 * sq;
+    if (ny < SURF + 1) ny = SURF + 1 + (SURF + 1 - ny);
+    if (nx < minX) nx = minX + (minX - nx);
+    if (nx > maxX) nx = maxX - (nx - maxX);
+    if (ny >= botY(nx)) { deposit(nx); p.dead = true; continue; }
+    p.x = nx; p.y = ny;
+  }
+}
+function stepSediment(dt, P) {
+  for (let c = 0; c < BOT.length; c++) {
+    if (S.sed[c] <= 0) continue;
+    if (P.persistent) {
+      S.resAcc[c] += S.sed[c] * 0.0015 * dt;
+      while (S.resAcc[c] >= 1 && S.sed[c] >= 1) {
+        S.resAcc[c] -= 1;
+        if (!addParticle((c + WC0) * B + rand(1, 7), BOT[c] * B - 1.5, 0)) break;
+        S.sed[c] -= 1;
+      }
+    } else {
+      const d = S.sed[c] * P.sedDecay * dt;
+      S.sed[c] -= d; S.stats.degraded += d;
+    }
+  }
+}
+
+function stepFito(o, dt, P) {
+  o.age += dt;
+  excrete(o, dt, P);
+  if (o.age > o.life) { dieNatural(o); return; }
+  const sq = Math.sqrt(dt);
+  const nx = o.x + (Math.random() * 2 - 1) * 5 * sq;
+  const ny = clamp(o.y + (Math.random() * 2 - 1) * 2 * sq + Math.sin(S.t * 0.8 + o.phase) * 0.6 * dt, SURF + 2, SURF + 36);
+  if (inWater(nx, ny + 1) && inWater(nx - 1, ny) && inWater(nx + 1, ny)) { o.x = nx; o.y = ny; }
+  absorbAround(o, o.x, o.y, 3.5, 0.35, dt);
+}
+function stepPlant(o, dt, P) {
+  excrete(o, dt, P);
+  const c = clamp(Math.floor(o.x / B) - WC0, 0, BOT.length - 1);
+  const up = S.sed[c] * 0.0003 * dt;
+  if (up > 0) { S.sed[c] -= up; o.load += up; }
+  for (let yy = o.base - o.h; yy < o.base; yy += 7) absorbAround(o, o.x, yy, 5, 0.07, dt);
+}
+function findPrey(o, k) {
+  let best = null, bs = 1e9;
+  const d2max = k.detect * k.detect;
+  for (const q of S.orgs) {
+    if (q.gone || q.dead || k.eats.indexOf(q.kind) < 0) continue;
+    if (q.kind === 'planta') continue;
+    const dx = q.x - o.x, dy = q.y - o.y, d2 = dx * dx + dy * dy;
+    if (d2 > d2max) continue;
+    const s = d2 * (ppm(q) >= SICK ? 0.4 : 1);
+    if (s < bs) { bs = s; best = q; }
+  }
+  if (!best && o.preferPlant && k.eats.indexOf('planta') >= 0) {
+    for (const pl of S.plants) {
+      const py = clamp(o.y, pl.base - pl.h, pl.base - 2);
+      const dx = pl.x - o.x, dy = py - o.y, d2 = dx * dx + dy * dy;
+      if (d2 < d2max && d2 < bs) { bs = d2; best = pl; }
+    }
+  }
+  return best;
+}
+function stepSwimmer(o, dt, P) {
+  const k = K[o.kind];
+  o.age += dt;
+  if (o.dead) {
+    o.deadT += dt;
+    if (o.y > SURF + 3) o.y -= 6 * dt;
+    if (o.deadT > 6) { release(o.x, Math.max(o.y, SURF + 2), o.load); o.load = 0; if (S.selected === o) { S.lastNote = 'El organismo que seguías murió intoxicado. Al descomponerse, su contaminante volvió al agua.'; } killOrg(o); }
+    return;
+  }
+  excrete(o, dt, P);
+  const c = ppm(o);
+  if (c >= LETHAL) { dieToxic(o); return; }
+  if (o.age > o.life) { dieNatural(o); return; }
+  if (!fitsAt(k, o.x, o.y)) { const p = randomWaterPoint(k); o.x = p.x; o.y = p.y; }
+  const sick = c >= SICK;
+  const sp = sick ? 0.55 : 1;
+  if (sick && !o.warned && o.kind !== 'zoo') { o.warned = true; say(k.un.charAt(0).toUpperCase() + k.un.slice(1) + ' está intoxicado (' + fmtPpm(c) + ' ppm): nada más lento y es presa fácil.', 'warn'); }
+  o.hunger -= dt;
+  let tx = null, ty = null, speed = k.cruise * sp;
+  if (o.kind === 'pezp') {
+    for (const g of S.orgs) {
+      if (g.kind !== 'pezg' || g.dead || g.gone) continue;
+      const dx = o.x - g.x, dy = o.y - g.y;
+      if (dx * dx + dy * dy < 400) { tx = o.x + dx * 2; ty = o.y + dy * 2; speed = k.chase * sp; break; }
+    }
+  }
+  if (tx === null && o.hunger <= 0) {
+    if (o.hunger > -dt * 1.5) o.preferPlant = Math.random() < 0.25;
+    const prey = findPrey(o, k);
+    if (prey) {
+      const isPlant = prey.kind === 'planta';
+      const py = isPlant ? clamp(o.y, prey.base - prey.h, prey.base - 2) : prey.y;
+      tx = prey.x; ty = py; speed = k.chase * sp;
+      const dx = prey.x - o.x, dy = py - o.y;
+      const reach = k.hw + (isPlant ? 3 : K[prey.kind].hw) + 1;
+      if (dx * dx + dy * dy < reach * reach) {
+        eat(o, prey, isPlant ? 0.2 : 1);
+        o.hunger = k.hunger * rand(0.8, 1.2);
+        tx = null;
+      }
+    }
+  }
+  if (tx === null) {
+    o.wt -= dt;
+    if (o.wt <= 0 || (o.x - o.wx) * (o.x - o.wx) + (o.y - o.wy) * (o.y - o.wy) < 9) {
+      const p = randomWaterPoint(k); o.wx = p.x; o.wy = p.y; o.wt = rand(3, 8);
+    }
+    tx = o.wx; ty = o.wy;
+  }
+  const dx = tx - o.x, dy = ty - o.y, d = Math.hypot(dx, dy) || 1;
+  let dvx = dx / d * speed, dvy = dy / d * speed * 0.75;
+  if (o.kind === 'zoo') { const pulse = 0.3 + 1.4 * Math.max(0, Math.sin(o.age * 5 + o.phase)); dvx *= pulse; dvy *= pulse; }
+  const a = Math.min(1, dt * 3);
+  o.vx += (dvx - o.vx) * a; o.vy += (dvy - o.vy) * a;
+  let nx = o.x + o.vx * dt, ny = o.y + o.vy * dt;
+  if (sick) ny += Math.sin(o.age * 9) * 4 * dt;
+  const okY = (y) => y >= (k.ymin || 0) - 2 && y <= (k.ymax || 999);
+  if (fitsAt(k, nx, ny) && okY(ny)) { o.x = nx; o.y = ny; }
+  else if (fitsAt(k, nx, o.y)) { o.x = nx; o.vy *= -0.5; }
+  else if (fitsAt(k, o.x, ny) && okY(ny)) { o.y = ny; o.vx *= -0.5; }
+  else { o.vx *= -0.5; o.vy *= -0.5; o.wt = 0; }
+  if (Math.abs(o.vx) > 1.2) o.face = o.vx > 0 ? 1 : -1;
+}
+function moveTo(o, x, y, speed, dt) {
+  const dx = x - o.x, dy = y - o.y, d = Math.hypot(dx, dy);
+  if (d < 0.5) { o.x = x; o.y = y; return true; }
+  const s = Math.min(d, speed * dt);
+  o.x += dx / d * s; o.y += dy / d * s;
+  if (Math.abs(dx) > 0.5) o.face = dx > 0 ? 1 : -1;
+  return d <= speed * dt;
+}
+function stepBird(o, dt, P) {
+  o.age += dt;
+  if (o.state === 'dead') {
+    o.deadT += dt;
+    moveTo(o, Math.max(o.x, 340), 52, 30, dt);
+    if (o.deadT > 30) { deposit((WC1) * B, o.load); o.load = 0; if (S.selected === o) S.lastNote = 'La garza que seguías murió intoxicada.'; killOrg(o); S.birdTimer = 20; }
+    return;
+  }
+  excrete(o, dt, P);
+  const c = ppm(o);
+  if (c >= LETHAL) { o.state = 'dead'; o.dead = true; o.deadT = 0; dieToxic(o); return; }
+  if (c >= SICK && !o.warned) {
+    o.warned = true;
+    say(S.pollutant === 'hg' ? 'La garza está intoxicada con mercurio: tiembla y le cuesta pescar.' : 'La garza está intoxicada: tiembla y le cuesta pescar.', 'warn');
+  }
+  if (S.pollutant === 'ddt' && c >= 1.5 && !S.eggsCracked) {
+    S.eggsCracked = true;
+    say('El DDT adelgazó la cáscara de los huevos de la garza: se rompieron en el nido.', 'warn');
+  }
+  const sick = c >= SICK ? 0.6 : 1;
+  switch (o.state) {
+    case 'arrive':
+      if (moveTo(o, PERCH.x, PERCH.y, 40, dt)) { o.state = 'perch'; o.face = -1; }
+      break;
+    case 'perch':
+      o.face = -1;
+      o.hunger -= dt;
+      if (o.hunger <= 0) {
+        let best = null, bs = -1;
+        for (const q of S.orgs) {
+          if ((q.kind !== 'pezp' && q.kind !== 'pezg') || q.dead || q.gone) continue;
+          if (q.y > SURF + 50 || q.x < WC0 * B + 8 || q.x > (WC1 + 1) * B - 8) continue;
+          const s = q.w * 10 - Math.abs(q.x - o.x) * 0.02 + (ppm(q) >= SICK ? 20 : 0);
+          if (s > bs) { bs = s; best = q; }
+        }
+        if (best) { o.target = best; o.state = 'fly'; }
+        else o.hunger = 1.5;
+      }
+      break;
+    case 'fly': {
+      const t = o.target;
+      if (!t || t.gone || t.dead || t.y > SURF + 58) { o.state = 'return'; break; }
+      if (moveTo(o, t.x, SURF - 14, 42 * sick, dt) || Math.abs(o.x - t.x) < 3) o.state = 'dive';
+      break;
+    }
+    case 'dive': {
+      const t = o.target;
+      if (!t || t.gone || t.dead || t.y > SURF + 58 || o.y > SURF + 54) { o.state = 'return'; break; }
+      moveTo(o, t.x, t.y, 64 * sick, dt);
+      if (Math.hypot(t.x - o.x, t.y - o.y) < 6) { eat(o, t, 1); o.state = 'return'; }
+      break;
+    }
+    case 'return':
+      if (moveTo(o, PERCH.x, PERCH.y, 38 * sick, dt)) { o.state = 'perch'; o.hunger = K.garza.hunger * rand(0.8, 1.2); o.target = null; }
+      break;
+  }
+}
+
+function respawn(dt) {
+  for (const kind of ['fito', 'zoo', 'pezp', 'pezg']) {
+    const k = K[kind];
+    const def = k.target - S.counts[kind];
+    if (def <= 0) continue;
+    let expect = (k.respawn * def + 0.02) * dt;
+    while (expect > 0) {
+      if (Math.random() < Math.min(1, expect)) spawn(kind);
+      expect -= 1;
+    }
+  }
+  if (S.counts.garza === 0) {
+    S.birdTimer -= dt;
+    if (S.birdTimer <= 0) { spawnBird(true); say('Llega una garza joven desde otro lago. Su cuerpo todavía está limpio.', 'good'); }
+  }
+}
+
+function levelStats() {
+  const L = [];
+  for (let i = 0; i <= 5; i++) L.push({n: 0, load: 0, w: 0, c: null});
+  for (const o of S.orgs) {
+    if (o.gone || o.dead) continue;
+    const l = L[K[o.kind].lvl];
+    l.n++; l.load += o.load; l.w += o.w;
+  }
+  for (let i = 1; i <= 5; i++) L[i].c = L[i].w > 0 ? L[i].load / L[i].w * F_ORG : null;
+  L[0].c = waterPpm();
+  L[0].n = null;
+  return L;
+}
+function pushHistory() {
+  const L = levelStats();
+  S.history.push({t: Math.round(S.t), v: [L[0].c, L[1].c, L[2].c, L[3].c, L[4].c, L[5].c]});
+  if (S.history.length > 420) S.history.shift();
+}
+
+function step(dt) {
+  const P = POLL[S.pollutant];
+  S.t += dt;
+  const rate = EMIT[S.level] * (S.filter ? 0.1 : 1);
+  S.emitAcc += rate * dt;
+  while (S.emitAcc >= 1) {
+    S.emitAcc -= 1; S.stats.emitted += 1;
+    if (!addParticle(OUT_X + rand(0, 2), OUT_Y + rand(-3, 3), rand(18, 28))) deposit(OUT_X + 8);
+  }
+  stepParticles(dt, P);
+  stepSediment(dt, P);
+  buildHash();
+  const cnt = S.counts; cnt.fito = cnt.zoo = cnt.pezp = cnt.pezg = cnt.garza = 0;
+  const list = S.orgs;
+  for (let i = 0; i < list.length; i++) {
+    const o = list[i];
+    if (o.gone) continue;
+    switch (o.kind) {
+      case 'fito': stepFito(o, dt, P); break;
+      case 'planta': stepPlant(o, dt, P); break;
+      case 'garza': stepBird(o, dt, P); break;
+      default: stepSwimmer(o, dt, P);
+    }
+    if (!o.gone && !(o.dead && o.kind !== 'garza') && cnt[o.kind] != null) cnt[o.kind]++;
+  }
+  if (S.orgs.some(o => o.gone)) S.orgs = S.orgs.filter(o => !o.gone);
+  let j = 0; const ps = S.parts;
+  for (let i = 0; i < ps.length; i++) if (!ps[i].dead) ps[j++] = ps[i];
+  ps.length = j;
+  respawn(dt);
+  if (S.pollutant === 'bio' && S.level > 0) S.flags.bioDays += dt;
+  while (S.t >= S.nextHist) { pushHistory(); S.nextHist += 1; }
+}
+
+function initWorld(pollutant, level, prewarm) {
+  S = freshState(pollutant, level);
+  makePlants();
+  for (let i = 0; i < 100; i++) spawn('fito');
+  for (let i = 0; i < 30; i++) spawn('zoo');
+  for (let i = 0; i < 10; i++) { const o = spawn('pezp'); if (o) { o.age = rand(0, 100); o.w = rand(0.5, 2.5); } }
+  for (let i = 0; i < 4; i++) { const o = spawn('pezg'); if (o) { o.age = rand(0, 200); o.w = rand(2, 5); } }
+  spawnBird(false);
+  if (prewarm) {
+    S.quiet = true;
+    for (let i = 0; i < prewarm * 10; i++) step(0.1);
+    S.quiet = false;
+  }
+}
+
+/* =========================================================
+   6. DIBUJO DEL MUNDO
+   ========================================================= */
+const cv = document.getElementById('world');
+const g = cv.getContext('2d');
+g.imageSmoothingEnabled = false;
+function layer() { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; }
+const skyL = layer(), terrL = layer(), waterL = layer();
+
+const TEX = {
+  dirt: ['#7a5232', '#6b4629', '#86603c', '#5f3e24'],
+  grass: ['#5aa83a', '#4c9530', '#6bbd45'],
+  stone: ['#6f747c', '#62676f', '#7c818a', '#565a61'],
+  sand: ['#d8c48a', '#cbb67b', '#e2d29c', '#c2ab6f'],
+  mud: ['#4d4434', '#433b2d', '#5a5040'],
+  brick: ['#9c4a35', '#8c3f2c', '#a85540'],
+  roof: ['#5b6573', '#4f5865', '#68727f'],
+  log: ['#6b4a2b', '#5c3f24', '#7a5733'],
+  leaves: ['#3f8f2f', '#347a27', '#4ea33a', '#2e6b22'],
+  concrete: ['#a3a7ad', '#979ba2', '#b0b4ba']
+};
+function pick(arr, h) { return arr[Math.floor(h * arr.length) % arr.length]; }
+function drawBlock(c, type, bx, by) {
+  const ox = bx * B, oy = by * B;
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const h = hash2(ox + x, oy + y, type.length * 31);
+    let col = null;
+    switch (type) {
+      case 'grass':
+        if (y < 2 || (y === 2 && h < 0.5)) col = pick(TEX.grass, h); else col = pick(TEX.dirt, h); break;
+      case 'brick': {
+        const mortarRow = (y % 4 === 3);
+        const off = (Math.floor(y / 4) % 2) ? 3 : 7;
+        if (mortarRow || x === off) col = '#a59a8b'; else col = pick(TEX.brick, hash2(ox + (x < off ? 0 : 8), oy + Math.floor(y / 4), 3)); break;
+      }
+      case 'window':
+        if (x === 0 || x === 7 || y === 0 || y === 7) col = '#3b3f47'; else if (x === 3 || y === 3) col = '#4a4f59'; else col = (y < 3 && x < 3) ? '#d9f0ff' : '#7fb8e0'; break;
+      case 'windowLit':
+        if (x === 0 || x === 7 || y === 0 || y === 7) col = '#3b3f47'; else if (x === 3 || y === 3) col = '#4a4f59'; else col = h < 0.3 ? '#ffe9a3' : '#f2c14e'; break;
+      case 'door':
+        if (x === 0 || x === 7 || y === 0) col = '#3b3f47'; else col = (x === 4 && y === 4) ? '#c9a24a' : (y % 2 ? '#5d4a3a' : '#6b5644'); break;
+      case 'gate':
+        if (y === 0) col = '#3b3f47'; else col = (x % 2 === 0) ? '#6b7685' : '#58616f'; break;
+      case 'hazard':
+        if (x === 0 || x === 7 || y === 0 || y === 7) col = pick(TEX.brick, h);
+        else { const d = Math.abs(x - 3.5) + Math.abs(y - 3.5); col = d < 3.2 ? (d < 1.2 ? '#14161d' : '#f2c14e') : pick(TEX.brick, h); }
+        break;
+      case 'roof': {
+        if (y < 7 - x) { col = null; break; }
+        col = (y === 7 - x) ? '#7f8a99' : pick(TEX.roof, h); break;
+      }
+      case 'chimney':
+        if (x < 1 || x > 6) col = null; else if (y < 2 && by === 1) col = (x % 2 ? '#e8e2cf' : '#c94a3a'); else col = pick(TEX.brick, h); break;
+      case 'stack':
+        if (x < 2 || x > 5) col = null; else col = (x === 2) ? '#9aa4b1' : pick(TEX.roof, h); break;
+      case 'silo':
+        if (x === 0 || x === 7) col = null; else col = x < 3 ? '#c3c8cf' : x < 6 ? '#a3a9b2' : '#858c96'; if (col && y === 0 && by === 4) col = '#6b7685'; break;
+      case 'pipeV':
+        if (x >= 2 && x <= 5) col = x === 2 ? '#c3cad3' : x === 5 ? '#5b6573' : (y % 4 === 0 ? '#6b7685' : '#949eab'); break;
+      case 'pipeH':
+        if (y >= 2 && y <= 5) col = y === 2 ? '#c3cad3' : y === 5 ? '#5b6573' : (x % 4 === 0 ? '#6b7685' : '#949eab'); break;
+      case 'pipeElbow':
+        if ((x >= 2 && x <= 5 && y <= 5) || (y >= 2 && y <= 5 && x >= 2)) col = (x === 2 || y === 2) ? '#c3cad3' : (x === 5 && y < 2) || y === 5 ? '#5b6573' : '#949eab'; break;
+      case 'leaves':
+        col = h < 0.12 ? null : pick(TEX.leaves, h); break;
+      default:
+        col = pick(TEX[type] || TEX.stone, h);
+    }
+    if (col) { c.fillStyle = col; c.fillRect(ox + x, oy + y, 1, 1); }
+  }
+}
+function terrainType(c, r) {
+  if (c < WC0 || c > WC1) {
+    if (r < 7) return null;
+    if (r === 7) return 'grass';
+    const st = 14 + (hash2(c, 0, 7) < 0.5 ? 1 : 0);
+    return r >= st ? 'stone' : 'dirt';
+  }
+  const br = BOT[c - WC0];
+  if (r < br) return null;
+  if (r === br) return 'sand';
+  if (r === br + 1) return 'mud';
+  return r >= br + 3 ? 'stone' : 'dirt';
+}
+function buildLayers() {
+  /* cielo */
+  const s = skyL.getContext('2d');
+  const SKY = ['#5fa9ea', '#6cb1ec', '#79b9ef', '#87c2f1', '#95cbf3', '#a3d3f5', '#b1dbf7', '#bfe2f8', '#cbe8f9'];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const r = y / B; const i = Math.min(SKY.length - 1, Math.floor(r));
+    const f = r - Math.floor(r);
+    const useNext = f > 0.5 && hash2(x, y, 5) < (f - 0.5) * 2 && i < SKY.length - 1;
+    s.fillStyle = SKY[useNext ? i + 1 : i]; s.fillRect(x, y, 1, 1);
+  }
+  s.fillStyle = '#fff1a8'; s.fillRect(282, 10, 14, 14);
+  s.fillStyle = '#ffe066'; s.fillRect(284, 12, 10, 10);
+  s.fillStyle = '#fff8d6'; s.fillRect(285, 13, 4, 4);
+
+  /* terreno */
+  const t = terrL.getContext('2d');
+  for (let c = 0; c < 48; c++) for (let r = 0; r < 27; r++) { const ty = terrainType(c, r); if (ty) drawBlock(t, ty, c, r); }
+  // fábrica
+  drawBlock(t, 'silo', 0, 4); drawBlock(t, 'silo', 0, 5); drawBlock(t, 'silo', 0, 6);
+  drawBlock(t, 'chimney', 2, 1); drawBlock(t, 'chimney', 2, 2);
+  drawBlock(t, 'stack', 5, 2);
+  for (let c = 1; c <= 6; c++) drawBlock(t, 'roof', c, 3);
+  const row4 = ['brick', 'windowLit', 'brick', 'window', 'brick', 'windowLit'];
+  const row5 = ['brick', 'brick', 'hazard', 'brick', 'brick', 'brick'];
+  const row6 = ['brick', 'door', 'brick', 'gate', 'gate', 'brick'];
+  row4.forEach((ty, i) => drawBlock(t, ty, i + 1, 4));
+  row5.forEach((ty, i) => drawBlock(t, ty, i + 1, 5));
+  row6.forEach((ty, i) => drawBlock(t, ty, i + 1, 6));
+  // tubería de descarga
+  drawBlock(t, 'pipeH', 7, 6);
+  drawBlock(t, 'pipeV', 7, 7); drawBlock(t, 'pipeV', 7, 8);
+  drawBlock(t, 'pipeElbow', 7, 9);
+  drawBlock(t, 'pipeH', 8, 9); drawBlock(t, 'pipeH', 9, 9); drawBlock(t, 'pipeH', 10, 9);
+  t.fillStyle = '#23272f'; t.fillRect(87, 74, 1, 4);
+  // orilla derecha: tronco seco con nido y árbol
+  drawBlock(t, 'log', 43, 4); drawBlock(t, 'log', 43, 5); drawBlock(t, 'log', 43, 6);
+  for (let r = 3; r <= 6; r++) drawBlock(t, 'log', 46, r);
+  for (let c = 44; c <= 47; c++) for (let r = 0; r <= 2; r++) drawBlock(t, 'leaves', c, r);
+  drawBlock(t, 'leaves', 45, 3); drawBlock(t, 'leaves', 47, 3);
+  // juncos y pasto
+  for (let i = 0; i < 4; i++) {
+    const x = 337 + i * 2, top = 44 + (i % 2) * 3;
+    t.fillStyle = '#5c8f3a'; t.fillRect(x, top, 1, 56 - top);
+    t.fillStyle = '#6b4a2b'; t.fillRect(x, top - 3, 1, 3);
+  }
+  for (let x = 0; x < W; x++) {
+    const c = Math.floor(x / B);
+    if ((c < WC0 || c > WC1) && !(c >= 0 && c <= 7 && x < 64) && hash2(x, 1, 9) < 0.22) { t.fillStyle = hash2(x, 2, 9) < 0.15 ? '#f2c14e' : '#6bbd45'; t.fillRect(x, 55, 1, 1); }
+  }
+  // cartel de la fábrica
+  t.fillStyle = '#2b3038'; t.fillRect(17, 27, 30, 5);
+  for (let x = 18; x < 46; x++) for (let y = 28; y < 31; y++) { t.fillStyle = ((x + y) % 6 < 3) ? '#f2c14e' : '#14161d'; t.fillRect(x, y, 1, 1); }
+
+  /* agua */
+  const wl = waterL.getContext('2d');
+  const top = hexToRgb('#4b9be0'), deep = hexToRgb('#0f3563');
+  for (let x = WC0 * B; x < (WC1 + 1) * B; x++) {
+    const by = botY(x);
+    for (let y = SURF; y < by; y++) {
+      const d = clamp((y - SURF) / 150, 0, 1);
+      const n = (hash2(x, y, 11) - 0.5) * 10;
+      const r = top[0] + (deep[0] - top[0]) * d + n, gg = top[1] + (deep[1] - top[1]) * d + n, b = top[2] + (deep[2] - top[2]) * d + n;
+      wl.fillStyle = 'rgb(' + (r | 0) + ',' + (gg | 0) + ',' + (b | 0) + ')';
+      wl.fillRect(x, y, 1, 1);
+    }
+  }
+}
+
+const clouds = [{x: 40, y: 6, s: 1}, {x: 170, y: 14, s: 0.8}, {x: 300, y: 4, s: 1.2}];
+function drawCloud(cx, cy, s) {
+  g.fillStyle = '#ffffff';
+  const w = Math.round(28 * s), h = Math.round(6 * s);
+  g.fillRect(Math.round(cx), Math.round(cy + h * 0.5), w, h);
+  g.fillRect(Math.round(cx + w * 0.2), Math.round(cy), Math.round(w * 0.45), h);
+  g.fillStyle = '#e3eef7';
+  g.fillRect(Math.round(cx), Math.round(cy + h * 1.5) - 1, w, 1);
+}
+const smoke = [];
+let smokeAcc = 0;
+
+function drawSprite(ctx, spr, cx, cy, face, frac, oid, sick, pc, opt, scale) {
+  scale = scale || 1;
+  const x0 = Math.round(cx - spr.w * scale / 2), y0 = Math.round(cy - spr.h * scale / 2);
+  const flip = spr.faceLeft ? face > 0 : face < 0;
+  const gray = opt && opt.gray, flipY = opt && opt.flipY;
+  for (let i = 0; i < spr.px.length; i++) {
+    const p = spr.px[i];
+    let col = p[2];
+    if (p[3] >= 0 && frac > 0 && hashf(p[3], oid) < frac) col = pc;
+    else if (gray) col = mix(col, '#6b6f78', 0.8);
+    else if (sick > 0) col = mix(col, '#8b7f99', sick);
+    const px = flip ? spr.w - 1 - p[0] : p[0];
+    const py = flipY ? spr.h - 1 - p[1] : p[1];
+    ctx.fillStyle = col;
+    ctx.fillRect(x0 + px * scale, y0 + py * scale, scale, scale);
+  }
+}
+function dotFrac(o) {
+  const c = ppm(o);
+  if (c <= 0) return 0;
+  let f = Math.sqrt(c / 6);
+  if (o.load >= 0.5) f = Math.max(f, o.kind === 'fito' ? 0.34 : o.kind === 'zoo' ? 0.12 : 0.03);
+  return clamp(f, 0, 1);
+}
+function sickMix(o) { const c = ppm(o); return c < SICK ? 0 : clamp(0.2 + (c - SICK) / (LETHAL - SICK) * 0.5, 0, 0.7); }
+
+function drawPlant(ctx, o, t, pc, scaleOpt) {
+  const frac = dotFrac(o);
+  let i = 0;
+  for (const st of o.stems) {
+    let lastX = o.x + st.dx;
+    for (let k = 0; k < st.h; k++) {
+      const yy = o.base - 1 - k;
+      const sway = Math.round(Math.sin(t * 1.1 + o.phase + k * 0.18 + st.dx) * (k / st.h) * 2.2);
+      const x = o.x + st.dx + sway;
+      lastX = x;
+      const put = (px, py, col) => { ctx.fillStyle = (hashf(i, o.id) < frac) ? pc : col; i++; ctx.fillRect(px, py, 1, 1); };
+      put(x, yy, '#3d8a36');
+      if (k % 3 === 1 && k < st.h - 1) {
+        const dir = ((k + st.dx) % 6 < 3) ? -1 : 1;
+        put(x + dir, yy, '#5cb848');
+        put(x + 2 * dir, yy - 1, '#7ccf58');
+      }
+    }
+    ctx.fillStyle = '#8fdc6a'; ctx.fillRect(lastX, o.base - st.h - 1, 1, 1);
+  }
+}
+function drawNest(ctx) {
+  ctx.fillStyle = '#7a5733'; ctx.fillRect(340, 31, 16, 3);
+  ctx.fillStyle = '#5c3f24'; ctx.fillRect(341, 33, 14, 2);
+  ctx.fillStyle = '#a07a4a'; for (let x = 340; x < 356; x += 3) ctx.fillRect(x, 30, 2, 1);
+  const eggs = [343, 347, 351];
+  eggs.forEach((x, i) => {
+    if (S.eggsCracked) {
+      ctx.fillStyle = '#cfe0e8'; ctx.fillRect(x, 30, 1, 1); ctx.fillRect(x + 2, 29, 1, 1);
+      ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 1, 30, 1, 1);
+    } else {
+      ctx.fillStyle = '#d7ecf2'; ctx.fillRect(x, 28, 3, 3);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x, 28, 1, 1);
+    }
+  });
+}
+function drawFilter(ctx) {
+  ctx.fillStyle = '#3a4152'; ctx.fillRect(64, 38, 18, 18);
+  ctx.fillStyle = '#8e9aab'; ctx.fillRect(65, 39, 16, 16);
+  ctx.fillStyle = '#e8e2cf'; ctx.fillRect(66, 46, 14, 5);
+  ctx.fillStyle = '#b9b29c'; for (let x = 67; x < 80; x += 2) ctx.fillRect(x, 48, 1, 1);
+  ctx.fillStyle = (Math.floor(performance.now() / 500) % 2) ? '#7fcf4f' : '#4f9a2f'; ctx.fillRect(67, 41, 3, 3);
+  ctx.fillStyle = '#3987e5'; ctx.fillRect(76, 41, 3, 3);
+  ctx.fillStyle = '#949eab'; ctx.fillRect(60, 50, 4, 3);
+}
+
+function render(realDt) {
+  const P = POLL[S.pollutant];
+  const t = S.t;
+  const run = S.speedIdx > 0 ? 1 : 0;
+  g.drawImage(skyL, 0, 0);
+  for (const c of clouds) { c.x += 2.5 * c.s * realDt * run; if (c.x > W + 10) c.x = -40; drawCloud(c.x, c.y, c.s); }
+  g.drawImage(terrL, 0, 0);
+  if (S.filter) drawFilter(g);
+
+  // humo
+  smokeAcc += realDt * run * (0.6 + S.level * 2.2);
+  while (smokeAcc > 1) {
+    smokeAcc -= 1;
+    smoke.push({x: 19 + rand(-1, 1), y: 8, a: 0, s: 2}, {x: 43 + rand(-1, 1), y: 16, a: 0, s: 1});
+    if (smoke.length > 120) smoke.splice(0, 2);
+  }
+  for (let i = smoke.length - 1; i >= 0; i--) {
+    const sm = smoke[i];
+    sm.a += realDt * run; sm.y -= 6 * realDt * run; sm.x += (3 + sm.a * 2) * realDt * run;
+    if (sm.a > 3.5 || sm.y < -4) { smoke.splice(i, 1); continue; }
+    const sz = Math.round(sm.s + sm.a * 1.2);
+    g.fillStyle = S.level >= 2 ? (sm.a < 1.5 ? '#6b6f78' : '#8d929b') : (sm.a < 1.5 ? '#a9adb4' : '#c9cdd3');
+    g.fillRect(Math.round(sm.x), Math.round(sm.y), sz, sz);
+  }
+
+  // agua
+  g.drawImage(waterL, 0, 0);
+  const murk = clamp(S.parts.length / 900, 0, 1) * 0.32;
+  if (murk > 0.01) {
+    g.globalAlpha = murk; g.fillStyle = P.murk;
+    for (let c = 0; c < BOT.length; c++) g.fillRect((c + WC0) * B, SURF, B, BOT[c] * B - SURF);
+    g.globalAlpha = 1;
+  }
+  // rayos de luz
+  g.globalAlpha = 0.06; g.fillStyle = '#ffffff';
+  for (let r = 0; r < 3; r++) {
+    const bx = 130 + r * 80 + Math.sin(t * 0.05 + r) * 10;
+    for (let y = SURF; y < SURF + 60; y += 2) g.fillRect(Math.round(bx + (y - SURF) * 0.35), y, 6, 2);
+  }
+  g.globalAlpha = 1;
+  // superficie
+  for (let x = WC0 * B; x < (WC1 + 1) * B; x++) {
+    if (hash2(x, Math.floor(performance.now() / 400), 2) < 0.55) { g.fillStyle = '#a9d6ff'; g.fillRect(x, SURF, 1, 1); }
+  }
+  // sedimento contaminado
+  for (let c = 0; c < BOT.length; c++) {
+    const v = S.sed[c]; if (v < 0.5) continue;
+    const y = BOT[c] * B, x = (c + WC0) * B;
+    const n = Math.min(24, Math.round(Math.sqrt(v) * 2));
+    g.fillStyle = P.color;
+    for (let i = 0; i < n; i++) g.fillRect(x + Math.floor(hashf(i, c) * 8), y + Math.floor(hashf(i + 50, c) * 4), 1, 1);
+    g.globalAlpha = clamp(v / 120, 0, 0.45); g.fillStyle = '#4a2f3a'; g.fillRect(x, y, 8, 3); g.globalAlpha = 1;
+  }
+  // chorro de la tubería
+  if (S.level > 0) {
+    g.fillStyle = S.filter ? '#7fb6d9' : P.murk;
+    const n = S.filter ? 2 : 2 + S.level * 2;
+    for (let i = 0; i < n; i++) { const d = (performance.now() / 60 + i * 7) % 14; g.fillRect(OUT_X + Math.round(d), OUT_Y - 2 + ((i * 3) % 5), 2, 1); }
+  }
+
+  // seres vivos
+  const pc = P.color;
+  for (const o of S.plants) drawPlant(g, o, t, pc);
+  const order = ['fito', 'zoo', 'pezp', 'pezg'];
+  for (const kind of order) {
+    for (const o of S.orgs) {
+      if (o.kind !== kind) continue;
+      const spr = kind === 'fito' ? SPR.fito[o.v] : SPR[kind];
+      if (o.dead) { drawSprite(g, spr, o.x, o.y, o.face, dotFrac(o), o.id, 0, pc, {gray: true, flipY: true}); continue; }
+      const sm = sickMix(o);
+      const jx = sm > 0 ? Math.round(Math.sin(performance.now() / 50 + o.id) * 0.6) : 0;
+      drawSprite(g, spr, o.x + jx, o.y, o.face, dotFrac(o), o.id, sm, pc);
+    }
+  }
+  // partículas libres
+  g.fillStyle = pc;
+  for (const p of S.parts) g.fillRect(p.x | 0, p.y | 0, 1, 1);
+
+  // nido y garza
+  drawNest(g);
+  for (const o of S.orgs) {
+    if (o.kind !== 'garza') continue;
+    let spr = SPR.garza;
+    if (o.state === 'dead') { drawSprite(g, SPR.garzaDown, o.x, o.y, o.face, dotFrac(o), o.id, 0, pc, {gray: true, flipY: true}); continue; }
+    if (o.state !== 'perch') spr = (Math.floor(performance.now() / 180) % 2) ? SPR.garzaUp : SPR.garzaDown;
+    const sm = sickMix(o);
+    const jx = sm > 0 ? Math.round(Math.sin(performance.now() / 45) * 0.7) : 0;
+    drawSprite(g, spr, o.x + jx, o.y, o.face, dotFrac(o), o.id, sm, pc);
+  }
+
+  // marcador de selección
+  const sel = S.selected;
+  if (sel && !sel.gone) {
+    const k = K[sel.kind];
+    let hw = k.hw + 3, hh = k.hh + 3, cx = sel.x, cy = sel.y;
+    if (sel.kind === 'planta') { hw = 6; hh = sel.h / 2 + 3; cy = sel.base - sel.h / 2; }
+    if (sel.kind === 'garza' && sel.state !== 'perch') { hw = 9; hh = 6; }
+    const on = Math.floor(performance.now() / 300) % 2 === 0;
+    g.fillStyle = on ? '#ffffff' : '#f2c14e';
+    const x0 = Math.round(cx - hw), x1 = Math.round(cx + hw), y0 = Math.round(cy - hh), y1 = Math.round(cy + hh);
+    [[x0, y0, 1, -1], [x1, y0, -1, -1], [x0, y1, 1, 1], [x1, y1, -1, 1]].forEach(([x, y, sx, sy]) => {
+      g.fillRect(x, y, 3 * sx || 1, 1); g.fillRect(x, y, 1, -3 * sy || 1);
+      if (sx < 0) g.fillRect(x - 2, y, 3, 1); else g.fillRect(x, y, 3, 1);
+      if (sy > 0) g.fillRect(x, y - 2, 1, 3); else g.fillRect(x, y, 1, 3);
+    });
+  }
+}
+
+/* =========================================================
+   7. INTERFAZ
+   ========================================================= */
+const $ = (id) => document.getElementById(id);
+function drawIconTo(canvas, spr, opt) {
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const s = Math.max(1, Math.floor(Math.min(canvas.width / spr.w, canvas.height / spr.h)));
+  drawSprite(ctx, spr, canvas.width / 2, canvas.height / 2, opt && opt.face || 1, opt && opt.frac || 0, opt && opt.id || 1, opt && opt.sick || 0, opt && opt.pc || '#ff4d6d', opt && opt.style, s);
+}
+
+const TOOLS = [
+  {id: 'lupa', name: 'Lupa', icon: ICON.lupa, hint: 'Haz clic en un organismo para ver cuántas partículas acumula. Si se lo comen, la lupa salta al depredador.'},
+  {id: 'red', name: 'Red de pesca', icon: ICON.red, hint: 'Haz clic en un pez para pescarlo y saber si sería seguro comerlo.'},
+  {id: 'fito', name: 'Sembrar fitoplancton', icon: ICON.fito, hint: 'Haz clic en el agua para agregar fitoplancton limpio.'},
+  {id: 'zoo', name: 'Soltar zooplancton', icon: SPR.zoo, hint: 'Haz clic en el agua para soltar zooplancton limpio.'},
+  {id: 'pezp', name: 'Soltar pez pequeño', icon: SPR.pezp, hint: 'Haz clic en el agua para soltar un pez pequeño joven y limpio.'},
+  {id: 'pezg', name: 'Soltar pez grande', icon: SPR.pezg, hint: 'Haz clic en el agua para soltar un pez grande joven y limpio. Mira cuánto tarda en contaminarse.'},
+  {id: 'filtro', name: 'Depuradora', icon: ICON.filtro, hint: 'Haz clic en la fábrica para instalar o quitar la planta de tratamiento. Retiene el 90 % del contaminante antes del vertido.'},
+  {id: 'draga', name: 'Draga', icon: ICON.draga, hint: 'Haz clic sobre el fondo del lago para retirar el sedimento contaminado de esa zona.'}
+];
+let tool = 'lupa';
+function buildHotbar() {
+  const hb = $('hotbar');
+  TOOLS.forEach((tl, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'slot'; b.id = 'slot-' + tl.id;
+    b.setAttribute('aria-pressed', tl.id === tool ? 'true' : 'false');
+    b.setAttribute('aria-label', (i + 1) + ': ' + tl.name);
+    b.title = tl.name;
+    const c = document.createElement('canvas'); c.width = 24; c.height = 24;
+    drawIconTo(c, tl.icon);
+    const k = document.createElement('span'); k.className = 'key'; k.textContent = i + 1;
+    b.append(c, k);
+    b.addEventListener('click', () => selectTool(tl.id));
+    hb.append(b);
+  });
+}
+function selectTool(id) {
+  tool = id;
+  TOOLS.forEach(tl => $('slot-' + tl.id).setAttribute('aria-pressed', tl.id === id ? 'true' : 'false'));
+  const tl = TOOLS.find(x => x.id === id);
+  $('toolName').textContent = tl.name;
+  $('toolHint').textContent = tl.hint;
+}
+
+function segButtons(container, items, current, onPick) {
+  const el = $(container); el.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'btn'; b.id = container + '-' + it.id;
+    b.setAttribute('aria-pressed', it.id === current ? 'true' : 'false');
+    b.innerHTML = (it.dot ? '<i class="dot" style="background:' + it.dot + '"></i>' : '') + it.label;
+    b.addEventListener('click', () => onPick(it.id));
+    el.append(b);
+  });
+}
+function refreshControls() {
+  segButtons('segPoll', Object.keys(POLL).map(k => ({id: k, label: POLL[k].name, dot: POLL[k].color})), S.pollutant, askPollutant);
+  segButtons('segLevel', LEVEL_NAMES.map((n, i) => ({id: i, label: n})), S.level, (i) => { setLevel(i); });
+  segButtons('segSpeed', [{id: 0, label: 'Pausa'}, {id: 1, label: '×1'}, {id: 2, label: '×3'}, {id: 3, label: '×10'}], S.speedIdx, setSpeed);
+  $('legPart').style.background = POLL[S.pollutant].color;
+}
+function setLevel(i) {
+  const prev = S.level; S.level = i;
+  refreshControls();
+  if (i === 0) say('La fábrica cerró el vertido. El contaminante que ya entró sigue en el lago.', 'good');
+  else if (prev === 0) say('La fábrica volvió a verter ' + POLL[S.pollutant].name.toLowerCase() + ' al lago.', 'warn');
+  else say('Vertido de la fábrica: ' + LEVEL_NAMES[i].toLowerCase() + '.', 'info');
+}
+function setSpeed(i) { S.speedIdx = i; $('pausedBadge').hidden = i !== 0; refreshControls(); }
+let pending = null;
+function askConfirm(text, action) {
+  pending = action;
+  $('confirmText').textContent = text;
+  $('confirmBox').hidden = false;
+  $('confirmYes').focus();
+}
+$('confirmYes').addEventListener('click', () => { $('confirmBox').hidden = true; if (pending) pending(); pending = null; });
+$('confirmNo').addEventListener('click', () => { $('confirmBox').hidden = true; pending = null; });
+function askPollutant(id) {
+  if (id === S.pollutant) return;
+  askConfirm('Cambiar a «' + POLL[id].long + '» deja el lago limpio y la fábrica empieza a verter la nueva sustancia. Los seres vivos se quedan.', () => switchPollutant(id));
+}
+function switchPollutant(id) {
+  S.pollutant = id;
+  S.parts.length = 0; S.sed.fill(0); S.resAcc.fill(0); S.relAcc = 0; S.emitAcc = 0;
+  S.stats = {emitted: 0, removed: 0, degraded: 0};
+  for (const o of S.orgs) { o.load = 0; o.warned = false; if (o.dead && o.kind !== 'garza') o.gone = true; }
+  S.orgs = S.orgs.filter(o => !o.gone);
+  S.eggsCracked = false;
+  S.history = []; S.nextHist = Math.ceil(S.t);
+  S.flags.bioDays = 0;
+  refreshControls();
+  say('Lago limpio. Ahora la fábrica vierte ' + POLL[id].long.toLowerCase() + '. ' + POLL[id].desc, 'info');
+  updatePanels(true);
+}
+$('btnReset').addEventListener('click', () => askConfirm('Reiniciar crea un lago nuevo y limpio, con la fábrica al nivel de vertido actual. Las misiones completadas se conservan.', () => {
+  const p = S.pollutant, l = S.level, sp = S.speedIdx;
+  initWorld(p, l, 0);
+  S.speedIdx = sp;
+  refreshControls();
+  say('Lago nuevo y limpio. La fábrica empieza a verter ' + POLL[p].name.toLowerCase() + '.', 'info');
+  updatePanels(true);
+}));
+
+/* chat */
+const chatEl = $('chat');
+const chatLines = [];
+function chatPush(text, tone) {
+  const p = document.createElement('p');
+  if (tone) p.className = tone;
+  p.textContent = text;
+  chatEl.append(p);
+  chatLines.push({el: p, t: performance.now()});
+  while (chatLines.length > 5) chatLines.shift().el.remove();
+}
+function chatTick() {
+  const now = performance.now();
+  for (const l of chatLines) if (now - l.t > 11000) l.el.classList.add('old');
+  while (chatLines.length && now - chatLines[0].t > 12500) chatLines.shift().el.remove();
+}
+
+/* toasts */
+function toast(title, text, spr) {
+  const z = $('toasts');
+  const d = document.createElement('div'); d.className = 'toast';
+  const c = document.createElement('canvas'); c.width = 20; c.height = 20; drawIconTo(c, spr || ICON.lupa);
+  const t = document.createElement('div'); t.innerHTML = '<b></b><span></span>';
+  t.querySelector('b').textContent = title; t.querySelector('span').textContent = text;
+  d.append(c, t); z.append(d);
+  setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 320); }, 4200);
+}
+
+/* pirámide */
+const LEVELS = [
+  {lvl: 5, name: 'Garza', color: 'var(--s-garza)', icon: SPR.garza},
+  {lvl: 4, name: 'Pez grande', color: 'var(--s-pezg)', icon: SPR.pezg},
+  {lvl: 3, name: 'Pez pequeño', color: 'var(--s-pezp)', icon: SPR.pezp},
+  {lvl: 2, name: 'Zooplancton', color: 'var(--s-zoo)', icon: SPR.zoo},
+  {lvl: 1, name: 'Productores', color: 'var(--s-prod)', icon: ICON.fito},
+  {lvl: 0, name: 'Agua', color: 'var(--s-agua)', icon: ICON.agua}
+];
+let scaleMode = 'lin';
+function buildPyramid() {
+  const el = $('pyr'); el.innerHTML = '';
+  LEVELS.forEach(L => {
+    const row = document.createElement('div'); row.className = 'pyr-row';
+    row.innerHTML =
+      '<div class="pyr-side left"><span class="pyr-val" id="pn' + L.lvl + '"></span><div class="track"><div class="fill" id="pnb' + L.lvl + '"></div></div></div>' +
+      '<div class="pyr-mid"><canvas width="24" height="24" id="pic' + L.lvl + '"></canvas><span>' + L.name + '</span></div>' +
+      '<div class="pyr-side right"><span class="pyr-val" id="pc' + L.lvl + '"></span><div class="track"><div class="fill" id="pcb' + L.lvl + '" style="background:' + L.color + '"></div><div class="mark" id="pm' + L.lvl + '" title="Límite de consumo: 1 ppm"></div></div><span class="factor" id="pf' + L.lvl + '"></span></div>';
+    el.append(row);
+    drawIconTo($('pic' + L.lvl), L.icon, {face: L.lvl === 5 ? -1 : 1});
+  });
+}
+$('scaleLin').addEventListener('click', () => { scaleMode = 'lin'; $('scaleLin').setAttribute('aria-pressed', 'true'); $('scaleLog').setAttribute('aria-pressed', 'false'); updatePanels(true); });
+$('scaleLog').addEventListener('click', () => { scaleMode = 'log'; $('scaleLog').setAttribute('aria-pressed', 'true'); $('scaleLin').setAttribute('aria-pressed', 'false'); updatePanels(true); });
+function niceMax(v) { if (v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))); const m = v / e; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * e; }
+
+function updatePyramid() {
+  const L = levelStats();
+  let maxN = 0, maxC = 0;
+  for (let i = 1; i <= 5; i++) maxN = Math.max(maxN, L[i].n);
+  for (let i = 0; i <= 5; i++) if (L[i].c) maxC = Math.max(maxC, L[i].c);
+  const linMax = niceMax(Math.max(maxC, LIMIT * 1.2));
+  const logMin = -6, logMax = Math.max(1, Math.ceil(Math.log10(Math.max(maxC, LIMIT * 2))));
+  const pos = (v) => {
+    if (!v || v <= 0) return 0;
+    if (scaleMode === 'lin') return clamp(v / linMax, 0, 1);
+    return clamp((Math.log10(v) - logMin) / (logMax - logMin), 0, 1);
+  };
+  for (const Lv of LEVELS) {
+    const d = L[Lv.lvl];
+    if (Lv.lvl === 0) { $('pn0').textContent = ''; $('pnb0').style.width = '0'; $('pnb0').parentElement.style.visibility = 'hidden'; }
+    else { $('pn' + Lv.lvl).textContent = d.n + (d.n === 1 ? ' ind.' : ' ind.'); $('pnb' + Lv.lvl).style.width = (maxN ? d.n / maxN * 100 : 0) + '%'; }
+    $('pc' + Lv.lvl).innerHTML = fmtPpm(d.c) + ' <small>ppm</small>';
+    $('pcb' + Lv.lvl).style.width = (pos(d.c) * 100) + '%';
+    $('pm' + Lv.lvl).style.left = (pos(LIMIT) * 100) + '%';
+    let f = '';
+    if (Lv.lvl >= 1) { const below = L[Lv.lvl - 1].c; if (d.c && below && below > 0) f = fmtFactor(d.c / below); }
+    $('pf' + Lv.lvl).textContent = f;
+  }
+  const ax = $('axisLabels');
+  if (scaleMode === 'lin') ax.innerHTML = '<span style="left:0">0</span><span style="left:50%">' + nf3.format(linMax / 2) + '</span><span style="left:100%">' + nf3.format(linMax) + '</span>';
+  else {
+    const ticks = []; for (let e = logMin; e <= logMax; e += 2) ticks.push(e);
+    if (ticks[ticks.length - 1] !== logMax) ticks.push(logMax);
+    ax.innerHTML = ticks.map(e => '<span style="left:' + ((e - logMin) / (logMax - logMin) * 100) + '%">' + pow10Label(e) + '</span>').join('');
+  }
+  return L;
+}
+
+function updateBalance() {
+  let bio = 0; for (const o of S.orgs) bio += o.load;
+  let sed = 0; for (let c = 0; c < BOT.length; c++) sed += S.sed[c];
+  const parts = [
+    {name: 'En el agua', v: S.parts.length, col: 'var(--s-agua)'},
+    {name: 'En el sedimento', v: sed, col: 'var(--b-sed)'},
+    {name: 'En seres vivos', v: bio, col: 'var(--b-vivo)'},
+    {name: 'Retirado', v: S.stats.removed, col: 'var(--b-ret)'}
+  ];
+  if (!POLL[S.pollutant].persistent || S.stats.degraded > 0.5) parts.push({name: 'Degradado', v: S.stats.degraded, col: 'var(--b-deg)'});
+  const tot = parts.reduce((a, p) => a + p.v, 0) || 1;
+  $('balance').innerHTML = parts.map(p => '<div style="flex:0 0 calc(' + (p.v / tot * 100) + '% - 2px);background:' + p.col + '" title="' + p.name + '"></div>').join('');
+  $('balanceLegend').innerHTML = parts.map(p => '<li><i style="background:' + p.col + '"></i>' + p.name + '<b>' + nf0.format(p.v / tot * 100) + ' %</b></li>').join('');
+  $('balance').setAttribute('aria-label', parts.map(p => p.name + ': ' + nf0.format(p.v / tot * 100) + ' %').join(', '));
+}
+
+/* inspector */
+function realMass(o) {
+  const f = o.w / K[o.kind].wmax;
+  switch (o.kind) {
+    case 'fito': return 'microscópico';
+    case 'planta': return '≈ 40 g';
+    case 'zoo': return nf1.format(0.1 + f * 0.9) + ' mg';
+    case 'pezp': return nf0.format(3 + f * 27) + ' g';
+    case 'pezg': return nf2.format(0.2 + f * 1.6) + ' kg';
+    case 'garza': return '≈ 2 kg';
+  }
+  return '';
+}
+function statusOf(o) {
+  if (o.dead) return ['dead', 'Muerto'];
+  const c = ppm(o);
+  if (c >= SICK) return ['bad', 'Intoxicado'];
+  if (c >= LIMIT) return ['warn', 'Acumulando mucho'];
+  if (o.load >= 0.5) return ['ok', 'Con partículas'];
+  return ['ok', 'Limpio'];
+}
+let inspCanvas = null;
+function updateInspector() {
+  const el = $('insp');
+  const o = S.selected && !S.selected.gone ? S.selected : null;
+  if (!o) {
+    const L = levelStats();
+    let top = null;
+    for (const q of S.orgs) if (!q.gone && !q.dead && (!top || ppm(q) > ppm(top))) top = q;
+    el.innerHTML = '<p class="insp-empty">' + (S.lastNote ? S.lastNote + ' ' : '') + 'Elige la lupa (tecla 1) y haz clic en cualquier ser vivo del lago para ver su carga de contaminante.</p>' +
+      (top ? '<button class="btn" id="btnTop" type="button">Ver al más contaminado: ' + K[top.kind].name + '</button>' : '');
+    const bt = $('btnTop'); if (bt) bt.addEventListener('click', () => { S.selected = top; S.lastNote = ''; selectTool('lupa'); updatePanels(true); });
+    inspCanvas = null;
+    return;
+  }
+  const k = K[o.kind], c = ppm(o), st = statusOf(o), wp = waterPpm();
+  const timesWater = wp > 0 && c > 0 ? c / wp : 0;
+  if (!inspCanvas || inspCanvas.dataset.id !== String(o.id)) {
+    el.innerHTML =
+      '<div class="insp-head"><canvas width="42" height="28" id="inspCv"></canvas><div><h4 id="inspName"></h4><p id="inspRole"></p><span class="pill" id="inspPill"></span></div></div>' +
+      '<dl class="kv">' +
+      '<div><dt>Partículas</dt><dd id="iLoad"></dd></div>' +
+      '<div><dt>Concentración</dt><dd id="iPpm"></dd></div>' +
+      '<div><dt>Edad</dt><dd id="iAge"></dd></div>' +
+      '<div><dt>Masa</dt><dd id="iMass"></dd></div>' +
+      '<div><dt>Presas comidas</dt><dd id="iEat"></dd></div>' +
+      '<div><dt>Frente al agua</dt><dd id="iX"></dd></div>' +
+      '</dl>' +
+      '<div class="toxbar" id="iBar" aria-hidden="true">' + '<i></i>'.repeat(10) + '</div>' +
+      '<div class="toxlbl"><span>0 ppm</span><span>daño ' + SICK + '</span><span>letal ' + LETHAL + ' ppm</span></div>' +
+      '<p class="insp-last" id="iLast"></p>' +
+      '<div class="verdict" id="iVerdict" hidden></div>' +
+      '<p class="insp-note" id="iTip"></p>';
+    inspCanvas = $('inspCv');
+    inspCanvas.dataset.id = String(o.id);
+    $('inspName').textContent = k.name;
+    $('inspRole').textContent = k.role;
+    $('iTip').textContent = k.tip;
+  }
+  const ctx = inspCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#173a63'; ctx.fillRect(0, 0, 42, 28);
+  const pc = POLL[S.pollutant].color;
+  if (o.kind === 'planta') drawSprite(ctx, ICON.planta, 21, 14, 1, dotFrac(o), o.id, 0, pc, null, 2);
+  else {
+    const spr = o.kind === 'fito' ? SPR.fito[o.v] : o.kind === 'garza' ? SPR.garza : SPR[o.kind];
+    const s = Math.max(1, Math.floor(Math.min(40 / spr.w, 26 / spr.h)));
+    drawSprite(ctx, spr, 21, 14, o.kind === 'garza' ? -1 : 1, dotFrac(o), o.id, o.dead ? 0 : sickMix(o), pc, o.dead ? {gray: true} : null, s);
+  }
+  const pill = $('inspPill'); pill.className = 'pill ' + st[0]; pill.textContent = st[1];
+  $('iLoad').textContent = nf1.format(o.load);
+  $('iPpm').textContent = fmtPpm(c) + ' ppm';
+  $('iAge').textContent = nf0.format(o.age) + ' días';
+  $('iMass').textContent = realMass(o);
+  $('iEat').textContent = o.kind === 'fito' || o.kind === 'planta' ? 'no come' : nf0.format(o.eaten);
+  $('iX').textContent = timesWater > 0 ? '×' + nf0.format(timesWater) : '—';
+  const n = Math.round(clamp(c / LETHAL, 0, 1) * 10);
+  $('iBar').querySelectorAll('i').forEach((b, i) => { b.className = i < n ? (i < Math.round(SICK / LETHAL * 10) ? 'on lo' : 'on') : ''; });
+  $('iLast').textContent = o.kind === 'fito' || o.kind === 'planta' ? (o.load >= 0.5 ? 'Absorbió ' + nf1.format(o.load) + ' partículas del agua.' : 'Todavía no ha absorbido partículas.') : o.last;
+  const v = $('iVerdict');
+  if (o.kind === 'pezp' || o.kind === 'pezg') {
+    v.hidden = false;
+    v.innerHTML = c < LIMIT ? '<b style="color:var(--ok)">Apto para consumo</b><br>Está bajo el límite de referencia de ' + LIMIT + ' ppm.' : '<b style="color:var(--bad)">No apto para consumo</b><br>Supera el límite de referencia de ' + LIMIT + ' ppm. Comerlo a menudo sería un riesgo.';
+  } else v.hidden = true;
+}
+
+/* misiones */
+const MISSIONS = [
+  {title: 'Bioacumulación en el productor', task: 'Con la lupa, inspecciona un fitoplancton (puntos verdes cerca de la superficie) o una planta que ya tenga partículas.',
+   lesson: 'El productor absorbe el contaminante del agua más rápido de lo que lo elimina y lo acumula en su cuerpo. Eso es bioacumulación.',
+   check: () => { const o = S.selected; return o && !o.gone && (o.kind === 'fito' || o.kind === 'planta') && o.load >= 0.5; }},
+  {title: 'Sube un eslabón', task: 'Inspecciona un pez pequeño y compara su concentración con la del zooplancton en la pirámide.',
+   lesson: 'El pez pequeño come cientos de presas y retiene su contaminante: su concentración es varias veces mayor que la del nivel de abajo.',
+   check: () => { const o = S.selected; return o && !o.gone && o.kind === 'pezp' && o.load > 0.5; }},
+  {title: 'La cima de la cadena', task: 'Inspecciona a la garza, la superdepredadora del lago. También puedes seguir un pez hasta que ella se lo coma.',
+   lesson: 'La garza casi no absorbe nada del agua, pero cada pez le llega con una dosis concentrada. La concentración más alta está en la cima: biomagnificación.',
+   check: () => { const o = S.selected; return o && !o.gone && o.kind === 'garza' && o.load > 0.5; }},
+  {title: 'Pesca responsable', task: 'Usa la red de pesca (tecla 2) para sacar un pez grande y revisa si sería apto para comer.',
+   lesson: 'Los peces grandes y viejos son los que más contaminante acumulan. Por eso las guías de salud recomiendan limitar el consumo de peces depredadores.',
+   check: () => S.flags.fishedBig},
+  {title: 'Más vertido, más daño', task: 'Sube el vertido a «Alto» y espera (usa ×10) hasta que algún pez o la garza quede intoxicado.',
+   lesson: 'Los primeros en enfermar son los de arriba de la cadena, aunque el agua todavía parezca casi limpia.',
+   check: () => S.level === 3 && S.orgs.some(o => !o.gone && !o.dead && (o.kind === 'pezg' || o.kind === 'garza' || o.kind === 'pezp') && ppm(o) >= SICK)},
+  {title: 'No todo se biomagnifica', task: 'Cambia el contaminante a «Biodegradable» y deja correr 60 días con la fábrica vertiendo. Mira los «×» de la pirámide.',
+   lesson: 'Una sustancia que se degrada y se excreta rápido no alcanza a pasar de un nivel a otro. La persistencia es la clave de la biomagnificación.',
+   check: () => S.flags.bioDays >= 60},
+  {title: 'Corta el problema de raíz', task: 'Instala la depuradora en la fábrica (tecla 7 y clic sobre la fábrica).',
+   lesson: 'Tratar el agua antes de verterla reduce la entrada de contaminante. Pero lo que ya está en el lago sigue circulando por años.',
+   check: () => S.filter},
+  {title: 'La herencia del fondo', task: 'Usa la draga (tecla 8) sobre el fondo del lago para retirar sedimento contaminado.',
+   lesson: 'Los contaminantes persistentes se guardan en el sedimento y vuelven poco a poco al agua. Dragar ayuda, aunque remover el fondo levanta parte de ellos.',
+   check: () => S.flags.dredged}
+];
+const done = new Array(MISSIONS.length).fill(false);
+function buildMissions() {
+  $('xp').innerHTML = '<i></i>'.repeat(MISSIONS.length);
+  renderMissions();
+}
+function renderMissions() {
+  const cur = done.indexOf(false);
+  $('missions').innerHTML = MISSIONS.map((m, i) =>
+    '<li class="' + (done[i] ? 'done' : i === cur ? 'current' : '') + '"><span class="box">' + (done[i] ? '✓' : i + 1) + '</span><div><h4>' + m.title + '</h4>' +
+    (done[i] ? '<p class="lesson">' + m.lesson + '</p>' : '<p>' + m.task + '</p>') + '</div></li>').join('');
+  const n = done.filter(Boolean).length;
+  $('xp').querySelectorAll('i').forEach((b, i) => b.className = i < n ? 'on' : '');
+  $('xpLabel').textContent = n + ' de ' + MISSIONS.length + ' completadas';
+}
+function checkMissions() {
+  let changed = false;
+  MISSIONS.forEach((m, i) => {
+    if (done[i]) return;
+    let ok = false; try { ok = !!m.check(); } catch (e) { ok = false; }
+    if (ok) { done[i] = true; changed = true; toast('Misión cumplida', m.title, i === 2 ? SPR.garza : i === 3 ? ICON.red : i === 6 ? ICON.filtro : i === 7 ? ICON.draga : SPR.pezp); say('Misión cumplida: ' + m.title + '. ' + m.lesson, 'mission'); }
+  });
+  if (changed) renderMissions();
+}
+
+/* gráfico */
+const SERIES = [
+  {name: 'Agua', color: '#3987e5'},
+  {name: 'Productores', color: '#199e70'},
+  {name: 'Zooplancton', color: '#c98500'},
+  {name: 'Pez pequeño', color: '#d55181'},
+  {name: 'Pez grande', color: '#9085e9'},
+  {name: 'Garza', color: '#d95926'}
+];
+$('chartLegend').innerHTML = SERIES.map(s => '<li><i style="background:' + s.color + '"></i>' + s.name + '</li>').join('');
+const ch = $('chart'), chx = ch.getContext('2d');
+let chartHover = null, chartGeom = null;
+function drawChart() {
+  const wrap = $('chartWrap');
+  const cssW = Math.max(280, wrap.clientWidth), cssH = cssW < 560 ? 210 : 260;
+  const dpr = window.devicePixelRatio || 1;
+  if (ch.width !== Math.round(cssW * dpr) || ch.height !== Math.round(cssH * dpr)) { ch.width = Math.round(cssW * dpr); ch.height = Math.round(cssH * dpr); ch.style.height = cssH + 'px'; }
+  chx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  chx.fillStyle = '#1b1f27'; chx.fillRect(0, 0, cssW, cssH);
+  const padL = 44, padR = cssW < 560 ? 78 : 104, padT = 10, padB = 26;
+  const pw = cssW - padL - padR, ph = cssH - padT - padB;
+  const hist = S.history;
+  const tEnd = hist.length ? hist[hist.length - 1].t : 0;
+  const span = 300;
+  const tStart = Math.max(hist.length ? hist[0].t : 0, tEnd - span);
+  const t0 = Math.min(tStart, Math.max(0, tEnd - span));
+  const tSpan = Math.max(30, tEnd - t0);
+  let maxV = LETHAL;
+  for (const h of hist) if (h.t >= t0) for (const v of h.v) if (v && v > maxV) maxV = v;
+  const yMinE = -6, yMaxE = Math.max(1, Math.ceil(Math.log10(maxV)));
+  const X = (t) => padL + (t - t0) / tSpan * pw;
+  const Y = (v) => padT + (1 - (Math.log10(v) - yMinE) / (yMaxE - yMinE)) * ph;
+  chartGeom = {X, Y, t0, tSpan, padL, pw, padT, ph};
+  chx.font = '15px VT323, ui-monospace, monospace';
+  chx.textBaseline = 'middle';
+  for (let e = yMinE; e <= yMaxE; e++) {
+    const y = Math.round(Y(Math.pow(10, e))) + 0.5;
+    chx.strokeStyle = '#2a303d'; chx.lineWidth = 1;
+    chx.beginPath(); chx.moveTo(padL, y); chx.lineTo(padL + pw, y); chx.stroke();
+    chx.fillStyle = '#8b94a7'; chx.textAlign = 'right';
+    chx.fillText(pow10Label(e), padL - 6, y);
+  }
+  // umbrales
+  [[LIMIT, 'límite de consumo'], [LETHAL, 'umbral letal']].forEach(([v, lbl]) => {
+    const y = Math.round(Y(v)) + 0.5;
+    chx.setLineDash([4, 4]); chx.strokeStyle = '#8b94a7';
+    chx.beginPath(); chx.moveTo(padL, y); chx.lineTo(padL + pw, y); chx.stroke(); chx.setLineDash([]);
+    chx.fillStyle = '#b9c1cf'; chx.textAlign = 'left'; chx.fillText(lbl, padL + 4, y - 8);
+  });
+  // eje x
+  chx.textAlign = 'center'; chx.fillStyle = '#8b94a7'; chx.textBaseline = 'top';
+  const stepT = tSpan > 200 ? 50 : tSpan > 80 ? 25 : 10;
+  for (let tt = Math.ceil(t0 / stepT) * stepT; tt <= t0 + tSpan; tt += stepT) {
+    const x = X(tt);
+    chx.fillRect(Math.round(x), padT + ph, 1, 4);
+    chx.fillText('día ' + tt, x, padT + ph + 6);
+  }
+  chx.strokeStyle = '#394052'; chx.beginPath(); chx.moveTo(padL, padT + ph + 0.5); chx.lineTo(padL + pw, padT + ph + 0.5); chx.stroke();
+  // líneas
+  const ends = [];
+  SERIES.forEach((s, si) => {
+    chx.strokeStyle = s.color; chx.lineWidth = 2; chx.lineJoin = 'round';
+    chx.beginPath();
+    let pen = false, last = null;
+    for (const h of hist) {
+      if (h.t < t0) continue;
+      const v = h.v[si];
+      if (!v || v <= 0) { pen = false; continue; }
+      const x = X(h.t), y = Y(clamp(v, Math.pow(10, yMinE), Math.pow(10, yMaxE)));
+      if (!pen) { chx.moveTo(x, y); pen = true; } else chx.lineTo(x, y);
+      last = {x, y, v};
+    }
+    chx.stroke();
+    if (last) ends.push({si, x: last.x, y: last.y});
+  });
+  // etiquetas directas
+  ends.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;
+  for (let i = ends.length - 2; i >= 0; i--) if (ends[i].y > ends[i + 1].y - 14) ends[i].y = ends[i + 1].y - 14;
+  chx.textAlign = 'left'; chx.textBaseline = 'middle';
+  ends.forEach(e => {
+    chx.fillStyle = SERIES[e.si].color; chx.fillRect(padL + pw + 6, Math.round(e.y) - 1, 8, 3);
+    chx.fillStyle = '#e9edf2'; chx.fillText(SERIES[e.si].name, padL + pw + 18, e.y);
+  });
+  // capa de hover
+  const tip = $('chartTip');
+  if (chartHover != null && hist.length) {
+    let best = null, bd = 1e9;
+    for (const h of hist) { if (h.t < t0) continue; const d = Math.abs(h.t - chartHover); if (d < bd) { bd = d; best = h; } }
+    if (best) {
+      const x = Math.round(X(best.t)) + 0.5;
+      chx.strokeStyle = '#b9c1cf'; chx.lineWidth = 1; chx.beginPath(); chx.moveTo(x, padT); chx.lineTo(x, padT + ph); chx.stroke();
+      best.v.forEach((v, si) => {
+        if (!v || v <= 0) return;
+        const y = Y(clamp(v, Math.pow(10, yMinE), Math.pow(10, yMaxE)));
+        chx.fillStyle = '#1b1f27'; chx.beginPath(); chx.arc(x, y, 6, 0, 6.283); chx.fill();
+        chx.fillStyle = SERIES[si].color; chx.beginPath(); chx.arc(x, y, 4, 0, 6.283); chx.fill();
+      });
+      tip.hidden = false;
+      tip.innerHTML = '<h5>Día ' + best.t + '</h5>' + SERIES.map((s, si) => ({s, v: best.v[si]})).reverse().map(r => '<div><i style="background:' + r.s.color + '"></i>' + r.s.name + '<b>' + fmtPpm(r.v) + '</b></div>').join('');
+      const tw = tip.offsetWidth;
+      let left = x + 12; if (left + tw > cssW) left = x - tw - 12;
+      tip.style.left = Math.max(0, left) + 'px';
+    }
+  } else tip.hidden = true;
+}
+ch.addEventListener('pointermove', (e) => {
+  if (!chartGeom) return;
+  const r = ch.getBoundingClientRect();
+  const x = e.clientX - r.left;
+  if (x < chartGeom.padL || x > chartGeom.padL + chartGeom.pw) { chartHover = null; drawChart(); return; }
+  chartHover = chartGeom.t0 + (x - chartGeom.padL) / chartGeom.pw * chartGeom.tSpan;
+  drawChart();
+});
+ch.addEventListener('pointerleave', () => { chartHover = null; drawChart(); });
+$('tableView').addEventListener('toggle', renderTable);
+function renderTable() {
+  if (!$('tableView').open) return;
+  const hist = S.history;
+  if (!hist.length) { $('chartTable').innerHTML = '<p class="sub">Todavía no hay datos.</p>'; return; }
+  const rows = [];
+  for (let i = hist.length - 1; i >= 0 && rows.length < 14; i -= 20) rows.push(hist[i]);
+  $('chartTable').innerHTML = '<table><thead><tr><th>Día</th>' + SERIES.map(s => '<th>' + s.name + '</th>').join('') + '</tr></thead><tbody>' +
+    rows.map(h => '<tr><td>' + h.t + '</td>' + h.v.map(v => '<td>' + fmtPpm(v) + '</td>').join('') + '</tr>').join('') + '</tbody></table><p class="sub">Valores en ppm, cada 20 días.</p>';
+}
+
+/* HUD */
+function updateHud() {
+  $('hudDay').textContent = nf0.format(Math.floor(S.t));
+  $('hudPoll').textContent = POLL[S.pollutant].name;
+  $('hudSw').style.background = POLL[S.pollutant].color;
+  $('hudLevel').textContent = LEVEL_NAMES[S.level];
+  $('hudFilter').textContent = S.filter ? 'Sí' : 'No';
+  $('hudEmit').textContent = nf0.format(S.stats.emitted);
+}
+let lastPanel = 0, lastChart = 0;
+function updatePanels(force) {
+  const now = performance.now();
+  if (force || now - lastPanel > 250) {
+    lastPanel = now;
+    updateHud(); updatePyramid(); updateBalance(); updateInspector(); checkMissions();
+    if ($('tableView').open && force) renderTable();
+  }
+  if (force || now - lastChart > 400) { lastChart = now; drawChart(); }
+}
+
+/* interacción con el lago */
+function toWorld(e) {
+  const r = cv.getBoundingClientRect();
+  return {x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H, rx: e.clientX - r.left, ry: e.clientY - r.top};
+}
+function pickOrg(x, y, filter, radius) {
+  let best = null, bd = (radius || 12) * (radius || 12);
+  for (const o of S.orgs) {
+    if (o.gone || (filter && !filter(o))) continue;
+    let cx = o.x, cy = o.y;
+    if (o.kind === 'planta') cy = clamp(y, o.base - o.h, o.base);
+    const dx = cx - x, dy = cy - y;
+    const d = dx * dx + dy * dy - (K[o.kind].hw * K[o.kind].hw) * 0.6;
+    if (d < bd) { bd = d; best = o; }
+  }
+  return best;
+}
+cv.addEventListener('click', (e) => {
+  const p = toWorld(e);
+  const x = p.x, y = p.y;
+  switch (tool) {
+    case 'lupa': {
+      const o = pickOrg(x, y);
+      S.selected = o; S.lastNote = '';
+      updatePanels(true);
+      break;
+    }
+    case 'red': {
+      const o = pickOrg(x, y, q => (q.kind === 'pezp' || q.kind === 'pezg') && !q.dead, 14);
+      if (!o) { say('No hay ningún pez ahí. Haz clic justo sobre un pez.', 'info'); break; }
+      const c = ppm(o);
+      S.stats.removed += o.load;
+      if (o.kind === 'pezg') S.flags.fishedBig = true;
+      say('Pescaste ' + K[o.kind].un + ' de ' + realMass(o) + ' con ' + fmtPpm(c) + ' ppm. ' + (c < LIMIT ? 'Es apto para consumo.' : 'No es apto para consumo: supera ' + LIMIT + ' ppm.'), c < LIMIT ? 'good' : 'warn');
+      if (S.selected === o) S.selected = null;
+      S.lastNote = 'Pescaste ' + K[o.kind].un + ' con ' + fmtPpm(c) + ' ppm' + (c < LIMIT ? ' (apto para consumo).' : ' (no apto: supera el límite de ' + LIMIT + ' ppm).');
+      o.gone = true; o.load = 0;
+      S.orgs = S.orgs.filter(q => !q.gone);
+      updatePanels(true);
+      break;
+    }
+    case 'fito': case 'zoo': case 'pezp': case 'pezg': {
+      if (!inWater(x, y)) { say('Haz clic dentro del agua para soltar organismos.', 'info'); break; }
+      const k = K[tool];
+      const alive = S.orgs.filter(o => o.kind === tool && !o.gone).length;
+      if (alive >= k.cap) { say('El lago no tiene espacio para más ' + k.name.toLowerCase() + '.', 'info'); break; }
+      const n = tool === 'fito' ? 10 : tool === 'zoo' ? 5 : 1;
+      let made = 0;
+      for (let i = 0; i < n; i++) { const o = spawn(tool, {x, y}); if (o) { made++; if (tool === 'pezg') { o.w = k.w0; } } }
+      if (made) say(made === 1 ? 'Soltaste ' + k.un + ' limpio.' : 'Agregaste ' + made + ' ' + k.name.toLowerCase() + ' limpio.', 'good');
+      else say('No hay espacio suficiente ahí. Prueba en una zona más profunda.', 'info');
+      break;
+    }
+    case 'filtro': {
+      if (x > 96 || y > 84) { say('Haz clic sobre la fábrica para instalar la depuradora.', 'info'); break; }
+      S.filter = !S.filter;
+      say(S.filter ? 'Depuradora instalada: ahora sale solo el 10 % del contaminante por la tubería.' : 'Quitaste la depuradora: la fábrica vuelve a verter todo.', S.filter ? 'good' : 'warn');
+      updatePanels(true);
+      break;
+    }
+    case 'draga': {
+      const c0 = Math.floor(x / B) - WC0;
+      if (c0 < 0 || c0 >= BOT.length) { say('Haz clic sobre el fondo del lago.', 'info'); break; }
+      let total = 0, resus = 0;
+      for (let c = Math.max(0, c0 - 2); c <= Math.min(BOT.length - 1, c0 + 2); c++) {
+        const v = S.sed[c]; if (v <= 0) continue;
+        const up = Math.floor(v * 0.15);
+        let put = 0;
+        for (let i = 0; i < up; i++) if (addParticle((c + WC0) * B + rand(0, 8), BOT[c] * B - rand(2, 10), rand(-3, 3))) put++;
+        total += v - put; resus += put;
+        S.sed[c] = 0;
+      }
+      S.stats.removed += total;
+      S.flags.dredged = true;
+      say(total > 0.5 ? 'La draga retiró ' + nf0.format(total) + ' partículas del fondo, pero levantó ' + resus + ' que vuelven al agua.' : 'Aquí el fondo está limpio. Prueba cerca de la tubería.', 'info');
+      updatePanels(true);
+      break;
+    }
+  }
+});
+const hoverTip = $('hoverTip');
+cv.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'touch') return;
+  const p = toWorld(e);
+  const o = (tool === 'lupa' || tool === 'red') ? pickOrg(p.x, p.y, tool === 'red' ? (q => q.kind === 'pezp' || q.kind === 'pezg') : null) : null;
+  if (o) { hoverTip.hidden = false; hoverTip.textContent = K[o.kind].name + ' · ' + fmtPpm(ppm(o)) + ' ppm'; hoverTip.style.left = p.rx + 'px'; hoverTip.style.top = p.ry + 'px'; }
+  else hoverTip.hidden = true;
+});
+cv.addEventListener('pointerleave', () => { hoverTip.hidden = true; });
+document.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  if (e.key >= '1' && e.key <= '8') { selectTool(TOOLS[+e.key - 1].id); }
+  else if (e.code === 'Space' && e.target === document.body) { e.preventDefault(); setSpeed(S.speedIdx === 0 ? (S.prevSpeed || 1) : (S.prevSpeed = S.speedIdx, 0)); }
+});
+
+/* =========================================================
+   8. ARRANQUE Y BUCLE
+   ========================================================= */
+let lastT = performance.now();
+function frame(now) {
+  const realDt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+  const simDt = realDt * SPEEDS[S.speedIdx];
+  if (simDt > 0) {
+    const n = Math.ceil(simDt / 0.05);
+    for (let i = 0; i < n; i++) step(simDt / n);
+  }
+  render(realDt);
+  chatTick();
+  updatePanels(false);
+  requestAnimationFrame(frame);
+}
+function start(data) {
+  data = data || {};
+  buildLayers();
+  initWorld(data.pollutant || 'hg', data.level != null ? data.level : 2, 260);
+  if (data.filter) S.filter = true;
+  S.speedIdx = data.speedIdx != null ? data.speedIdx : 1;
+  if (Array.isArray(data.done)) data.done.forEach((v, i) => { if (v && i < done.length) done[i] = true; });
+  drawIconTo($('logo'), SPR.pezp, {frac: 0.45, id: 3, pc: '#ff4d6d'});
+  $('legPart').style.background = POLL[S.pollutant].color;
+  buildHotbar(); selectTool('lupa');
+  buildPyramid(); buildMissions(); refreshControls();
+  say('La fábrica lleva ' + nf0.format(S.t) + ' días vertiendo ' + POLL[S.pollutant].long.toLowerCase() + ' al lago.', 'warn');
+  say('Usa la lupa (tecla 1) y haz clic en un ser vivo para ver cuánto contaminante lleva dentro.', 'info');
+  updatePanels(true);
+  window.addEventListener('resize', () => drawChart());
+  requestAnimationFrame(frame);
+  window.__sim = {get S() { return S; }, step, levelStats, initWorld, ppm};
+}
+const hot = window.claude && window.claude.hot;
+try { if (hot && hot.snapshot) hot.snapshot(() => ({pollutant: S.pollutant, level: S.level, filter: S.filter, speedIdx: S.speedIdx, done: done.slice()})); } catch (e) { /* opcional */ }
+if (hot && hot.ready) hot.ready(start); else start((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
