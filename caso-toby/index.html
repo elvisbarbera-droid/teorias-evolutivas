@@ -2309,10 +2309,10 @@ function buildCeilingLights() {
 
 /* --------------------- partículas: polvo y haz de luz --------------- */
 function buildAtmosphere() {
-  const N = 380, pos = new Float32Array(N * 3), seeds = new Float32Array(N);
+  const N = 170, pos = new Float32Array(N * 3), seeds = new Float32Array(N);
   for (let i = 0; i < N; i++) { pos[i * 3] = R(-3.2, 0.6); pos[i * 3 + 1] = R(0.2, 2.9); pos[i * 3 + 2] = R(-3.9, 0.4); seeds[i] = R(0, 100); }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const mat = new THREE.PointsMaterial({ map: TEX.soft, size: 2.2, sizeAttenuation: false, color: new THREE.Color(0.9, 1.0, 1.4), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
+  const mat = new THREE.PointsMaterial({ map: TEX.soft, size: 1.8, sizeAttenuation: false, color: new THREE.Color(0.9, 1.0, 1.4), transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending });
   const pts = new THREE.Points(geo, mat); scene.add(pts); ANIM.dust = { pts, seeds, base: pos.slice() };
 }
 
