@@ -2555,23 +2555,47 @@ function updatePlayer(dt) {
 }
 
 /* --------------------------- entrada ------------------------------- */
-function lock() { if (!IS_TOUCH && canvasGL.requestPointerLock) { try { const p = canvasGL.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* sin bloqueo */ } } }
+// Si el navegador no permite capturar el ratón (p. ej. dentro de otra página), se mira arrastrando.
+let lockFailed = !('requestPointerLock' in HTMLElement.prototype), gestureLockAt = 0, mdrag = null, dragHintDone = false;
+const markLockFail = () => { if (performance.now() - gestureLockAt < 1500) { lockFailed = true; canvasGL.style.cursor = 'grab'; updateLockHint(); } };
+function lock() {
+  if (IS_TOUCH || lockFailed || !canvasGL.requestPointerLock) return;
+  try { const p = canvasGL.requestPointerLock(); if (p && p.catch) p.catch(markLockFail); } catch (e) { markLockFail(); }
+}
 function unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
+document.addEventListener('pointerlockerror', markLockFail);
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvasGL;
   updateLockHint();
   if (!locked && MODE === 'walk') openPause();
 });
-function updateLockHint() { $('#lockHint').classList.toggle('hidden', locked || MODE !== 'walk' || IS_TOUCH); }
+function updateLockHint() {
+  const h = $('#lockHint');
+  h.textContent = lockFailed ? 'Arrastra con el ratón para mirar · clic o E para interactuar' : 'Haz clic para mirar alrededor';
+  h.classList.toggle('hidden', locked || MODE !== 'walk' || IS_TOUCH || (lockFailed && dragHintDone));
+}
 canvasGL.addEventListener('mousedown', (e) => {
   if (MODE !== 'walk' || IS_TOUCH) return;
-  if (!locked) { lock(); return; }
-  if (e.button === 0) tryInteract();
+  if (locked) { if (e.button === 0) tryInteract(); return; }
+  mdrag = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, moved: false };
+  if (lockFailed) canvasGL.style.cursor = 'grabbing';
+  else { gestureLockAt = performance.now(); lock(); }
+});
+addEventListener('mouseup', () => {
+  if (mdrag && !mdrag.moved && !locked && lockFailed && MODE === 'walk') tryInteract();
+  mdrag = null; if (lockFailed) canvasGL.style.cursor = 'grab';
 });
 document.addEventListener('mousemove', (e) => {
-  if (!locked || MODE !== 'walk') return;
-  const k = 0.0021 * SETTINGS.sens;
-  PLAYER.yaw -= e.movementX * k; PLAYER.pitch = clamp(PLAYER.pitch - e.movementY * k, -1.35, 1.3);
+  if (MODE !== 'walk') return;
+  if (locked) {
+    const k = 0.0021 * SETTINGS.sens;
+    PLAYER.yaw -= e.movementX * k; PLAYER.pitch = clamp(PLAYER.pitch - e.movementY * k, -1.35, 1.3);
+  } else if (mdrag && !IS_TOUCH) {
+    const k = 0.0045 * SETTINGS.sens;
+    PLAYER.yaw -= (e.clientX - mdrag.lx) * k; PLAYER.pitch = clamp(PLAYER.pitch - (e.clientY - mdrag.ly) * k, -1.35, 1.3);
+    mdrag.lx = e.clientX; mdrag.ly = e.clientY;
+    if (Math.hypot(e.clientX - mdrag.x, e.clientY - mdrag.y) > 5) { mdrag.moved = true; if (lockFailed && !dragHintDone) { dragHintDone = true; updateLockHint(); } }
+  }
 });
 addEventListener('keydown', (e) => {
   if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
@@ -2580,7 +2604,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'Escape' || e.code === 'KeyP') {
     if (MODE === 'ui' && OVERLAY_CLOSE) { e.preventDefault(); OVERLAY_CLOSE(); }
     else if (MODE === 'pause' && e.code === 'KeyP') resumeGame();
-    else if (MODE === 'walk' && e.code === 'KeyP') { unlock(); openPause(); }
+    else if (MODE === 'walk' && (e.code === 'KeyP' || !locked)) { unlock(); openPause(); }
   }
   if (MODE === 'ui' && UI_KEY) UI_KEY(e);
 });
